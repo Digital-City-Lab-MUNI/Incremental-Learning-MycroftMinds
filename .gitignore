@@ -1,0 +1,8 @@
+*.pyc
+*.png
+*.jpg
+.vscode/
+.history/
+*.code-workspace
+*.log
+.pytest_cache/
