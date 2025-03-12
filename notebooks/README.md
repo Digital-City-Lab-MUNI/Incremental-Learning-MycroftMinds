@@ -19,3 +19,4 @@ Target (y): The value of the target feature at time t is used as the prediction 
 Why This Works:
 This method ensures that each prediction is based solely on past observations, maintaining temporal causality and preventing data leakage. The window_size parameter determines how many past observations are used, effectively controlling the size of each input sample (if there are f features, each sample is of size window_size × f).
 
+for more detailed explanation of the sliding window method see page 20 here: chrome-extension://efaidnbmnnnibpcajpcglclefindmkaj/http://bth.diva-portal.org/smash/get/diva2:1291227/FULLTEXT02.pdf 
