@@ -11,6 +11,11 @@ class Node:
         self.right = right
         self.value = value
 
+    def show(self,prefix=""):
+        print(f"{prefix}feature: {self.feature}")
+        print(f"{prefix}threshold: {self.threshold}")
+        print(f"{prefix}value: {self.value}")
+
 class BaseTree(BaseLeaner):
 
     def __init__(self,depth):
@@ -20,7 +25,6 @@ class BaseTree(BaseLeaner):
 
     def fit(self,X,y):
         self.root = self.__grow(X,y,depth = 0)
-        pass
 
     def predict(self,X) -> float:
         return self.__traverse(X,self.root)
@@ -99,6 +103,18 @@ class BaseTree(BaseLeaner):
 
         return y_variance - (left_weight * y_left_variance + right_weight * y_right_variance)
 
+    def show(self):
+        self.__traverse_show(self.root,"")
+
+    def __traverse_show(self,node,prefix):
+        node.show(prefix)
+        if(node.left):
+            print(f"{prefix}Left:")
+            self.__traverse_show(node.left,prefix+" ")
+        if(node.right):
+            print(f"{prefix}Right:")
+            self.__traverse_show(node.right,prefix+" ")
+
 if __name__ == "__main__":
 
     X = np.array([
@@ -122,3 +138,5 @@ if __name__ == "__main__":
     print("\nUnseen values: ")
     for i in range(len(X_eval)):
         print(f"predictions[{X_eval[i]}]: {tree.predict(X_eval[i])} == {y_eval[i]}")
+
+    tree.show()
