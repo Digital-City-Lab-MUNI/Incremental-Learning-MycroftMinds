@@ -16,18 +16,31 @@ class FastNode(Node):
         self.n_data_points_hits = 0
         self.y_sum = 0
         self.y_mean = 0
-        self.y_sum_2 = 0
+        self.y_sum_pwr_2 = 0
 
     def add_point(self,y):
         self.y_sum += y
         self.n_data_points_hits += 1
         self.y_sum_2 = self.y_sum**2
         self.y_mean = self.y_sum/self.n_data_points_hits
+        self.value = self.y_mean 
 
     def variance(self):
         if self.n_data_points_hits:
             return self.y_sum_2/self.n_data_points_hits - self.y_mean
         return 0
+
+class Split():
+
+    def __init__(self,feature = None, threshold = None, variance = None):
+        self.feature = feature
+        self.threshold = threshold
+        self.variance = variance
+
+    # Define comparison so that heapq sorts by variance
+    def __lt__(self, other):
+        return self.variance > other.variance  # Max-heap behavior
+
 
 class FastODTree(BaseTree):
 
@@ -39,123 +52,77 @@ class FastODTree(BaseTree):
         self.samples_seen = 0
         self.seen_y_sum = 0
         self.seen_y_len = 0
+        self.root = FastNode()
 
     def fit(self,x,y):
-        self.seen_y_sum += x
-        self.seen_y_len += 1
-        if self.root:
-            self.__fit_traverse(self.root,x,y,depth = 0)
-        # if root does not exist, init it with grow function
-        else:
-            # TODO: variance tracking has to be changed
-            self.root = self.__grow(,x,y,depth = 0)
+        self.__fit_traverse(self.root,x,y,depth = 0)
 
     def __fit_traverse(self,node,X,y,depth):
         ''' check depth '''
         if depth >= self.depth:
-            return None
+            return
 
-        if(X[node.feature] < node.threshold):
-            if node.left:
-                self.__fit_traverse(
-                    node.left,
-                    X,
-                    y,
-                    depth+1
-                )
-            else:
-                node.left = self.__grow(
-                    X,
-                    y,
-                    depth+1
-                )
+        split = self.splits[depth]
+        print(node,split,self.splits,depth)
+        if split == None:
+            best_split, second_best_split = self.__split(node, X, y)
+            if (best_split.variance - second_best_split.variance) < hoeffding_bound(self.samples_seen,self.delta):
+                self.splits[depth] = best_split
+                node.left = FastNode()
+                node.right = FastNode()
+                print("split added")
         else:
-            if node.right:
-                self.__fit_traverse(
-                    node.left,
-                    X,
-                    y,
-                    depth+1
-                )
+            if X[split.feature] < split.threshold:
+                if node.left == None:
+                    node.left = FastNode()
+                self.__fit_traverse(node.left,X,y,depth+1)
             else:
-                node.right = self.__grow(
-                    X,
-                    y,
-                    depth+1
-                )
+                if node.right == None:
+                    node.right = FastNode()
+                self.__fit_traverse(node.right,X,y,depth+1)
 
-    def __grow(self,parent_node,X,y,depth) -> Node:
-
-        ''' get mean value for regression'''
-        if  self.seen_y_len == 0:
-            value = 0
-        else:
-            value = self.seen_y_sum / self.seen_y_len
-
-        # check if split for this level exists, if not then find new split
-        # TODO: here we need to add hf_bound
-        if not self.splits[depth]:
-            best_feature, second_best_feature = self.__split(parent_node,X,y)
-
-            b_feature = best_feature[2]
-            b_threshold = best_feature[2]
-            sb_feature = second_best_feature[2]
-
-            self.splits[depth][0] = b_feature
-            self.splits[depth][1] = b_threshold
-
-            self.samples_seen += 1
-            if (b_feature - sb_feature) < hoeffding_bound(self.samples_seen,self.delta):
-                # reset seen data
-                self.samples_seen = 0
-                self.seen_y_sum = 0
-                self.seen_y_len = 0
-
-                return FastNode(
-                    value    = value,
-                    feature  = b_feature,
-                    threshold= b_threshold,
-                    left     = None,
-                    right    = None
-                )
-            else:
-                # if not ready to make split, return None
-                return None
-        # split already exists so use it
-        else:
-            b_feature, b_threshold = self.splits[depth][0], self.splits[depth][1]
-            new_node = FastNode(
-                value    = value,
-                feature  = b_feature,
-                threshold= b_threshold,
-                left     = None,
-                right    = None
-            )
-            self.__fit_traverse(new_node,X,y,depth+1)
-            return new_node
-
-    def __split(self,parent_node,x) -> {int,int}:
+    def __split(self,parent_node,X,y) -> {int,int}:
         self.features_max = []
 
-        for feature,_ in enumerate(x):
-            print(f"x: {x} {feature}")
-            threshold = x[feature]
+        print(parent_node)
+        parent_node.add_point(y)
+        for feature,_ in enumerate(X):
+            threshold = X[feature]
 
-            left_mask = x[feature] < threshold
-            right_mask = ~left_mask
+            found = False
+            for split in self.splits:
+                if split == None:
+                    continue
 
-            print(left_mask,right_mask)
-            ''' check if mask is doing any split and not just moving all data into right or left set'''
-            if sum(left_mask) == 0 or sum(right_mask) == 0:
+                if split.feature == feature and split.threshold == threshold:
+                    found = True
+
+            if found:
                 continue
 
-            parent_node.add(y)
-            variance = parent_node.variance()
-            heapq.heappush(self.features_max,(variance,threshold,feature))
+            left_mask = X[feature] < threshold
+            right_mask = ~left_mask
+            if type(left_mask) != list:
+                left_mask = [left_mask]
+            if type(right_mask) != list:
+                right_mask = [right_mask]
 
-        best_feature = heapq.heappop(self.features_max)
-        second_best_feature = heapq.heappop(self.features_max)
-        return best_feature, second_best_feature
+            ''' check if mask is doing any split and not just moving all data into right or left set'''
+            if len(left_mask) == 0 or len(right_mask) == 0:
+                continue
+
+            variance = parent_node.variance()
+            split = Split(
+                feature,
+                threshold,
+                variance
+            )
+
+            heapq.heappush(self.features_max,split)
+
+        best_split = heapq.heappop(self.features_max)
+        second_best_split = heapq.heappop(self.features_max)
+        return best_split, second_best_split
 
 
 if __name__ == "__main__":
@@ -170,7 +137,7 @@ if __name__ == "__main__":
         [5, 1], [4, 4], [3, 1], [1, 1], [2, 2]
     ])
 
-    y = np.array([
+    Y = np.array([
         10, 12, 15, 13, 16, 10, 12, 15, 13, 16,
         11, 14, 17, 18, 9, 13, 14, 11, 12, 8,
 
@@ -180,11 +147,11 @@ if __name__ == "__main__":
     ])
 
     tree = FastODTree(depth=3)
-    for x,y in zip(X,y):
+    for x,y in zip(X,Y):
         tree.fit(x, y)
 
     print("Check values: ")
     for i in range(len(X)):
-        print(f"predictions[{X[i]}]: {tree.predict(X[i])} == {y[i]}")
+        print(f"predictions[{X[i]}]: {tree.predict(X[i])} == {Y[i]}")
 
     # tree.show()
