@@ -73,7 +73,7 @@ class Node:
 
 
 class FastODT(BaseTree):
-    def __init__(self, depth = 5, grace_period=2, split_confidence=0.0001):
+    def __init__(self, depth = 3, grace_period=2, split_confidence=0.0001):
         self.grace_period = grace_period  # Number of samples before checking for a split
         self.split_confidence = split_confidence  # Confidence level for splitting
         self.root = Node()
@@ -87,18 +87,25 @@ class FastODT(BaseTree):
     def _update_tree(self, node , x, y, depth = 0):
 
         # this should be updated later
-        if node.left is None and node.right is None:
-            node.update_stats(x, y)
-            if node.samples_seen >= self.grace_period:
-                self._attempt_split(node, depth)
         
+        # print(f"depth: {depth} x:{x} y:{y}")
+        node.update_stats(x, y)
+        if depth >= self.depth:
+            return
+
+        if node.left is None and node.right is None:
+            if node.samples_seen >= self.grace_period:
+                self._attempt_split(node, x, y, depth)
+
         elif x[node.feature] <= node.threshold:
+            # print("left")
             self._update_tree(node.left,x,y,depth + 1)
 
         elif x[node.feature] > node.threshold:
+            # print("right")
             self._update_tree(node.right,x,y,depth + 1)
 
-    def _attempt_split(self, node, depth):
+    def _attempt_split(self, node, x, y, depth):
         best_split, best_reduction = node.find_best_split()
         if self.splits[depth] is not None:
             node.split(self.splits[depth])
@@ -122,8 +129,10 @@ if __name__ == "__main__":
     ])
 
     Y = np.array([
-        10, 12, 15, 13, 16, 10, 12, 15, 13, 16,
-        11, 14, 17, 18, 9, 13, 14, 11, 12, 8,
+        10, 12, 15, 13, 16, 
+        10, 12, 15, 13, 16,
+        11, 14, 17, 18, 9, 
+        13, 14, 11, 12, 8,
         # 9, 11, 5, 8, 15,
         # 7, 4, 10, 6, 9,
         # 3, 12, 5, 2, 7
@@ -134,4 +143,4 @@ if __name__ == "__main__":
     for i in range(len(X)):
         print(f"predictions[{X[i]}]: {Fodt.predict(X[i])} == {Y[i]}")
 
-    # htr.show()
+    Fodt.show()
