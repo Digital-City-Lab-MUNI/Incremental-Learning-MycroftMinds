@@ -2,7 +2,10 @@ import numpy as np
 
 from sklearn.metrics import mean_absolute_error  # Default error metric if none provided
 
-
+# TODO: how to deal with very short forecasting horizon?, perhaps we need some sort of rolling forecast say always have a forecast of 10 datapoints
+# but will this whole forecast be updated everytime we receive a new datapoint or will there be just a concatenation of the latest predictiction 
+# while the earliest prediction is removed?
+# how should this be made compatible with the update methods? 
 
 class ElasticGBDT:
 
