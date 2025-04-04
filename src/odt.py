@@ -1,4 +1,6 @@
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error
+from matplotlib import pyplot as plt
 from tree import BaseTree, Node
 import numpy as np
 class ODTree(BaseTree):
@@ -90,36 +92,25 @@ class ODTree(BaseTree):
 
 if __name__ == "__main__":
 
-    X = np.array([
-        [2, 3], [1, 4], [3, 6], [4, 2], [5, 5],
-        [2, 3], [1, 4], [3, 6], [4, 2], [5, 5],
-        [2, 4], [3, 4], [5, 4], [4, 6], [2, 2],
-        [5, 3], [1, 6], [2, 5], [1, 3], [5, 2],
-        [3, 5], [4, 3], [1, 2], [2, 6], [5, 6],
-        [3, 2], [2, 1], [4, 5], [1, 5], [2, 4],
-        [5, 1], [4, 4], [3, 1], [1, 1], [2, 2]
-    ])
-
-    y = np.array([
-        10, 12, 15, 13, 16, 10, 12, 15, 13, 16,
-        11, 14, 17, 18, 9, 13, 14, 11, 12, 8,
-
-        9, 11, 5, 8, 15,
-        7, 4, 10, 6, 9,
-        3, 12, 5, 2, 7
-    ])
-
-    X_train, X_eval, y_train, y_eval = train_test_split(X, y, test_size=0.2, random_state=42)
-
     tree = ODTree(depth=3)
-    tree.fit(X_train, y_train)
+    # Generate synthetic data following a sine wave pattern
+    X = np.linspace(0, 10, 100).reshape(-1, 1)  # Features: 100 points from 0 to 10
+    Y = np.sin(X).ravel() + np.random.normal(0, 0.1, X.shape[0])  # Sine wave with noise
 
-    print("Seen values: ")
-    for i in range(len(X_train)):
-        print(f"predictions[{X_train[i]}]: {tree.predict(X_train[i])} == {y_train[i]}")
+    tree.fit(X, Y)
+    tree.show()
+    # Make predictions
+    Y_pred = np.array([tree.predict(x) for x in X])
 
-    print("\nUnseen values: ")
-    for i in range(len(X_eval)):
-        print(f"predictions[{X_eval[i]}]: {tree.predict(X_eval[i])} == {y_eval[i]}")
+    # Compute prediction accuracy using Mean Absolute Error (MAE)
+    mae = mean_absolute_error(Y, Y_pred)
+    print(f"Mean Absolute Error: {mae:.4f}")
 
-    # tree.show()
+    # Plot the results
+    plt.scatter(X, Y, label="Actual Data", color="blue", s=10)
+    plt.plot(X, Y_pred, label="Predicted Data", color="red")
+    plt.legend()
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    plt.title("FastODT Predictions vs Actual Data")
+    plt.show()

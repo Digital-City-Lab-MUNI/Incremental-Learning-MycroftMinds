@@ -1,4 +1,6 @@
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error
+from matplotlib import pyplot as plt 
 from tree import BaseTree, Node
 import numpy as np
 import heapq
@@ -23,6 +25,7 @@ class Node:
         self.feature = None
         self.threshold = None
         self.attribute_stats = defaultdict(lambda: [0, 0, 0])  # Attribute sum and count
+        self.data_from_before_split = []
         self.left_y = []
         self.right_y = []
 
@@ -35,6 +38,12 @@ class Node:
             self.attribute_stats[feature][0] += val
             self.attribute_stats[feature][1] += 1
             self.attribute_stats[feature][2] = val
+
+    def update_from_parent_node(self, parent):
+        self.samples_seen = parent.samples_seen
+        self.sum_y = parent.sum_y
+        self.sum_y_squared = parent.sum_y_squared
+        self.value = parent.sum_y/self.samples_seen
 
     def find_best_split(self):
         best_feature, best_value, best_reduction = None, None, 0
@@ -54,7 +63,7 @@ class Node:
             else:
                 self.right_y.append(self.sum_y / self.samples_seen)
 
-        if not self.left_y or not self.right_y:
+        if not self.left_y and not self.right_y:
             return 0
         var_before = (self.sum_y_squared / self.samples_seen) - (self.sum_y / self.samples_seen) ** 2
         var_left = np.var(self.left_y) if self.left_y else 0
@@ -73,7 +82,7 @@ class Node:
 
 
 class FastODT(BaseTree):
-    def __init__(self, depth = 3, grace_period=2, split_confidence=0.0001):
+    def __init__(self, depth = 5, grace_period=10, split_confidence=0.0001):
         self.grace_period = grace_period  # Number of samples before checking for a split
         self.split_confidence = split_confidence  # Confidence level for splitting
         self.root = Node()
@@ -86,61 +95,118 @@ class FastODT(BaseTree):
 
     def _update_tree(self, node , x, y, depth = 0):
 
-        # this should be updated later
-        
-        # print(f"depth: {depth} x:{x} y:{y}")
-        node.update_stats(x, y)
         if depth >= self.depth:
             return
 
         if node.left is None and node.right is None:
+            # print(node.left,node.right)
+            node.update_stats(x, y)
             if node.samples_seen >= self.grace_period:
                 self._attempt_split(node, x, y, depth)
+            # print(node.left,node.right)
 
         elif x[node.feature] <= node.threshold:
-            # print("left")
             self._update_tree(node.left,x,y,depth + 1)
 
         elif x[node.feature] > node.threshold:
-            # print("right")
             self._update_tree(node.right,x,y,depth + 1)
 
     def _attempt_split(self, node, x, y, depth):
         best_split, best_reduction = node.find_best_split()
         if self.splits[depth] is not None:
             node.split(self.splits[depth])
+            node.left.update_from_parent_node(node)
+            node.right.update_from_parent_node(node)
 
         elif best_split and best_reduction > self.split_confidence:
             self.splits[depth] = best_split 
             node.split(best_split)
+            node.left.update_from_parent_node(node)
+            node.right.update_from_parent_node(node)
 
 if __name__ == "__main__":
 
-    Fodt = FastODT()
 
-    X = np.array([
-        [2, 3], [1, 4], [3, 6], [4, 2], [5, 5],
-        [2, 3], [1, 4], [3, 6], [4, 2], [5, 5],
-        [2, 4], [3, 4], [5, 4], [4, 6], [2, 2],
-        [5, 3], [1, 6], [2, 5], [1, 3], [5, 2],
-        # [3, 5], [4, 3], [1, 2], [2, 6], [5, 6],
-        # [3, 2], [2, 1], [4, 5], [1, 5], [2, 4],
-        # [5, 1], [4, 4], [3, 1], [1, 1], [2, 2]
-    ])
-
-    Y = np.array([
-        10, 12, 15, 13, 16, 
-        10, 12, 15, 13, 16,
-        11, 14, 17, 18, 9, 
-        13, 14, 11, 12, 8,
-        # 9, 11, 5, 8, 15,
-        # 7, 4, 10, 6, 9,
-        # 3, 12, 5, 2, 7
-    ])
+    # Generate synthetic data following a sine wave pattern
+    T = np.linspace(0, 5, 100).reshape(-1, 1)  # Features: 100 points from 0 to 10
+    Y = np.sin(T).ravel() + np.random.normal(0, 0.1, T.shape[0])  # Sine wave with noise
+    X = - np.sin(T).ravel() + np.random.normal(0, 0.1, T.shape[0])  # Sine wave with noise
+    X = X.reshape(-1,1)
+    print(X.shape)
     print(len(X),len(Y))
-    Fodt.partial_fit(X, Y)
-    # print("Check values: ")
-    for i in range(len(X)):
-        print(f"predictions[{X[i]}]: {Fodt.predict(X[i])} == {Y[i]}")
+    # depth = 20
+    grace_period = 0
+    split_confidence = 0.0001
 
-    Fodt.show()
+    Fodt_1 = FastODT(
+        depth=1,
+        grace_period=grace_period,
+        split_confidence=split_confidence
+    )
+    
+    Fodt_1.partial_fit(X,Y)
+    Y_pred_1 = np.array([Fodt_1.predict(x) for x in X])
+
+    Fodt_5 = FastODT(
+        depth=5,
+        grace_period=grace_period,
+        split_confidence=split_confidence
+    )
+
+    Fodt_5.partial_fit(X[:],Y[:])
+
+    Y_pred_5 = np.array([Fodt_5.predict(x) for x in X])
+
+    Fodt_10 = FastODT(
+        depth=10,
+        grace_period=grace_period,
+        split_confidence=split_confidence
+    )
+
+    Fodt_10.partial_fit(X[:],Y[:])
+    Y_pred_10 = np.array([Fodt_10.predict(x) for x in X])
+
+    Fodt_15 = FastODT(
+        depth=15,
+        grace_period=grace_period,
+        split_confidence=split_confidence
+    )
+
+    Fodt_15.partial_fit(X[:],Y[:])
+    Y_pred_15 = np.array([Fodt_15.predict(x) for x in X])
+
+    Fodt_20 = FastODT(
+        depth=20,
+        grace_period=grace_period,
+        split_confidence=split_confidence
+    )
+
+    Fodt_20.partial_fit(X[:],Y[:])
+
+    Y_pred_20 = np.array([Fodt_20.predict(x) for x in X])
+
+    # Compute prediction accuracy using Mean Absolute Error (MAE)
+    mae = mean_absolute_error(Y, Y_pred_1)
+    print(f"Mean Absolute Error: {mae:.4f}")
+    mae = mean_absolute_error(Y, Y_pred_5)
+    print(f"Mean Absolute Error: {mae:.4f}")
+    mae = mean_absolute_error(Y, Y_pred_10)
+    print(f"Mean Absolute Error: {mae:.4f}")
+    mae = mean_absolute_error(Y, Y_pred_15)
+    print(f"Mean Absolute Error: {mae:.4f}")
+    mae = mean_absolute_error(Y, Y_pred_20)
+    print(f"Mean Absolute Error: {mae:.4f}")
+
+    # Plot the results
+    plt.scatter(T, X.reshape(-1,1), label="Input", color="red", s=10)
+    plt.scatter(T, Y, label="Actual Data", color="blue", s=10)
+    plt.plot(T, Y_pred_1, label="Y_pred_Depth_1")
+    plt.plot(T, Y_pred_5, label="Y_pred_Depth_5")
+    plt.plot(T, Y_pred_10, label="Y_pred_Depth_10")
+    plt.plot(T, Y_pred_15, label="Y_pred_Depth_15")
+    plt.plot(T, Y_pred_20, label="Y_pred_Depth_20")
+    plt.legend()
+    plt.xlabel("X [100 Samples]")
+    plt.ylabel("Y")
+    plt.title("FastODT Predictions vs Actual Data")
+    plt.show()

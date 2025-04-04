@@ -115,6 +115,19 @@ class BaseTree(BaseLeaner):
             print(f"{prefix}Right:")
             self.__traverse_show(node.right,prefix+" ")
 
+    def show_final(self):
+        self.__traverse_show_final(self.root,"")
+
+    def __traverse_show_final(self,node,prefix):
+        
+        if node.left is None and node.right is None:
+            node.show(prefix)
+    
+        if(node.left):
+            self.__traverse_show_final(node.left,prefix+" ")
+        if(node.right):
+            self.__traverse_show_final(node.right,prefix+" ")
+
 if __name__ == "__main__":
 
     X = np.array([
