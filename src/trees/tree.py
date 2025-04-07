@@ -1,5 +1,5 @@
 from sklearn.model_selection import train_test_split
-from base import BaseLeaner
+from src.trees.base import BaseLeaner
 import numpy as np
 
 class Node:
