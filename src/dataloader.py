@@ -4,6 +4,10 @@ import pandas as pd
 import numpy as np
 import argparse
 import warnings
+import traceback
+from typing import List, Tuple, Dict, Optional
+
+warnings.filterwarnings("ignore")
 
 # ---------------------------
 # Preprocessing Functions
@@ -68,7 +72,8 @@ def add_lag_features(df, columns, lag_freqs):
         lag_delta = pd.Timedelta(lag_str)
         df[f'time_shift_{suffix}'] = df['time'] - lag_delta
         temp = df[['time'] + columns].copy()
-        rename_dict = {col: f'{col}_{suffix}' for col in columns}
+    # Process all lag frequencies
+        for suffix, lag_str in lag_freqs.items():
         temp.rename(columns=rename_dict, inplace=True)
 
         merged = pd.merge_asof(
@@ -108,7 +113,9 @@ def clean_data(ts_set, input_features, target_feature, window_size, step):
     return X_list, y_list
 
 
-def get_train_test_sets(data_dir, lag_args, columns_to_add_lag, target_feature = 'total_power_active',
+def get_train_test_sets(data_dir: str,
+                        lag_freqs: Dict,
+                        columns_to_add_lag, target_feature = 'total_power_active',
                         walk_forward_sets=False, train_months=3, valid_months=1):
     """
     data_dir: data directory
