@@ -127,33 +127,88 @@ def add_lag_features(df: pd.DataFrame, columns: List[str], lag_freqs: Dict) -> p
     """
     try:
         result_df = df.copy()
-
-    for col in columns:
-        df[f'{col}_lag_1'] = df[col].shift(1)
-
-    for suffix, lag_str in lag_freqs.items():
-        lag_delta = pd.Timedelta(lag_str)
-        df[f'time_shift_{suffix}'] = df['time'] - lag_delta
-        temp = df[['time'] + columns].copy()
-    # Process all lag frequencies
-        for suffix, lag_str in lag_freqs.items():
-        temp.rename(columns=rename_dict, inplace=True)
-
-        merged = pd.merge_asof(
-            df.sort_values(f'time_shift_{suffix}'),
-            temp.sort_values('time'),
-            left_on=f'time_shift_{suffix}',
-            right_on='time',
-            direction='backward',
-            tolerance=pd.Timedelta(lag_str)
-        )
-
+        
         for col in columns:
-            df[f'{col}_{suffix}'] = merged[f'{col}_{suffix}'].values
+            result_df[f'{col}_lag_1'] = result_df[col].shift(1)
 
-        df.drop(columns=[f'time_shift_{suffix}'], inplace=True)
+        for suffix, lag_str in lag_freqs.items():
+            result_df[f'time_shift_{suffix}'] = result_df['time'] - pd.Timedelta(lag_str)
+        
+        # Process all lag frequencies
+        for suffix, lag_str in lag_freqs.items():
+            # Rename columns on-the-fly during the merge
+            merged = pd.merge_asof(
+                result_df,
+                df[['time'] + columns],  # Use original df, no copy needed
+                left_on=f'time_shift_{suffix}',
+                right_on='time',
+                direction='backward',
+                tolerance=pd.Timedelta(lag_str),
+                suffixes=('', f'_{suffix}')  # Add suffix to right dataframe columns
+            )
+            
+            # Add only the new columns to our result dataframe
+            for col in columns:
+                result_df[f'{col}_{suffix}'] = merged[f'{col}_{suffix}']
+                
+        # Remove all time shift columns at once
+        time_shift_cols = [f'time_shift_{suffix}' for suffix in lag_freqs.keys()]
+        result_df.drop(columns=time_shift_cols, inplace=True)
 
-    return df
+        return result_df
+    
+    except Exception as e:
+        print(f"[ERROR] Failed to add lag features: {e}")
+        traceback.print_exc()
+        return df
+
+def add_cyclical_time_features(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Add cyclical time features using sine and cosine transformations.
+    This creates better features for time-based data by encoding the cyclical nature
+    of time components (hour of day, day of week, month of year, etc.)
+    
+    Args:
+        df (pd.DataFrame): DataFrame with a 'time' column in datetime format
+        
+    Returns:
+        pd.DataFrame: DataFrame with added cyclical time features
+    """
+    try:
+        df = df.copy()
+        
+        # Hour of day (24 hours)
+        df['hour_sin'] = np.sin(2 * np.pi * df['time'].dt.hour / 24)
+        df['hour_cos'] = np.cos(2 * np.pi * df['time'].dt.hour / 24)
+        
+        # Day of week (7 days)
+        df['day_of_week_sin'] = np.sin(2 * np.pi * df['time'].dt.dayofweek / 7)
+        df['day_of_week_cos'] = np.cos(2 * np.pi * df['time'].dt.dayofweek / 7)
+        
+        # Month of year (12 months)
+        df['month_sin'] = np.sin(2 * np.pi * (df['time'].dt.month - 1) / 12)
+        df['month_cos'] = np.cos(2 * np.pi * (df['time'].dt.month - 1) / 12)
+
+        # # Add minute-level precision to hour
+        # hours_with_minutes = df['time'].dt.hour + df['time'].dt.minute / 60
+        # df['hour_minute_sin'] = np.sin(2 * np.pi * hours_with_minutes / 24)
+        # df['hour_minute_cos'] = np.cos(2 * np.pi * hours_with_minutes / 24)
+        
+        # # Day of month (up to 31 days)
+        # day_of_month_max = df['time'].dt.daysinmonth
+        # df['day_of_month_sin'] = np.sin(2 * np.pi * (df['time'].dt.day - 1) / day_of_month_max)
+        # df['day_of_month_cos'] = np.cos(2 * np.pi * (df['time'].dt.day - 1) / day_of_month_max)
+        
+        # # Quarter of year (4 quarters)
+        # df['quarter_sin'] = np.sin(2 * np.pi * (df['time'].dt.quarter - 1) / 4)
+        # df['quarter_cos'] = np.cos(2 * np.pi * (df['time'].dt.quarter - 1) / 4)
+        
+        return df
+        
+    except Exception as e:
+        print(f"[ERROR] Failed to add cyclical time features: {e}")
+        traceback.print_exc()
+        return df
 
 # ---------------------------
 # Create Supervised Data
@@ -274,7 +329,7 @@ def get_train_test_sets(data_dir: str,
     except Exception as e:
         print(f"[ERROR] Failed to read CSV files: {e}")
         traceback.print_exc()
-        return (None, None, None, None, None, None
+        return (None, None), (None, None), (None, None)
 
     try:
         processed_dfs = preprocess_df(dataframes, add_cyclical_features=use_cyclical_features)
@@ -296,7 +351,7 @@ def get_train_test_sets(data_dir: str,
     except Exception as e:
         print(f"[ERROR] Preprocessing failed: {e}")
         traceback.print_exc()
-        return None, None, None, None, None, None
+        return (None, None), (None, None), (None, None)
 
     if columns_to_add_lag is None:
         columns_to_add_lag = [
@@ -311,15 +366,13 @@ def get_train_test_sets(data_dir: str,
         if col not in ['time', 'device_id', 'serial_number']
     ]
 
-    window_size = 1
-    step = 1
-
     train_sets, valid_sets, test_sets = [], [], []
 
     for idx, ts in enumerate(complete_time_series):
         try:
-            ts = ts.sort_values(by='time').reset_index(drop=True)
-            ts['time'] = pd.to_datetime(ts['time'])
+            # No need to sort or convert time again - it's already done in preprocess_df
+            # Just reset the index for consistent indexing
+            ts = ts.reset_index(drop=True)
 
             train_end_idx = int(len(ts) * 0.6)
             valid_end_idx = int(len(ts) * 0.8)
