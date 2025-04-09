@@ -370,24 +370,20 @@ def get_train_test_sets(data_dir: str,
 
     for idx, ts in enumerate(complete_time_series):
         try:
-            # No need to sort or convert time again - it's already done in preprocess_df
-            # Just reset the index for consistent indexing
-            ts = ts.reset_index(drop=True)
 
-            train_end_idx = int(len(ts) * 0.6)
-            valid_end_idx = int(len(ts) * 0.8)
+            train_end_idx = int(len(ts) * 0.8)
+            valid_start_idx = int(train_end_idx * 0.8)
 
-            ts_test = ts.iloc[valid_end_idx:]
+            ts_test = ts.iloc[train_end_idx:]
             ts_test_lagged = add_lag_features(ts_test, columns_to_add_lag, lag_freqs)
             X_test, y_test = clean_data([ts_test_lagged], input_features, target_feature, window_size, step)
             test_sets.append((np.vstack(X_test), np.hstack(y_test)))
 
             if not walk_forward_sets:
                 ts_train = ts.iloc[:train_end_idx]
-                ts_valid = ts.iloc[train_end_idx:valid_end_idx]
 
                 ts_train_lagged = add_lag_features(ts_train, columns_to_add_lag, lag_freqs)
-                ts_valid_lagged = add_lag_features(ts_valid, columns_to_add_lag, lag_freqs)
+                ts_valid_lagged = ts_train_lagged[valid_start_idx:]
 
                 X_train, y_train = clean_data([ts_train_lagged], input_features, target_feature, window_size, step)
                 X_valid, y_valid = clean_data([ts_valid_lagged], input_features, target_feature, window_size, step)
@@ -397,56 +393,78 @@ def get_train_test_sets(data_dir: str,
 
             else:
                 start_time = ts['time'].min()
-                current_start = start_time
                 end_time = ts_test['time'].min()
+                current_train_months = train_months+valid_months
+                step_idx = 0
 
-                while current_start + pd.DateOffset(months=train_months + valid_months) <= end_time:
-                    train_end = current_start + pd.DateOffset(months=train_months)
-                    valid_end = train_end + pd.DateOffset(months=valid_months)
+                while start_time + pd.DateOffset(months=current_train_months) <= end_time:
+                    train_end = start_time + pd.DateOffset(months=current_train_months)
 
-                    ts_train = ts[(ts['time'] >= current_start) & (ts['time'] < train_end)]
-                    ts_valid = ts[(ts['time'] >= train_end) & (ts['time'] < valid_end)]
+                    ts_train = ts[(ts['time'] >= start_time) & (ts['time'] < train_end)]
+                    valid_start_idx = int(len(ts_train)*(current_train_months/(valid_months+current_train_months)))
 
                     ts_train_lagged = add_lag_features(ts_train, columns_to_add_lag, lag_freqs)
-                    ts_valid_lagged = add_lag_features(ts_valid, columns_to_add_lag, lag_freqs)
+                    ts_valid_lagged = ts_train_lagged[valid_start_idx:]
 
                     X_train, y_train = clean_data([ts_train_lagged], input_features, target_feature, window_size, step)
                     X_valid, y_valid = clean_data([ts_valid_lagged], input_features, target_feature, window_size, step)
 
                     if X_train and X_valid:
-                        train_sets.append((np.vstack(X_train), np.hstack(y_train)))
-                        valid_sets.append((np.vstack(X_valid), np.hstack(y_valid)))
+                        if len(train_sets) <= step_idx:
+                            train_sets.append([])
+                            valid_sets.append([])
+                        train_sets[step_idx].append((np.vstack(X_train), np.hstack(y_train)))
+                        valid_sets[step_idx].append((np.vstack(X_valid), np.hstack(y_valid)))
 
-                    current_start = current_start + pd.DateOffset(months=valid_months)
+                    current_train_months += 1
+                    step_idx += 1
 
         except Exception as e:
-            print(f"[WARNING] Skipped time series (index {idx}) due to error: {e}")
+            print(f"[WARNING] Skipped one time series (index {idx}) due to error:")
             traceback.print_exc()
             continue
 
     # Stack all sets
     try:
-        if not train_sets or not valid_sets or not test_sets:
-            print("[ERROR] No valid train/validation/test sets could be created")
-            return (None, None), (None, None), (None, None)
-            
-        X_train_all = np.vstack([x for x, _ in train_sets])
-        y_train_all = np.hstack([y for _, y in train_sets])
+        if walk_forward_sets:
+            print('using walk_forward_sets')
+            X_train_all, y_train_all = [], []
+            X_valid_all, y_valid_all = [], []
 
-        X_valid_all = np.vstack([x for x, _ in valid_sets])
-        y_valid_all = np.hstack([y for _, y in valid_sets])
+            for step_trains, step_valids in zip(train_sets, valid_sets):
+                step_X_train = np.vstack([x for x, _ in step_trains])
+                step_y_train = np.hstack([y for _, y in step_trains])
+                step_X_valid = np.vstack([x for x, _ in step_valids])
+                step_y_valid = np.hstack([y for _, y in step_valids])
 
-        X_test_all = np.vstack([x for x, _ in test_sets])
-        y_test_all = np.hstack([y for _, y in test_sets])
-    
+                X_train_all.append((step_X_train, step_y_train))
+                X_valid_all.append((step_X_valid, step_y_valid))
+
+            X_test_all = np.vstack([x for x, _ in test_sets])
+            y_test_all = np.hstack([y for _, y in test_sets])
+
+            print(f"Total Training sets: {len(X_train_all)}")
+            print(f"Total Validation sets: {len(X_valid_all)}")
+            print(f"Total Test samples: {X_test_all.shape[0]}")
+
+        else:
+            X_train_all = np.vstack([x for x, _ in train_sets])
+            y_train_all = np.hstack([y for _, y in train_sets])
+
+            X_valid_all = np.vstack([x for x, _ in valid_sets])
+            y_valid_all = np.hstack([y for _, y in valid_sets])
+
+            X_test_all = np.vstack([x for x, _ in test_sets])
+            y_test_all = np.hstack([y for _, y in test_sets])
+
+            print(f"Total Training samples: {X_train_all.shape[0]}")
+            print(f"Total Validation samples: {X_valid_all.shape[0]}")
+            print(f"Total Test samples: {X_test_all.shape[0]}")
     except Exception as e:
         print(f"[ERROR] Failed to stack all sets: {e}")
-        traceback.print_exc()
-        return (None, None), (None, None), (None, None)
+        return None, None, None, None, None, None
 
-    print(f"Total Training samples: {X_train_all.shape[0]}")
-    print(f"Total Validation samples: {X_valid_all.shape[0]}")
-    print(f"Total Test samples: {X_test_all.shape[0]}")
+    return (X_train_all, y_train_all), (X_valid_all, y_valid_all), (X_test_all, y_test_all)
 
     return (X_train_all, y_train_all), (X_valid_all, y_valid_all), (X_test_all, y_test_all)
 
