@@ -132,51 +132,40 @@ def get_complete_time_series(df: pd.DataFrame) -> List[pd.DataFrame]:
 # ---------------------------
 # Feature Engineering
 # ---------------------------
-def add_lag_features(df: pd.DataFrame, columns: List[str], lag_freqs: Dict) -> pd.DataFrame:
-    """
-    Add lag features to the DataFrame based on specified columns and lag frequencies.
-    Assumes 'time' column is already in datetime format and sorted.
+def add_lag_features(df, columns, lag_freqs):
 
-    Args:
-        df (pd.DataFrame): DataFrame to which lag features will be added.
-        columns (list of str): List of columns to create lag features for.
-        lag_freqs (dict): Dictionary mapping suffixes to lag frequencies.
-
-    Returns:
-        pd.DataFrame: DataFrame with added lag features.
-    """
     try:
-        result_df = df.copy()
-        
-        for col in columns:
-            result_df[f'{col}_lag_1'] = result_df[col].shift(1)
+        df = df.copy()
+        df['time'] = pd.to_datetime(df['time'], errors='coerce')
+        df.sort_values('time', inplace=True)
+
+        # for col in columns:
+        #     df[f'{col}_lag_1'] = df[col].shift(1)
 
         for suffix, lag_str in lag_freqs.items():
-            result_df[f'time_shift_{suffix}'] = result_df['time'] - pd.Timedelta(lag_str)
-        
-        # Process all lag frequencies
-        for suffix, lag_str in lag_freqs.items():
-            # Rename columns on-the-fly during the merge
+            lag_delta = pd.Timedelta(lag_str)
+            df[f'time_shift_{suffix}'] = df['time'] - lag_delta
+            temp = df[['time'] + columns].copy()
+            rename_dict = {col: f'{col}_{suffix}' for col in columns}
+            temp.rename(columns=rename_dict, inplace=True)
+
             merged = pd.merge_asof(
-                result_df,
-                df[['time'] + columns],  # Use original df, no copy needed
+                df.sort_values(f'time_shift_{suffix}'),
+                temp.sort_values('time'),
                 left_on=f'time_shift_{suffix}',
                 right_on='time',
                 direction='backward',
-                tolerance=pd.Timedelta(lag_str),
-                suffixes=('', f'_{suffix}')  # Add suffix to right dataframe columns
+                tolerance=pd.Timedelta(lag_str)
             )
-            
-            # Add only the new columns to our result dataframe
-            for col in columns:
-                result_df[f'{col}_{suffix}'] = merged[f'{col}_{suffix}']
-                
-        # Remove all time shift columns at once
-        time_shift_cols = [f'time_shift_{suffix}' for suffix in lag_freqs.keys()]
-        result_df.drop(columns=time_shift_cols, inplace=True)
 
-        return result_df
-    
+            for col in columns:
+                df[f'{col}_{suffix}'] = merged[f'{col}_{suffix}'].values
+
+            df.drop(columns=[f'time_shift_{suffix}'], inplace=True)
+            #print(df.columns)
+
+        return df
+
     except Exception as e:
         print(f"[ERROR] Failed to add lag features: {e}")
         traceback.print_exc()
@@ -400,7 +389,7 @@ def get_train_test_sets(data_dir: str,
 
     train_sets, valid_sets, test_sets = [], [], []
 
-    for idx, ts in enumerate(complete_time_series[:2]):
+    for idx, ts in enumerate(complete_time_series[:]):
         try:
             ts['time'] = pd.to_datetime(ts['time'])
 
