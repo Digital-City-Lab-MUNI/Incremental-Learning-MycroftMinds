@@ -276,7 +276,7 @@ def clean_data(ts_set: List[pd.DataFrame],
         X_list, y_list = [], []
         for ts in ts_set:
             X_ts, y_ts = create_supervised_data_from_series(ts, input_features, target_feature, window_size, step)
-            valid = ~np.isnan(X_ts).any(axis=1)
+            valid = ~pd.DataFrame(X_ts).isna().any(axis=1)
             X_list.append(X_ts[valid])
             y_list.append(y_ts[valid])
         return X_list, y_list
@@ -291,8 +291,8 @@ def get_train_test_sets(data_dir: str,
                         columns_to_add_lag: List[str],
                         target_feature: str = 'total_power_active',
                         walk_forward_sets: bool = False,
-                        train_months: int = 3,
-                        valid_months: int = 1,
+                        train_days: int = 30,
+                        valid_days: int = 15,
                         window_size: int = 1,
                         step: int = 1,
                         use_cyclical_features: bool = False) -> Tuple[
@@ -312,8 +312,8 @@ def get_train_test_sets(data_dir: str,
         columns_to_add_lag (list): List of columns to create lag features for.
         target_feature (str): Target feature for prediction. Defaults to 'total_power_active'.
         walk_forward_sets (bool): Whether to use walk-forward validation. Defaults to False.
-        train_months (int): Number of months for the training window (if using walk-forward validation). Defaults to 3.
-        valid_months (int): Number of months for the validation window (if using walk-forward validation). Defaults to 1.
+        train_days (int): Number of days for the training window (if using walk-forward validation). Defaults to 30.
+        valid_days (int): Number of days for the validation window (if using walk-forward validation). Defaults to 15.
         window_size (int): Size of the sliding window for creating supervised data. Defaults to 1.
         step (int): Step size for the sliding window. Defaults to 1.
         use_cyclical_features (bool): Whether to use sine/cosine transformations for time features. Defaults to False.
@@ -372,15 +372,16 @@ def get_train_test_sets(data_dir: str,
 
     input_features = [
         col for col in data_concat.drop(columns=columns_to_add_lag).columns
-        if col not in ['time', 'device_id', 'serial_number']
+        if col not in ['serial_number']#'time', 'device_id', 
     ]
 
-    # Append lagged column names
+    # Append lagged column names to input features
     for col in columns_to_add_lag:
         for freq in lag_freqs.keys():
             lagged_col_name = f"{col}_{freq}"
             input_features.append(lagged_col_name)
     print("input_features: ", input_features)
+    print()
 
     window_size = 1
     step = 1
@@ -389,9 +390,11 @@ def get_train_test_sets(data_dir: str,
 
     train_sets, valid_sets, test_sets = [], [], []
 
-    for idx, ts in enumerate(complete_time_series[:]):
+    for idx, ts in enumerate(complete_time_series[:2]):
         try:
             ts['time'] = pd.to_datetime(ts['time'])
+            ts_start = ts['time'].min()
+            ts_end = ts['time'].max()
 
             train_end_idx = int(len(ts) * train_ratio)
             valid_end_idx = int(len(ts) * (train_ratio+valid_ratio))
@@ -399,6 +402,9 @@ def get_train_test_sets(data_dir: str,
             ts_lagged = add_lag_features(ts, columns_to_add_lag, lag_freqs)
 
             ts_test = ts_lagged.iloc[valid_end_idx:]
+            ts_test_start = ts_test['time'].min()
+            ts_test_end = ts_test['time'].max()
+
             X_test, y_test = clean_data([ts_test], input_features, target_feature, window_size, step)
             test_sets.append((np.vstack(X_test), np.hstack(y_test)))
             
@@ -415,13 +421,13 @@ def get_train_test_sets(data_dir: str,
                 X_valid, y_valid = clean_data([ts_valid], input_features, target_feature, window_size, step)
                 valid_sets.append((np.vstack(X_valid), np.hstack(y_valid)))
             else:
-                ts_train = ts_lagged.iloc[:(train_end_idx+valid_end_idx)]
+                ts_train = ts_lagged.iloc[:valid_end_idx]
                 series_start = ts_train['time'].min()
                 series_end = ts_train['time'].max()
 
                 # Count how many full months are in the training+validation period
-                num_full_months = count_full_months(series_start, series_end)
-                #print(f"Number of full months: {num_full_months}")
+                num_days=(series_end - series_start).days#count_full_months(series_start, series_end)
+                #print(num_days)
 
                 X_train, y_train = clean_data([ts_train], input_features, target_feature, window_size, step)
                 train_sets.append((np.vstack(X_train), np.hstack(y_train)))
@@ -442,31 +448,89 @@ def get_train_test_sets(data_dir: str,
             X_test_all = np.vstack([x for x, _ in test_sets])
             y_test_all = np.hstack([y for _, y in test_sets])
 
-            n_splits = num_full_months-(train_months+valid_months)+1
-            print('number of walk forward splits', n_splits)
+            print("overall data time range: ", ts_start, ts_end)
+            print()
+            print("test data time range: ", ts_test_start, ts_test_end)
+            print()
 
-            tscv = TimeSeriesSplit(n_splits=n_splits)
-
-            for i, (train_index, valid_index) in enumerate(tscv.split(X_train_all)):
-                all_train_sets.append((X_train_all[train_index], y_train_all[train_index]))
-                all_valid_sets.append((X_train_all[valid_index], y_train_all[valid_index]))
-
-            print("data range: ", series_start, series_end)
+            print("(train+valid) data range: ", series_start, series_end)
             total_timestamps = pd.date_range(start=series_start, end=series_end, periods=X_train_all.shape[0])
 
-            for i, (train_index, valid_index) in enumerate(tscv.split(X_train_all)):
-                # Get start and end datetime for train and valid sets
-                train_start_time = total_timestamps[train_index[0]]
-                train_end_time = total_timestamps[train_index[-1]]
+            train_valid=train_days+valid_days
+            if train_valid > num_days:
+                print("[ERROR] data timeline too small for provided train+test splits")
+                return (None, None), (None, None), (None, None)
 
-                valid_start_time = total_timestamps[valid_index[0]]
-                valid_end_time = total_timestamps[valid_index[-1]]
+            current_train_end = series_start + pd.Timedelta(days=train_days - 1)
+            current_valid_end = current_train_end + pd.Timedelta(days=valid_days)
 
-                print(f"Split {i+1}:")
-                print(f"  Train window: {train_start_time.date()} to {train_end_time.date()}")
-                print(f"  Valid window: {valid_start_time.date()} to {valid_end_time.date()}")
+            i = 0
+            while current_valid_end <= series_end:
+                train_mask = (total_timestamps >= series_start) & (total_timestamps <= current_train_end)
+                valid_mask = (total_timestamps > current_train_end) & (total_timestamps <= current_valid_end)
+
+                X_train_split = X_train_all[train_mask]
+                y_train_split = y_train_all[train_mask]
+
+                X_valid_split = X_train_all[valid_mask]
+                y_valid_split = y_train_all[valid_mask]
+
+                if len(X_valid_split) == 0:
+                    break  # Stop if there's no validation data left
+
+                all_train_sets.append((X_train_split, y_train_split))
+                all_valid_sets.append((X_valid_split, y_valid_split))
+
+                #  Use actual timestamps from total_timestamps for better print accuracy
+                train_indices = np.where(train_mask)[0]
+                valid_indices = np.where(valid_mask)[0]
+
+                train_start_time = total_timestamps[train_indices[0]]
+                train_end_time = total_timestamps[train_indices[-1]]
+
+                valid_start_time = total_timestamps[valid_indices[0]]
+                valid_end_time = total_timestamps[valid_indices[-1]]
+
+                print(f"Split {i + 1}:")
+                print(f"  Train window: {train_start_time} to {train_end_time}")
+                print(f"  Valid window: {valid_start_time} to {valid_end_time}")
+                print()
+
+                # Update for next iteration
+                current_train_end += pd.Timedelta(days=valid_days)
+                current_valid_end = current_train_end + pd.Timedelta(days=valid_days)
+                i += 1
+
+            # Final split — check if leftover days remain for validation
+            if current_train_end < series_end:
+                train_mask = (total_timestamps >= series_start) & (total_timestamps <= current_train_end)
+                valid_mask = (total_timestamps > current_train_end) & (total_timestamps <= series_end)
+
+                X_train_split = X_train_all[train_mask]
+                y_train_split = y_train_all[train_mask]
+
+                X_valid_split = X_train_all[valid_mask]
+                y_valid_split = y_train_all[valid_mask]
+
+                if len(X_valid_split) > 0:
+                    all_train_sets.append((X_train_split, y_train_split))
+                    all_valid_sets.append((X_valid_split, y_valid_split))
+
+                    train_indices = np.where(train_mask)[0]
+                    valid_indices = np.where(valid_mask)[0]
+
+                    train_start_time = total_timestamps[train_indices[0]]
+                    train_end_time = total_timestamps[train_indices[-1]]
+
+                    valid_start_time = total_timestamps[valid_indices[0]]
+                    valid_end_time = total_timestamps[valid_indices[-1]]
+
+                    print(f"Split {i + 1}:")
+                    print(f"  Train window: {train_start_time} to {train_end_time}")
+                    print(f"  Valid window: {valid_start_time} to {valid_end_time}")
 
             return all_train_sets, all_valid_sets, [X_test_all, y_test_all]
+
         else:
             X_train_all = np.vstack([x for x, _ in train_sets])
             y_train_all = np.hstack([y for _, y in train_sets])
