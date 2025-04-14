@@ -311,7 +311,7 @@ def get_train_test_sets(data_dir: str,
         lag_freqs (dict): Dictionary mapping suffixes to lag frequencies.
         columns_to_add_lag (list): List of columns to create lag features for.
         target_feature (str): Target feature for prediction. Defaults to 'total_power_active'.
-        walk_forward_sets (bool): Whether to use walk-forward validation. Defaults to False.
+        walk_forward_sets (bool): Whether to use walk-forward validation. Defaults to True.
         train_days (int): Number of days for the training window (if using walk-forward validation). Defaults to 30.
         valid_days (int): Number of days for the validation window (if using walk-forward validation). Defaults to 15.
         window_size (int): Size of the sliding window for creating supervised data. Defaults to 1.
@@ -390,7 +390,7 @@ def get_train_test_sets(data_dir: str,
 
     train_sets, valid_sets, test_sets = [], [], []
 
-    for idx, ts in enumerate(complete_time_series[:2]):
+    for idx, ts in enumerate(complete_time_series[:]):
         try:
             ts['time'] = pd.to_datetime(ts['time'])
             ts_start = ts['time'].min()
