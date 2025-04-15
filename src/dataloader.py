@@ -27,16 +27,19 @@ def get_train_test_sets(data_dir: str,
                         valid_days: int = 28,
                         window_size: int = 1,
                         step: int = 1,
-                        use_cyclical_features: bool = False) -> Tuple[
-                                                Tuple[np.ndarray, np.ndarray], 
-                                                Tuple[np.ndarray, np.ndarray], 
+                        use_cyclical_features: bool = False,
+                        optimize_memory: bool = True,
+                        save_intermediate: bool = True,
+                        intermediate_prefix: str = '5_min_wfv') -> Tuple[
+                                                Any, 
+                                                Any, 
                                                 Tuple[np.ndarray, np.ndarray]
                                                 ]:
     
     """
-    Create training, validation, and test sets from the data directory.
+    Create training, validation, and test sets from the data directory with optimized memory usage.
 
-    The data is preprocessed, and lag features are added based on the specified frequencies.
+    The data is preprocessed, lag features are added, and the result is returned in memory-efficient format.
 
     Args:
         data_dir (str): Directory containing the CSV files.
@@ -49,12 +52,25 @@ def get_train_test_sets(data_dir: str,
         window_size (int): Size of the sliding window for creating supervised data. Defaults to 1.
         step (int): Step size for the sliding window. Defaults to 1.
         use_cyclical_features (bool): Whether to use sine/cosine transformations for time features. Defaults to False.
+        optimize_memory (bool): Whether to optimize memory usage by using efficient dtypes. Defaults to True.
+        save_intermediate (bool): Whether to save intermediate results to disk. Defaults to True.
+        intermediate_prefix (str): Prefix for intermediate files. Defaults to 'processed'.
 
     Returns:
         tuple: A tuple containing training, validation, and test sets. Each set is a tuple of (X, y), 
                where X is the feature matrix and y is the target vector.
-               Returns (None, None), (None, None), (None, None) if an error occurs.
     """
+    # Check if processed data already exists
+    if save_intermediate:
+        try:
+            train, valid, test = load_dataset(data_dir, prefix=intermediate_prefix, use_numpy=True)
+            if train is not None and valid is not None and test is not None:
+                print(f"Loaded processed data from {data_dir} with prefix {intermediate_prefix}")
+                return train, valid, test
+        except Exception as e:
+            print(f"[WARNING] Could not load processed data: {e}")
+    
+    # Continue with standard processing if processed data doesn't exist
     if not os.path.exists(data_dir):
         print(f"[ERROR] The directory {data_dir} does not exist.")
         return (None, None), (None, None), (None, None)
@@ -104,7 +120,7 @@ def get_train_test_sets(data_dir: str,
 
     input_features = [
         col for col in data_concat.drop(columns=columns_to_add_lag).columns
-        if col not in ['serial_number']#'time', 'device_id', 
+        if col not in ['serial_number'] # 'time', 'device_id'
     ]
 
     # Append lagged column names to input features
@@ -115,8 +131,6 @@ def get_train_test_sets(data_dir: str,
     print("input_features: ", input_features)
     print()
 
-    window_size = 1
-    step = 1
     train_ratio = 0.6
     valid_ratio = 0.2
 
@@ -154,7 +168,6 @@ def get_train_test_sets(data_dir: str,
                 valid_sets.append((np.vstack(X_valid), np.hstack(y_valid)))
             else:
                 ts_train = ts_lagged.iloc[:valid_end_idx]
-
                 X_train, y_train = clean_data([ts_train], input_features, target_feature, window_size, step)
                 train_sets.append((np.vstack(X_train), np.hstack(y_train)))
 
@@ -182,6 +195,7 @@ def get_train_test_sets(data_dir: str,
             sorted_indices = np.argsort(X_test_all[:, 0])
             X_test_all = X_test_all[sorted_indices]
             y_test_all = y_test_all[sorted_indices]
+            
             # Get the max timestamp in training set
             train_max_time = X_train_all[:, 0].max()
 
@@ -198,8 +212,8 @@ def get_train_test_sets(data_dir: str,
             print("(Train + Valid) data range: ", X_train_all[:, 0].min(), X_train_all[:, 0].max())
             total_timestamps = pd.date_range(start=X_train_all[:, 0].min(), end=X_train_all[:, 0].max(), periods=X_train_all.shape[0])
 
-            num_days = (X_train_all[:, 0].max()-X_train_all[:, 0].min()).days
-            train_valid=train_days+valid_days
+            num_days = (X_train_all[:, 0].max() - X_train_all[:, 0].min()).days
+            train_valid = train_days + valid_days
             if train_valid > num_days:
                 print("[ERROR] data timeline too small for provided train+test splits")
                 return (None, None), (None, None), (None, None)
@@ -274,9 +288,6 @@ def get_train_test_sets(data_dir: str,
                     print(f"Split {i + 1}:")
                     print(f"  Train window: {train_start_time} to {train_end_time}")
                     print(f"  Valid window: {valid_start_time} to {valid_end_time}")
-
-            return all_train_sets, all_valid_sets, [X_test_all, y_test_all]
-
         else:
             X_train_all = np.vstack([x for x, _ in train_sets])
             y_train_all = np.hstack([y for _, y in train_sets])
@@ -292,8 +303,58 @@ def get_train_test_sets(data_dir: str,
             print(f"Total Validation samples: {X_valid_all.shape[0]}")
             print(f"Total Test samples: {X_test_all.shape[0]}")
 
+        # Apply memory optimization if requested
+        if optimize_memory:
+            # Process walk_forward_sets
+            if walk_forward_sets and isinstance(all_train_sets, list):
+                for i in range(len(all_train_sets)):
+                    all_train_sets[i] = optimize_memory_usage(all_train_sets[i])
+
+                for i in range(len(all_valid_sets)):
+                    all_valid_sets[i] = optimize_memory_usage(all_valid_sets[i])
+
+                final_test = optimize_memory_usage((X_test_all, y_test_all))
+
+                # Save memory usage info
+                train_mem = sum(calculate_memory_usage(ts) for ts in all_train_sets)
+                valid_mem = sum(calculate_memory_usage(vs) for vs in all_valid_sets)
+                test_mem = calculate_memory_usage(final_test)
+
+                print(f"Memory usage after optimization: Train={train_mem:.2f}MB, Valid={valid_mem:.2f}MB, Test={test_mem:.2f}MB")
+
+                # Save the processed data if requested
+                if save_intermediate:
+                    save_dataset(all_train_sets, all_valid_sets, final_test, 
+                                data_dir=data_dir, prefix=intermediate_prefix, use_numpy=True)
+
+                return all_train_sets, all_valid_sets, final_test
+
+            else:
+                # Non-walk-forward case
+                train_opt = optimize_memory_usage((X_train_all, y_train_all))
+                valid_opt = optimize_memory_usage((X_valid_all, y_valid_all)) 
+                test_opt = optimize_memory_usage((X_test_all, y_test_all))
+
+                # Save memory usage info
+                train_mem = calculate_memory_usage(train_opt)
+                valid_mem = calculate_memory_usage(valid_opt)
+                test_mem = calculate_memory_usage(test_opt)
+
+                print(f"Memory usage after optimization: Train={train_mem:.2f}MB, Valid={valid_mem:.2f}MB, Test={test_mem:.2f}MB")
+
+                # Save the processed data if requested
+                if save_intermediate:
+                    save_dataset(train_opt, valid_opt, test_opt, 
+                                data_dir=data_dir, prefix=intermediate_prefix, use_numpy=True)
+
+                return train_opt, valid_opt, test_opt
+
+        # Return unoptimized results if optimization is not requested
+        if walk_forward_sets:
+            return all_train_sets, all_valid_sets, (X_test_all, y_test_all)
+        else:
             return (X_train_all, y_train_all), (X_valid_all, y_valid_all), (X_test_all, y_test_all)
         
     except Exception as e:
         print(f"[ERROR] Failed to stack all sets: {e}")
-        return None, None, None, None, None, None
+        return None, None, None
