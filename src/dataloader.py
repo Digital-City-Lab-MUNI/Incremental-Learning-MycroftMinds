@@ -11,24 +11,6 @@ from dateutil.relativedelta import relativedelta
 
 warnings.filterwarnings("ignore")
 
-# method to count months in the dataset timeline
-def count_full_months(series_start, series_end):
-    current = pd.Timestamp(series_start).replace(day=1)
-    end = pd.Timestamp(series_end)
-    count = 0
-
-    while current < end:
-        next_month = current + relativedelta(months=1)
-        if (next_month - current).days <= 28:
-            # Skip months with fewer days (shouldn't really happen, but just in case)
-            current = next_month
-            continue
-        if (min(end, next_month) - current).days >= 30:
-            count += 1
-        current = next_month
-
-    return count
-
 # ---------------------------
 # Preprocessing Functions
 # ---------------------------
@@ -393,8 +375,8 @@ def get_train_test_sets(data_dir: str,
     for idx, ts in enumerate(complete_time_series[:]):
         try:
             ts['time'] = pd.to_datetime(ts['time'])
-            ts_start = ts['time'].min()
-            ts_end = ts['time'].max()
+            # ts_start = ts['time'].min()
+            # ts_end = ts['time'].max()
 
             train_end_idx = int(len(ts) * train_ratio)
             valid_end_idx = int(len(ts) * (train_ratio+valid_ratio))
@@ -410,8 +392,8 @@ def get_train_test_sets(data_dir: str,
             
             if not walk_forward_sets:
                 ts_train = ts_lagged.iloc[:train_end_idx]
-                series_start = ts_train['time'].min()
-                series_end = ts_train['time'].max()
+                # series_start = ts_train['time'].min()
+                # series_end = ts_train['time'].max()
                 #print(series_start, series_end)
 
                 X_train, y_train = clean_data([ts_train], input_features, target_feature, window_size, step)
@@ -422,12 +404,6 @@ def get_train_test_sets(data_dir: str,
                 valid_sets.append((np.vstack(X_valid), np.hstack(y_valid)))
             else:
                 ts_train = ts_lagged.iloc[:valid_end_idx]
-                series_start = ts_train['time'].min()
-                series_end = ts_train['time'].max()
-
-                # Count how many full months are in the training+validation period
-                num_days=(series_end - series_start).days#count_full_months(series_start, series_end)
-                #print(num_days)
 
                 X_train, y_train = clean_data([ts_train], input_features, target_feature, window_size, step)
                 train_sets.append((np.vstack(X_train), np.hstack(y_train)))
@@ -445,21 +421,41 @@ def get_train_test_sets(data_dir: str,
             X_train_all = np.vstack([x for x, _ in train_sets])
             y_train_all = np.hstack([y for _, y in train_sets])
 
+            sorted_indices = np.argsort(X_train_all[:, 0])
+
+            # Apply the sorting to both X and Y
+            X_train_all = X_train_all[sorted_indices]
+            y_train_all = y_train_all[sorted_indices]
+
             X_test_all = np.vstack([x for x, _ in test_sets])
             y_test_all = np.hstack([y for _, y in test_sets])
+            sorted_indices = np.argsort(X_test_all[:, 0])
+            X_test_all = X_test_all[sorted_indices]
+            y_test_all = y_test_all[sorted_indices]
+            # Get the max timestamp in training set
+            train_max_time = X_train_all[:, 0].max()
 
-            print("overall data time range: ", ts_start, ts_end)
+            # Filter test set to only include rows with time > max train time
+            mask = X_test_all[:, 0] > train_max_time
+            X_test_all = X_test_all[mask]
+            y_test_all = y_test_all[mask]
+
+            print("overall data time range: ", X_train_all[:, 0].min(), X_test_all[:, 0].max())
             print()
-            print("test data time range: ", ts_test_start, ts_test_end)
+            print("test data time range: ", X_test_all[:, 0].min(), X_test_all[:, 0].max())
             print()
 
-            print("(train+valid) data range: ", series_start, series_end)
-            total_timestamps = pd.date_range(start=series_start, end=series_end, periods=X_train_all.shape[0])
+            print("(train+valid) data range: ", X_train_all[:, 0].min(), X_train_all[:, 0].max())
+            total_timestamps = pd.date_range(start=X_train_all[:, 0].min(), end=X_train_all[:, 0].max(), periods=X_train_all.shape[0])
 
+            num_days = (X_train_all[:, 0].max()-X_train_all[:, 0].min()).days
             train_valid=train_days+valid_days
             if train_valid > num_days:
                 print("[ERROR] data timeline too small for provided train+test splits")
                 return (None, None), (None, None), (None, None)
+
+            series_start = X_train_all[:, 0].min()
+            series_end = X_train_all[:, 0].max()
 
             current_train_end = series_start + pd.Timedelta(days=train_days - 1)
             current_valid_end = current_train_end + pd.Timedelta(days=valid_days)
