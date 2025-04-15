@@ -64,6 +64,7 @@ class NodeHoeffdingBound:
     def find_best_split(self):
         __best_split_1st = (None, None, 0)
         __best_split_2nd = (None, None, 0)
+        print("------------------------")
         for feature, stats in self.attribute_stats.items():
             (
                 sum_x,
@@ -92,9 +93,9 @@ class NodeHoeffdingBound:
                 __best_split_2nd = (feature, avg_x, reduction)
 
             R = len(self.attribute_stats)
-            e = hoeffding_bound(R,count,self.delta)
+            e = hoeffding_bound(np.log2(R),count,self.delta)/200
             if R > 1:
-                if __best_split_1st[2] - __best_split_2nd[2] > e or e < self.tie_threshold:
+                if __best_split_1st[2] - __best_split_2nd[2] > e:
                     return (__best_split_1st[0],__best_split_1st[1]), __best_split_1st[2]
             elif R == 1:
                 if __best_split_1st[2] > e:

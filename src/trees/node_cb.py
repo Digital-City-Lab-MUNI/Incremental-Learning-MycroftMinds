@@ -84,7 +84,6 @@ class NodeConfidenceBound:
             )
 
             if reduction > best_reduction:
-                # print(f"new best feature: {feature, avg_x, reduction}")
                 best_feature, best_value, best_reduction = feature, avg_x, reduction
         return (best_feature, best_value), best_reduction
     

@@ -107,50 +107,50 @@ if __name__ == "__main__":
     predictions_cb = {}
     predictions_hf = {}
 
-    # for d in depths:
-    #     print(d)
-    #     split_confidence_cb = 0.0001
-    #     split_confidence_hf = 1.0
+    for d in depths:
+        print(d)
+        split_confidence_cb = 0.0001
+        split_confidence_hf = 0.0001
 
-    #     model_cb = FastODT(
-    #         depth=d, 
-    #         grace_period=10,
-    #         split_confidence=split_confidence_cb,
-    #         option="cb"
-    #     )
-    #     model_hf = FastODT(
-    #         depth=d, 
-    #         grace_period=10,
-    #         split_confidence=1.0,
-    #         option="hf"
-    #     )
-    #     model_cb.partial_fit(X, Y, verbose=True)
-    #     model_hf.partial_fit(X, Y, verbose=True)
-    #     Y_pred_cb = np.array([model_cb.predict(x) for x in X])
-    #     Y_pred_hf = np.array([model_hf.predict(x) for x in X])
-    #     predictions_cb[d] = Y_pred_cb
-    #     predictions_hf[d] = Y_pred_hf
-    #     mae_cb = mean_absolute_error(Y, Y_pred_cb)
-    #     mae_hf = mean_absolute_error(Y, Y_pred_hf)
-    #     print(f"Depth {d} split confidence: {split_confidence_cb} - MAE: {mae_cb:.4f}")
-    #     print(f"Depth {d} split confidence: {split_confidence_hf} - MAE: {mae_hf:.4f}")
+        model_cb = FastODT(
+            depth=d, 
+            grace_period=10,
+            split_confidence=split_confidence_cb,
+            option="cb"
+        )
+        model_hf = FastODT(
+            depth=d, 
+            grace_period=10,
+            split_confidence=1.0,
+            option="hf"
+        )
+        model_cb.partial_fit(X, Y, verbose=True)
+        model_hf.partial_fit(X, Y, verbose=True)
+        Y_pred_cb = np.array([model_cb.predict(x) for x in X])
+        Y_pred_hf = np.array([model_hf.predict(x) for x in X])
+        predictions_cb[d] = Y_pred_cb
+        predictions_hf[d] = Y_pred_hf
+        mae_cb = mean_absolute_error(Y, Y_pred_cb)
+        mae_hf = mean_absolute_error(Y, Y_pred_hf)
+        print(f"Depth {d} split confidence: {split_confidence_cb} - MAE: {mae_cb:.4f}")
+        print(f"Depth {d} split confidence: {split_confidence_hf} - MAE: {mae_hf:.4f}")
 
-    # print(f"Training for 1 label data (1D) took: {time.time()-start}s")
-    # # Plot predicted values (vs true Y)
-    # plt.figure(figsize=(12, 6))
-    # plt.plot(T, Y, label="Actual Y", color="black", linewidth=2)
+    print(f"Training for 1 label data (1D) took: {time.time()-start}s")
+    # Plot predicted values (vs true Y)
+    plt.figure(figsize=(12, 6))
+    plt.plot(T, Y, label="Actual Y", color="black", linewidth=2)
 
-    # for d in depths:
-    #     plt.plot(T, predictions_hf[d], label=f"Depth {d} Prediction HF")
-    #     plt.plot(T, predictions_cb[d], label=f"Depth {d} Prediction CB")
+    for d in depths:
+        plt.plot(T, predictions_hf[d], label=f"Depth {d} Prediction HF")
+        plt.plot(T, predictions_cb[d], label=f"Depth {d} Prediction CB")
 
-    # plt.xlabel("T (synthetic time)")
-    # plt.ylabel("Target Y")
-    # plt.title("FastODT Regression on Synthetic Single-Feature Data")
-    # plt.legend()
-    # plt.grid(True)
-    # plt.tight_layout()
-    # plt.show()
+    plt.xlabel("T (synthetic time)")
+    plt.ylabel("Target Y")
+    plt.title("FastODT Regression on Synthetic Single-Feature Data")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
 
 
     start = time.time()
@@ -175,7 +175,7 @@ if __name__ == "__main__":
     for d in depths:
         print(d)
         split_confidence_cb = 0.001
-        split_confidence_hf = 1.0
+        split_confidence_hf = 0.001
         model_cb = FastODT(
             depth=d, 
             grace_period=10,
