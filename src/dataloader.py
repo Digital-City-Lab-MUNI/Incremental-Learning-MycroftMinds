@@ -40,10 +40,10 @@ def preprocess_df(dataframes: List[pd.DataFrame],
 
             # Always add basic time components for backward compatibility
             df['hour'] = df['time'].dt.hour
-            df['minute'] = df['time'].dt.minute
-            df['second'] = df['time'].dt.second
-            df['day'] = df['time'].dt.day
+            df['weekday'] = df['time'].dt.weekday
             df['month'] = df['time'].dt.month
+            #possibly add combination hour+minute, but minute itself is useless
+            #df['minute'] = df['time'].dt.hour + df['time'].dt.minute / 60
             
             # Optionally add cyclical features if requested
             if add_cyclical_features:
@@ -121,9 +121,6 @@ def add_lag_features(df, columns, lag_freqs):
         df['time'] = pd.to_datetime(df['time'], errors='coerce')
         df.sort_values('time', inplace=True)
 
-        # for col in columns:
-        #     df[f'{col}_lag_1'] = df[col].shift(1)
-
         for suffix, lag_str in lag_freqs.items():
             lag_delta = pd.Timedelta(lag_str)
             df[f'time_shift_{suffix}'] = df['time'] - lag_delta
@@ -173,8 +170,8 @@ def add_cyclical_time_features(df: pd.DataFrame) -> pd.DataFrame:
         df['hour_cos'] = np.cos(2 * np.pi * df['time'].dt.hour / 24)
         
         # Day of week (7 days)
-        df['day_of_week_sin'] = np.sin(2 * np.pi * df['time'].dt.dayofweek / 7)
-        df['day_of_week_cos'] = np.cos(2 * np.pi * df['time'].dt.dayofweek / 7)
+        df['weekday_sin'] = np.sin(2 * np.pi * df['time'].dt.weekday / 7)
+        df['weekday_cos'] = np.cos(2 * np.pi * df['time'].dt.weekday / 7)
         
         # Month of year (12 months)
         df['month_sin'] = np.sin(2 * np.pi * (df['time'].dt.month - 1) / 12)
@@ -273,8 +270,8 @@ def get_train_test_sets(data_dir: str,
                         columns_to_add_lag: List[str],
                         target_feature: str = 'total_power_active',
                         walk_forward_sets: bool = True,
-                        train_days: int = 30,
-                        valid_days: int = 15,
+                        train_days: int = 28,
+                        valid_days: int = 28,
                         window_size: int = 1,
                         step: int = 1,
                         use_cyclical_features: bool = False) -> Tuple[
@@ -294,8 +291,8 @@ def get_train_test_sets(data_dir: str,
         columns_to_add_lag (list): List of columns to create lag features for.
         target_feature (str): Target feature for prediction. Defaults to 'total_power_active'.
         walk_forward_sets (bool): Whether to use walk-forward validation. Defaults to True.
-        train_days (int): Number of days for the training window (if using walk-forward validation). Defaults to 30.
-        valid_days (int): Number of days for the validation window (if using walk-forward validation). Defaults to 15.
+        train_days (int): Number of days for the training window (if using walk-forward validation). Defaults to 28 (4 weeks).
+        valid_days (int): Number of days for the validation window (if using walk-forward validation). Defaults to 28 (4 weeks).
         window_size (int): Size of the sliding window for creating supervised data. Defaults to 1.
         step (int): Step size for the sliding window. Defaults to 1.
         use_cyclical_features (bool): Whether to use sine/cosine transformations for time features. Defaults to False.
@@ -440,12 +437,12 @@ def get_train_test_sets(data_dir: str,
             X_test_all = X_test_all[mask]
             y_test_all = y_test_all[mask]
 
-            print("overall data time range: ", X_train_all[:, 0].min(), X_test_all[:, 0].max())
+            print("Overall data time range: ", X_train_all[:, 0].min(), X_test_all[:, 0].max())
             print()
-            print("test data time range: ", X_test_all[:, 0].min(), X_test_all[:, 0].max())
+            print("Test data time range: ", X_test_all[:, 0].min(), X_test_all[:, 0].max())
             print()
 
-            print("(train+valid) data range: ", X_train_all[:, 0].min(), X_train_all[:, 0].max())
+            print("(Train + Valid) data range: ", X_train_all[:, 0].min(), X_train_all[:, 0].max())
             total_timestamps = pd.date_range(start=X_train_all[:, 0].min(), end=X_train_all[:, 0].max(), periods=X_train_all.shape[0])
 
             num_days = (X_train_all[:, 0].max()-X_train_all[:, 0].min()).days
@@ -543,6 +540,7 @@ def get_train_test_sets(data_dir: str,
             print(f"Total Test samples: {X_test_all.shape[0]}")
 
             return (X_train_all, y_train_all), (X_valid_all, y_valid_all), (X_test_all, y_test_all)
+        
     except Exception as e:
         print(f"[ERROR] Failed to stack all sets: {e}")
         return None, None, None, None, None, None
