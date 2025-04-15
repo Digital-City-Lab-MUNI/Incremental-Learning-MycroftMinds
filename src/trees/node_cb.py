@@ -10,6 +10,17 @@ import numpy as np
 from collections import defaultdict
 
 class NodeConfidenceBound:
+
+    __SUM_X = 0 
+    __COUNT = 1 
+    __VAL = 2 
+    __LEFT_Y = 3 
+    __LEFT_Y_SQUARED = 4 
+    __LEFT_N = 5 
+    __RIGHT_Y = 6 
+    __RIGHT_Y_SQUARED = 7 
+    __RIGHT_N = 8
+
     def __init__(self):
         self.samples_seen = 0
         self.sum_y = 0
@@ -19,10 +30,8 @@ class NodeConfidenceBound:
         self.right = None  # None means it's a leaf node
         self.feature = None
         self.threshold = None
-        self.attribute_stats = defaultdict(lambda: [0, 0, 0])  # Attribute sum and count
+        self.attribute_stats = defaultdict(lambda: [0, 0, 0, 0, 0, 0, 0, 0, 0])  # Attribute sum and count
         self.data_from_before_split = []
-        self.left_y = []
-        self.right_y = []
 
     def update_stats(self, x, y):
         self.samples_seen += 1
@@ -30,9 +39,20 @@ class NodeConfidenceBound:
         self.sum_y_squared += y**2
         self.value = self.sum_y/self.samples_seen
         for feature, val in enumerate(x):
-            self.attribute_stats[feature][0] += val
-            self.attribute_stats[feature][1] += 1
-            self.attribute_stats[feature][2] = val
+            self.attribute_stats[feature][self.__SUM_X] += val
+            self.attribute_stats[feature][self.__COUNT] += 1
+            self.attribute_stats[feature][self.__VAL] = val
+            sum_x = self.attribute_stats[feature][self.__SUM_X]
+            count = self.attribute_stats[feature][self.__COUNT]
+            avg_x = sum_x / count
+            if val <= avg_x:
+                self.attribute_stats[feature][self.__LEFT_Y] += y
+                self.attribute_stats[feature][self.__LEFT_Y_SQUARED] += y**2
+                self.attribute_stats[feature][self.__LEFT_N] += 1
+            else:
+                self.attribute_stats[feature][self.__RIGHT_Y] += y
+                self.attribute_stats[feature][self.__RIGHT_Y_SQUARED] += y**2
+                self.attribute_stats[feature][self.__RIGHT_N] += 1
 
     def update_from_parent_node(self, parent):
         self.samples_seen = parent.samples_seen
@@ -41,30 +61,47 @@ class NodeConfidenceBound:
         self.value = parent.sum_y/self.samples_seen
 
     def find_best_split(self):
-        best_feature, best_value, best_reduction = None, None, 0
-        for feature, (sum_x, count, val) in self.attribute_stats.items():
+        best_feature, best_value, best_reduction = (None, None, 0)
+        for feature, stats in self.attribute_stats.items():
+            (
+                sum_x,
+                count, 
+                val, 
+                left_y, 
+                left_y_squared, 
+                left_n, 
+                right_y, 
+                right_y_squared, 
+                right_n
+            ) = stats
+            
             if count < 2:
                 continue
             avg_x = sum_x / count
-            reduction = self._variance_reduction(avg_x, val)
+            reduction = self._variance_reduction(
+                left_y, left_y_squared, left_n, 
+                right_y, right_y_squared, right_n
+            )
+
             if reduction > best_reduction:
+                # print(f"new best feature: {feature, avg_x, reduction}")
                 best_feature, best_value, best_reduction = feature, avg_x, reduction
         return (best_feature, best_value), best_reduction
     
-    def _variance_reduction(self, split_value, threshold):
-        for _ in range(self.samples_seen):
-            if threshold <= split_value:
-                self.left_y.append(self.sum_y / self.samples_seen)
-            else:
-                self.right_y.append(self.sum_y / self.samples_seen)
 
-        if not self.left_y and not self.right_y:
+    def _variance_reduction(self, left_y, left_y_squared, left_n, right_y, right_y_squared, right_n):
+        if left_n == 0 or right_n == 0:
             return 0
-        var_before = (self.sum_y_squared / self.samples_seen) - (self.sum_y / self.samples_seen) ** 2
-        var_left = np.var(self.left_y) if self.left_y else 0
-        var_right = np.var(self.right_y) if self.right_y else 0
-        return var_before - ((len(self.left_y) / self.samples_seen) * var_left + (len(self.right_y) / self.samples_seen) * var_right)
-    
+        # Parent variance
+        var_total = (self.sum_y_squared / self.samples_seen) - (self.sum_y / self.samples_seen) ** 2
+        # Left and right variances
+        var_left = (left_y_squared / left_n) - (left_y / left_n) ** 2
+        var_right = (right_y_squared / right_n) - (right_y / right_n) ** 2
+        # Weighted variance after split
+        var_children = (left_n / self.samples_seen) * var_left + (right_n / self.samples_seen) * var_right
+
+        return var_total - var_children  # variance reduction
+
     def split(self, split_info):
         self.feature, self.threshold = split_info
         self.left = NodeConfidenceBound()

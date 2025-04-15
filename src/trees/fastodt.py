@@ -4,7 +4,8 @@ from src.trees.tree import BaseTree, Node
 from src.trees.node_hf import NodeHoeffdingBound
 from src.trees.node_cb import NodeConfidenceBound
 import numpy as np
-
+import tqdm
+import time
 
 class FastODT(BaseTree):
     def __init__(self, depth = 5, grace_period=10, split_confidence=1.0, option = "HF"):
@@ -25,9 +26,14 @@ class FastODT(BaseTree):
             # self.split_confidence = np.log(1/self.split_confidence)
             self.root = NodeConfidenceBound()
 
-    def partial_fit(self, X, y):
-        for i in range(len(X)):
-            self._update_tree(self.root, X[i], y[i], depth = 0)
+    def partial_fit(self, X, y, verbose = False):
+        if verbose:
+            for i in tqdm.tqdm(range(len(X))):
+                self._update_tree(self.root, X[i], y[i], depth = 0)
+
+        else:
+            for i in range(len(X)):
+                self._update_tree(self.root, X[i], y[i], depth = 0)
 
     def _update_tree(self, node , x, y, depth = 0):
 
@@ -84,71 +90,77 @@ class FastODT(BaseTree):
 
 if __name__ == "__main__":
 
+
+    start = time.time()
+    SAMPLES = 10000
     # Generate synthetic data following a sine wave pattern
-    T = np.linspace(0, 5, 200).reshape(-1, 1)  # Features: 100 points from 0 to 5
+    T = np.linspace(0, 5, SAMPLES).reshape(-1, 1)  # Features: 100 points from 0 to 5
     Y = np.sin(T).ravel() + np.random.normal(0, 0.1, T.shape[0])  # Sine wave with noise
     X = - np.sin(T).ravel() + np.random.normal(0, 0.1, T.shape[0])  # Sine wave with noise
     X = X.reshape(-1,1)
-    print(X.shape)
+    print(f"Working with: {SAMPLES} SAMPLES")
     print(len(X),len(Y))
     # depth = 20
-    grace_period = 0
-    split_confidence = 1.0
 
     # Train and predict with different depths
-    depths = [10, 15, 20]
+    depths = [200, 350, 800]
     predictions_cb = {}
     predictions_hf = {}
 
-    for d in depths:
-        print(d)
-        model_cb = FastODT(
-            depth=d, 
-            grace_period=10,
-            split_confidence=0.00001,
-            option="cb"
-        )
-        model_hf = FastODT(
-            depth=d, 
-            grace_period=10,
-            split_confidence=1.0,
-            option="hf"
-        )
-        model_cb.partial_fit(X, Y)
-        model_hf.partial_fit(X, Y)
-        Y_pred_cb = np.array([model_cb.predict(x) for x in X])
-        Y_pred_hf = np.array([model_hf.predict(x) for x in X])
-        predictions_cb[d] = Y_pred_cb
-        predictions_hf[d] = Y_pred_hf
-        mae_cb = mean_absolute_error(Y, Y_pred_cb)
-        mae_hf = mean_absolute_error(Y, Y_pred_hf)
-        print(f"Depth {d} - MAE: {mae_cb:.4f}")
-        print(f"Depth {d} - MAE: {mae_hf:.4f}")
+    # for d in depths:
+    #     print(d)
+    #     split_confidence_cb = 0.0001
+    #     split_confidence_hf = 1.0
 
-    # Plot predicted values (vs true Y)
-    plt.figure(figsize=(12, 6))
-    plt.plot(T, Y, label="Actual Y", color="black", linewidth=2)
+    #     model_cb = FastODT(
+    #         depth=d, 
+    #         grace_period=10,
+    #         split_confidence=split_confidence_cb,
+    #         option="cb"
+    #     )
+    #     model_hf = FastODT(
+    #         depth=d, 
+    #         grace_period=10,
+    #         split_confidence=1.0,
+    #         option="hf"
+    #     )
+    #     model_cb.partial_fit(X, Y, verbose=True)
+    #     model_hf.partial_fit(X, Y, verbose=True)
+    #     Y_pred_cb = np.array([model_cb.predict(x) for x in X])
+    #     Y_pred_hf = np.array([model_hf.predict(x) for x in X])
+    #     predictions_cb[d] = Y_pred_cb
+    #     predictions_hf[d] = Y_pred_hf
+    #     mae_cb = mean_absolute_error(Y, Y_pred_cb)
+    #     mae_hf = mean_absolute_error(Y, Y_pred_hf)
+    #     print(f"Depth {d} split confidence: {split_confidence_cb} - MAE: {mae_cb:.4f}")
+    #     print(f"Depth {d} split confidence: {split_confidence_hf} - MAE: {mae_hf:.4f}")
 
-    for d in depths:
-        plt.plot(T, predictions_hf[d], label=f"Depth {d} Prediction HF")
-        plt.plot(T, predictions_cb[d], label=f"Depth {d} Prediction CB")
+    # print(f"Training for 1 label data (1D) took: {time.time()-start}s")
+    # # Plot predicted values (vs true Y)
+    # plt.figure(figsize=(12, 6))
+    # plt.plot(T, Y, label="Actual Y", color="black", linewidth=2)
 
-    plt.xlabel("T (synthetic time)")
-    plt.ylabel("Target Y")
-    plt.title("FastODT Regression on Synthetic Single-Feature Data")
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
+    # for d in depths:
+    #     plt.plot(T, predictions_hf[d], label=f"Depth {d} Prediction HF")
+    #     plt.plot(T, predictions_cb[d], label=f"Depth {d} Prediction CB")
+
+    # plt.xlabel("T (synthetic time)")
+    # plt.ylabel("Target Y")
+    # plt.title("FastODT Regression on Synthetic Single-Feature Data")
+    # plt.legend()
+    # plt.grid(True)
+    # plt.tight_layout()
+    # plt.show()
 
 
+    start = time.time()
     # # 2nd example - multifeature classification
     # Generate Features
-    n_samples = 100
+    n_samples = SAMPLES
     T = np.linspace(0, 5, n_samples)
-    weight = 70 + 10 * np.random.normal(0, 1, n_samples)
-    age = 20 + 2 * T + np.random.normal(0, 1, n_samples)
-    height = 170 - 5 * np.random.normal(0, 1, n_samples)
+    weight = 70 + 10 * np.random.normal(0, 1, n_samples)/10
+    age = 20 + 2 * T + np.random.normal(0, 1, n_samples)/10
+    height = 170 - 5 * np.random.normal(0, 1, n_samples)/10
 
     # Stack features into matrix X
     X = np.stack([weight, age, height], axis=1)
@@ -156,34 +168,38 @@ if __name__ == "__main__":
 
 
     # Train and predict with different depths
-    depths = [10, 15, 20]
+    depths = depths
     predictions_cb = {}
     predictions_hf = {}
 
     for d in depths:
         print(d)
+        split_confidence_cb = 0.001
+        split_confidence_hf = 1.0
         model_cb = FastODT(
             depth=d, 
             grace_period=10,
-            split_confidence=0.00001,
+            split_confidence=split_confidence_cb,
             option="cb"
         )
         model_hf = FastODT(
             depth=d, 
             grace_period=10,
-            split_confidence=1.0,
+            split_confidence=split_confidence_hf,
             option="hf"
         )
-        model_cb.partial_fit(X, Y)
-        model_hf.partial_fit(X, Y)
+        model_cb.partial_fit(X, Y, verbose=True)
+        model_hf.partial_fit(X, Y, verbose=True)
         Y_pred_cb = np.array([model_cb.predict(x) for x in X])
         Y_pred_hf = np.array([model_hf.predict(x) for x in X])
         predictions_cb[d] = Y_pred_cb
         predictions_hf[d] = Y_pred_hf
         mae_cb = mean_absolute_error(Y, Y_pred_cb)
         mae_hf = mean_absolute_error(Y, Y_pred_hf)
-        print(f"Depth {d} - MAE: {mae_cb:.4f}")
-        print(f"Depth {d} - MAE: {mae_hf:.4f}")
+        print(f"Depth {d} split confidence: {split_confidence_cb} - MAE: {mae_cb:.4f}")
+        print(f"Depth {d} split confidence: {split_confidence_hf} - MAE: {mae_hf:.4f}")
+
+    print(f"Training for 3 label data (1D) took: {time.time()-start}s")
 
     # Plot predicted values (vs true Y)
     plt.figure(figsize=(12, 6))
