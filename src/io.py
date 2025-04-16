@@ -189,9 +189,15 @@ def save_dataset(train, valid, test, data_dir='../data', prefix='', use_numpy=Tr
     prefix = f"{prefix}_" if prefix else ""
     
     if use_numpy:
+        print(f"[INFO] Saving train data to {data_dir}...")
         train_path = save_data_numpy(train, f"{prefix}train", data_dir)
+        print(f"[INFO] Train data saved: {len(train)} samples")
+        print(f"[INFO] Saving valid data to {data_dir}...")
         valid_path = save_data_numpy(valid, f"{prefix}valid", data_dir)
+        print(f"[INFO] Valid data saved: {len(valid)} samples")
+        print(f"[INFO] Saving test data to {data_dir}...")
         test_path = save_data_numpy(test, f"{prefix}test", data_dir)
+        print(f"[INFO] Test data saved: {len(test)} samples")
     else:
         train_path = save_data_pickle(train, f"{prefix}train", data_dir)
         valid_path = save_data_pickle(valid, f"{prefix}valid", data_dir)
@@ -200,13 +206,16 @@ def save_dataset(train, valid, test, data_dir='../data', prefix='', use_numpy=Tr
     return train_path, valid_path, test_path
 
 
-def load_dataset(data_dir='../data', prefix='', use_numpy=True):
+def load_dataset(data_dir='../data', prefix='', use_numpy=True, train=True, valid=True, test=True):
     """Load the train, validation, and test datasets.
     
     Args:
         data_dir: Directory to load the data from
         prefix: Optional prefix for filenames
         use_numpy: Whether to use NumPy (True) or pickle (False) for loading
+        train: Whether to load the training dataset
+        valid: Whether to load the validation dataset
+        test: Whether to load the test dataset
         
     Returns:
         Tuple of (train, valid, test) datasets
@@ -215,9 +224,18 @@ def load_dataset(data_dir='../data', prefix='', use_numpy=True):
     prefix = f"{prefix}_" if prefix else ""
     
     if use_numpy:
-        train = load_data_numpy(f"{prefix}train", data_dir)
-        valid = load_data_numpy(f"{prefix}valid", data_dir)
-        test = load_data_numpy(f"{prefix}test", data_dir)
+        if train:
+            print('[INFO] Loading train data...')
+            train = load_data_numpy(f"{prefix}train", data_dir)
+            print(f'[INFO] Train data loaded: {len(train)} samples')
+        if valid:
+            print('[INFO] Loading valid data...')
+            valid = load_data_numpy(f"{prefix}valid", data_dir)
+            print(f'[INFO] Valid data loaded: {len(valid)} samples')
+        if test:
+            print('[INFO] Loading test data...')
+            test = load_data_numpy(f"{prefix}test", data_dir)
+            print(f'[INFO] Test data loaded: {len(test)} samples')
     
     else:
         train_file = os.path.join(data_dir, f'{prefix}train.pkl')
@@ -230,9 +248,17 @@ def load_dataset(data_dir='../data', prefix='', use_numpy=True):
             print(f"[ERROR] The following files do not exist: {missing}")
             return None, None, None
         
-        # Load data using pickle    
+        # Load data using pickle
+        print('[INFO] Loading train data...')
         train = load_data_pickle(f"{prefix}train", data_dir)
+        print(f'[INFO] Train data loaded: {len(train)} samples')
+
+        print('[INFO] Loading valid data...')
         valid = load_data_pickle(f"{prefix}valid", data_dir)
+        print(f'[INFO] Valid data loaded: {len(valid)} samples')
+
+        print('[INFO] Loading test data...')
         test = load_data_pickle(f"{prefix}test", data_dir)
+        print(f'[INFO] Test data loaded: {len(test)} samples')
             
     return train, valid, test
