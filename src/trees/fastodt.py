@@ -6,6 +6,7 @@ from src.trees.node_cb import NodeConfidenceBound
 import numpy as np
 import tqdm
 import time
+import os
 
 class FastODT(BaseTree):
     def __init__(self, depth = 5, grace_period=10, split_confidence=1.0, option = "HF"):
@@ -90,20 +91,26 @@ class FastODT(BaseTree):
 
 if __name__ == "__main__":
 
-
+    print(os.getcwd())
+    X = np.load('./smoke_data/X.npy', allow_pickle=True)
+    Y = np.load('./smoke_data/y.npy', allow_pickle=True)
+    print(X.shape, Y.shape)
+    X = X[:,2:]
+    print(type(X), type(Y), X[0])
     start = time.time()
-    SAMPLES = 10000
+    PRINT_BUFFOR_START = 3000
+    PRINT_BUFFOR_END = 3500
+    SAMPLES = X.shape[0]
     # Generate synthetic data following a sine wave pattern
-    T = np.linspace(0, 5, SAMPLES).reshape(-1, 1)  # Features: 100 points from 0 to 5
-    Y = np.sin(T).ravel() + np.random.normal(0, 0.1, T.shape[0])  # Sine wave with noise
-    X = - np.sin(T).ravel() + np.random.normal(0, 0.1, T.shape[0])  # Sine wave with noise
-    X = X.reshape(-1,1)
+    # T = np.linspace(0, 5, SAMPLES).reshape(-1, 1)  # Features: 100 points from 0 to 5
+    # Y = np.sin(T).ravel() + np.random.normal(0, 0.1, T.shape[0])  # Sine wave with noise
+    # X = - np.sin(T).ravel() + np.random.normal(0, 0.1, T.shape[0])  # Sine wave with noise
     print(f"Working with: {SAMPLES} SAMPLES")
     print(len(X),len(Y))
     # depth = 20
 
     # Train and predict with different depths
-    depths = [200, 350, 800]
+    depths = [20, 150, 500]
     predictions_cb = {}
     predictions_hf = {}
 
@@ -121,7 +128,7 @@ if __name__ == "__main__":
         model_hf = FastODT(
             depth=d, 
             grace_period=10,
-            split_confidence=1.0,
+            split_confidence=split_confidence_hf,
             option="hf"
         )
         model_cb.partial_fit(X, Y, verbose=True)
@@ -138,35 +145,31 @@ if __name__ == "__main__":
     print(f"Training for 1 label data (1D) took: {time.time()-start}s")
     # Plot predicted values (vs true Y)
     plt.figure(figsize=(12, 6))
-    plt.plot(T, Y, label="Actual Y", color="black", linewidth=2)
+    print(Y[PRINT_BUFFOR_START:PRINT_BUFFOR_END].shape)
+    plt.plot(Y[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Actual Y", color="black", linewidth=2)
 
     for d in depths:
-        plt.plot(T, predictions_hf[d], label=f"Depth {d} Prediction HF")
-        plt.plot(T, predictions_cb[d], label=f"Depth {d} Prediction CB")
+        print(predictions_hf[d][PRINT_BUFFOR_START:PRINT_BUFFOR_END].shape)
+        print(predictions_cb[d][PRINT_BUFFOR_START:PRINT_BUFFOR_END].shape)
+        plt.plot(predictions_hf[d][PRINT_BUFFOR_START:PRINT_BUFFOR_END], label=f"Depth {d} Prediction HF")
+        plt.plot(predictions_cb[d][PRINT_BUFFOR_START:PRINT_BUFFOR_END], label=f"Depth {d} Prediction CB")
 
-    plt.xlabel("T (synthetic time)")
+    plt.xlabel(f"Samples")
     plt.ylabel("Target Y")
-    plt.title("FastODT Regression on Synthetic Single-Feature Data")
+    plt.title(f"FastODT Regression on smoke data. HF {split_confidence_hf} CB: {split_confidence_cb}")
+    plt.ylim(0, 300)
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
     plt.show()
 
+    Y = np.clip(Y, 0, 200)
 
     start = time.time()
     # # 2nd example - multifeature classification
     # Generate Features
-    n_samples = SAMPLES
-    T = np.linspace(0, 5, n_samples)
-    weight = 70 + 10 * np.random.normal(0, 1, n_samples)/10
-    age = 20 + 2 * T + np.random.normal(0, 1, n_samples)/10
-    height = 170 - 5 * np.random.normal(0, 1, n_samples)/10
-
-    # Stack features into matrix X
-    X = np.stack([weight, age, height], axis=1)
-    Y = 0.05 * weight + 0.1 * age - 0.03 * height
-
-
+    n_samples = Y.shape[0]
+    
     # Train and predict with different depths
     depths = depths
     predictions_cb = {}
@@ -203,15 +206,16 @@ if __name__ == "__main__":
 
     # Plot predicted values (vs true Y)
     plt.figure(figsize=(12, 6))
-    plt.plot(T, Y, label="Actual Y", color="black", linewidth=2)
+    plt.plot(Y[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Actual Y", color="black", linewidth=2)
 
     for d in depths:
-        plt.plot(T, predictions_hf[d], label=f"Depth {d} Prediction HF")
-        plt.plot(T, predictions_cb[d], label=f"Depth {d} Prediction CB")
+        plt.plot(predictions_hf[d][PRINT_BUFFOR_START:PRINT_BUFFOR_END], label=f"Depth {d} Prediction HF")
+        plt.plot(predictions_cb[d][PRINT_BUFFOR_START:PRINT_BUFFOR_END], label=f"Depth {d} Prediction CB")
 
     plt.xlabel("T (synthetic time)")
     plt.ylabel("Target Y")
-    plt.title("FastODT Regression on Synthetic Multi-Feature Data")
+    plt.title(f"FastODT Regression on clipped smoke data. HF {split_confidence_hf} CB: {split_confidence_cb}")
+    plt.ylim(0, 300)
     plt.legend()
     plt.grid(True)
     plt.tight_layout()

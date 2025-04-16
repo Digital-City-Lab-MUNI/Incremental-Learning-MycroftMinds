@@ -64,7 +64,6 @@ class NodeHoeffdingBound:
     def find_best_split(self):
         __best_split_1st = (None, None, 0)
         __best_split_2nd = (None, None, 0)
-        print("------------------------")
         for feature, stats in self.attribute_stats.items():
             (
                 sum_x,
