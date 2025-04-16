@@ -1,15 +1,17 @@
 import pandas as pd
 import numpy as np
 import traceback
-from typing import List
+from typing import List, Optional
 
-def preprocess_df(dataframes: List[pd.DataFrame], 
+def preprocess_df(dataframes: List[pd.DataFrame],
+                 device_list: Optional[List[str]] = None,
                  add_cyclical_features: bool = False) -> List[pd.DataFrame]:
     """
-    Preprocess a list of DataFrames by converting 'time' column to datetime, sorting, and extracting time components.
+    Preprocess a list of DataFrames by converting 'time' column to datetime and extracting time components.
 
     Args:
         dataframes (list of pd.DataFrame): List of DataFrames to preprocess.
+        device_list (list of str): List of device IDs to filter the DataFrames. If None, no filtering is applied.
         add_cyclical_features (bool): Whether to add sine/cosine cyclical features for time components.
                                      Default is False for backward compatibility.
 
@@ -19,9 +21,13 @@ def preprocess_df(dataframes: List[pd.DataFrame],
     try:
         processed = []
         for df in dataframes:
+            # Filter by device_id if device_list is provided
+            if device_list is not None:
+                df = df[df['device_id'].isin(device_list)]
+
+            # Convert 'time' column to datetime and handle errors
             df['time'] = pd.to_datetime(df['time'], errors='coerce', utc=True)
             df['time'] = df['time'].dt.tz_convert(None)
-            df.sort_values('time', inplace=True)
             df.reset_index(drop=True, inplace=True)
 
             if 'id' in df.columns:

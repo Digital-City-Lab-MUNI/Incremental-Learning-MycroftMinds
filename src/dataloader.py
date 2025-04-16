@@ -22,12 +22,13 @@ def get_train_test_sets(data_dir: str,
                         lag_freqs: Dict,
                         columns_to_add_lag: List[str],
                         target_feature: str = 'total_power_active',
+                        device_list: Optional[List[str]] = None,
                         walk_forward_sets: bool = True,
                         train_days: int = 28,
                         valid_days: int = 28,
                         window_size: int = 1,
                         step: int = 1,
-                        use_cyclical_features: bool = False,
+                        add_cyclical_features: bool = False,
                         optimize_memory: bool = True,
                         save_intermediate: bool = True,
                         intermediate_prefix: str = '5_min_wfv') -> Tuple[
@@ -44,14 +45,15 @@ def get_train_test_sets(data_dir: str,
     Args:
         data_dir (str): Directory containing the CSV files.
         lag_freqs (dict): Dictionary mapping suffixes to lag frequencies.
-        columns_to_add_lag (list): List of columns to create lag features for.
+        columns_to_add_lag (list of str): List of columns to create lag features for.
         target_feature (str): Target feature for prediction. Defaults to 'total_power_active'.
+        device_list (list of str): List of devices to include. If None, all devices are included. Defaults to None.
         walk_forward_sets (bool): Whether to use walk-forward validation. Defaults to True.
         train_days (int): Number of days for the training window (if using walk-forward validation). Defaults to 28 (4 weeks).
         valid_days (int): Number of days for the validation window (if using walk-forward validation). Defaults to 28 (4 weeks).
         window_size (int): Size of the sliding window for creating supervised data. Defaults to 1.
         step (int): Step size for the sliding window. Defaults to 1.
-        use_cyclical_features (bool): Whether to use sine/cosine transformations for time features. Defaults to False.
+        add_cyclical_features (bool): Whether to use sine/cosine transformations for time features. Defaults to False.
         optimize_memory (bool): Whether to optimize memory usage by using efficient dtypes. Defaults to True.
         save_intermediate (bool): Whether to save intermediate results to disk. Defaults to True.
         intermediate_prefix (str): Prefix for intermediate files. Defaults to 'processed'.
@@ -89,7 +91,7 @@ def get_train_test_sets(data_dir: str,
         return (None, None), (None, None), (None, None)
 
     try:
-        processed_dfs = preprocess_df(dataframes, add_cyclical_features=use_cyclical_features)
+        processed_dfs = preprocess_df(dataframes, device_list, add_cyclical_features)
         if not processed_dfs:
             print("[ERROR] Preprocessing returned empty result")
             return (None, None), (None, None), (None, None)
