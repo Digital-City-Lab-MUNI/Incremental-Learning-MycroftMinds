@@ -1,116 +1,353 @@
-import sys
-import numpy as np
+from sklearn.metrics import mean_absolute_percentage_error, mean_squared_error, mean_absolute_error
 import pandas as pd
-import traceback
-from typing import Any, Tuple
+import numpy as np
+import matplotlib.pyplot as plt
+from typing import Tuple, List, Dict, Any
 
-def calculate_memory_usage(obj: Any) -> float:
-    """Calculate the approximate memory usage of an object in MB.
-    
+
+def aggregate_values(x1: pd.Series, x2: pd.Series, freq: str) -> Tuple[pd.Series, pd.Series]:
+    """
+    Aggregate values of two series based on a given frequency.
     Args:
-        obj: The object to measure
-        
+        x1 (pd.Series): First series to aggregate.
+        x2 (pd.Series): Second series to aggregate.
+        freq (str): Frequency string for resampling (e.g., '5T' for 5 minutes).
     Returns:
-        Memory usage in MB
+        Tuple[pd.Series, pd.Series]: Aggregated series.
     """
-    def _sizeof(obj):
-        if isinstance(obj, (np.ndarray)):
-            return obj.nbytes
-        elif isinstance(obj, (pd.DataFrame, pd.Series)):
-            return obj.memory_usage(deep=True).sum()
-        elif isinstance(obj, (list, tuple)):
-            return sum(_sizeof(x) for x in obj)
-        else:
-            return sys.getsizeof(obj)
-            
-    return _sizeof(obj) / (1024 * 1024)  # Convert to MB
-
-def optimize_memory_usage(data_tuple: Tuple[np.ndarray, np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
-    """Optimize memory usage of a data tuple by converting to efficient dtypes.
+    # Ensure the series are datetime indexed
+    if not isinstance(x1.index, pd.DatetimeIndex):
+        x1.index = pd.to_datetime(x1.index)
+    if not isinstance(x2.index, pd.DatetimeIndex):
+        x2.index = pd.to_datetime(x2.index)
+    # Resample and aggregate the series
     
+    return x1.resample(freq).sum(), x2.resample(freq).sum()
+
+def calculate_metrics(y_true, y_pred, device_id:str, period: str, verbose=True) -> dict:
+    """
+    Calculate RMSE, MAE, and MAPE for predictions.
+
     Args:
-        data_tuple: A tuple of (X, y) where X is a feature matrix and y is a target vector
-        
+        y_true (array-like): True values.
+        y_pred (array-like): Predicted values.
+        device_id (str): Device type, either 'cpu' or 'gpu'.
+        period (str): The period for which the metrics are calculated. Ideally in the format `'YYYY-MM-DD HH:MM:SS' - 'YYYY-MM-DD HH:MM:SS'`.
+        verbose (bool): If True, print the metrics.
+
     Returns:
-        The optimized (X, y) tuple
+        dict: A dictionary containing the metrics for different aggregation levels.
     """
-    X, y = data_tuple
-    
-    # Handle non-numpy arrays
-    if not isinstance(X, np.ndarray) or not isinstance(y, np.ndarray):
-        return X, y
-        
-    # Skip optimization for object dtypes (strings, timestamps, etc.)
-    if X.dtype == object or y.dtype == object:
-        return X, y
-    
-    # Optimize numeric data
-    def optimize_array(arr):
-        # For floating point arrays
-        if np.issubdtype(arr.dtype, np.floating):
-            # If the range fits in float32, use that
-            if np.nanmin(arr) >= np.finfo(np.float32).min and np.nanmax(arr) <= np.finfo(np.float32).max:
-                return arr.astype(np.float32)
-        # For integer arrays
-        elif np.issubdtype(arr.dtype, np.integer):
-            # Find the smallest integer type that fits the data range
-            min_val, max_val = np.nanmin(arr), np.nanmax(arr)
-            for dtype in [np.int8, np.uint8, np.int16, np.uint16, np.int32]:
-                info = np.iinfo(dtype)
-                if min_val >= info.min and max_val <= info.max:
-                    return arr.astype(dtype)
-        return arr
-        
-    # Apply optimization if possible
-    try:
-        # Handle numeric columns in X
-        if X.ndim == 2:
-            # Skip first 2 columns (timestamp and device_id) as they're not numeric
-            numeric_cols = X[:, 2:].astype(float)
-            optimized_cols = optimize_array(numeric_cols)
-            X_optimized = np.column_stack((X[:, :2], optimized_cols))
-        else:
-            X_optimized = optimize_array(X)
-            
-        y_optimized = optimize_array(y)
-        
-        return X_optimized, y_optimized
-        
-    except Exception as e:
-        print(f"[WARNING] Memory optimization failed: {e}")
-        traceback.print_exc()
-        return X, y
+    def aggregate_metrics(y_true: pd.Series, y_pred: pd.Series, freq: str) -> dict:
+        """Helper function to calculate metrics for aggregated data."""
+        y_true_agg, y_pred_agg = aggregate_values(y_true, y_pred, freq)
+        return {
+            'rmse': np.sqrt(mean_squared_error(y_true_agg, y_pred_agg)),
+            'mae': mean_absolute_error(y_true_agg, y_pred_agg),
+            'mape': mean_absolute_percentage_error(y_true_agg, y_pred_agg)
+        }
 
-def print_memory_stats(train, valid, test):
-    """Print detailed memory usage statistics for datasets.
+    metrics = {
+        'device_id': device_id,
+        'period': period,
+        '5_min': {
+            'rmse': np.sqrt(mean_squared_error(y_true, y_pred)),
+            'mae': mean_absolute_error(y_true, y_pred),
+            'mape': mean_absolute_percentage_error(y_true, y_pred)
+        },
+        'hourly': aggregate_metrics(y_true, y_pred, 'H'),
+        'daily': aggregate_metrics(y_true, y_pred, 'D'),
+        'weekly': aggregate_metrics(y_true, y_pred, 'W'),
+        '28_days': aggregate_metrics(y_true, y_pred, '28D')
+    }
     
-    Args:
-        train: Training dataset
-        valid: Validation dataset
-        test: Test dataset
+    if verbose:
+        print("=" * 50)
+        print(f"Metrics for Device: {device_id} | Period: {period}")
+        print("=" * 50)
+        print("5-Minute Metrics:")
+        print("-" * 50)
+        print(f"\tRMSE: {metrics['5_min']['rmse']:.4f}")
+        print(f"\tMAE: {metrics['5_min']['mae']:.4f}")
+        print(f"\tMAPE: {metrics['5_min']['mape']:.4%}")
+        for agg_period, agg_metrics in metrics.items():
+            if agg_period not in ['period', '5_min', 'device_id']:
+                print("-" * 50)
+                print(f"{agg_period.capitalize()} Metrics:")
+                print("-" * 50)
+                print(f"\tRMSE: {agg_metrics['rmse']:.4f}")
+                print(f"\tMAE: {agg_metrics['mae']:.4f}")
+                print(f"\tMAPE: {agg_metrics['mape']:.4%}")
+        print("=" * 50)
+
+    return metrics
+
+
+def all_time_aggregation_metrics(period_metrics: Dict[str, List[Dict]], verbose=True) -> Dict[str, Dict[str, List[Dict[str, float]]]]:
     """
-    # For walk-forward validation structure
-    if isinstance(train, list):
-        train_mem = sum(calculate_memory_usage(ts) for ts in train)
-        valid_mem = sum(calculate_memory_usage(vs) for vs in valid)
-        test_mem = calculate_memory_usage(test)
-        
-        # Print summary statistics
-        print(f"Memory usage:")
-        print(f"  Train: {train_mem:.2f} MB ({len(train)} splits)")
-        print(f"  Valid: {valid_mem:.2f} MB ({len(valid)} splits)")
-        print(f"  Test:  {test_mem:.2f} MB")
-        print(f"  Total: {train_mem + valid_mem + test_mem:.2f} MB")
-        
-    else:
-        # For standard dataset structure
-        train_mem = calculate_memory_usage(train)
-        valid_mem = calculate_memory_usage(valid)
-        test_mem = calculate_memory_usage(test)
-        
-        # Print summary statistics
-        print(f"Memory usage:")
-        print(f"  Train: {train_mem:.2f} MB")
-        print(f"  Valid: {valid_mem:.2f} MB")
-        print(f"  Test:  {test_mem:.2f} MB")
-        print(f"  Total: {train_mem + valid_mem + test_mem:.2f} MB")
+    Aggregate metrics across multiple periods.
+
+    Args:
+        period_metrics (dict): Dictionary containing metrics for different periods.
+        verbose (bool): If True, print the aggregated metrics.
+
+
+    Returns:
+        dict: A dictionary containing the aggregated metrics for each device.
+    """
+    aggregated_metrics: dict[str, # device_id
+                             dict[str, # aggregation name (5_min, hourly, etc.)
+                                  list[   
+                                    dict[str, float]  # metric dict (rmse, mae, mape)
+                                  ]
+                            ]
+                        ] = {}
+    for device_id, all_period_list in period_metrics.items():
+        if device_id not in aggregated_metrics:
+            aggregated_metrics[device_id] = {
+                '5_min': {'rmse': [], 'mae': [], 'mape': []},
+                'hourly': {'rmse': [], 'mae': [], 'mape': []},
+                'daily': {'rmse': [], 'mae': [], 'mape': []},
+                'weekly': {'rmse': [], 'mae': [], 'mape': []},
+                '28_days': {'rmse': [], 'mae': [], 'mape': []}
+            }
+        for period_dict in all_period_list:
+            for agg_name in aggregated_metrics[device_id].keys():
+                for metric, value in period_dict[agg_name].items():
+                    aggregated_metrics[device_id][agg_name][metric].append(value)
+
+    # Calculate mean and std for each metric
+    for device_id, agg_dict in aggregated_metrics.items():
+        for agg_name, metrics in agg_dict.items():
+            for metric, values in metrics.items():
+                mean_value = np.mean(values)
+                std_value = np.std(values)
+                aggregated_metrics[device_id][agg_name][metric] = {
+                    'mean': mean_value,
+                    'std': std_value
+                }
+    
+    if verbose:
+        print("\n\n" + "=" * 50)
+        print("Aggregated Metrics Across Periods")
+        print("=" * 50)
+        for device_id, agg_dict in aggregated_metrics.items():
+            print(f"Device ID: {device_id}")
+            print("-" * 50)
+            for agg_name, metrics in agg_dict.items():
+                print(f"{agg_name.capitalize()} Metrics:")
+                for metric, values in metrics.items():
+                    print(f"\t{metric.upper()}: {values['mean']:.4f} ± {values['std']:.4f}")
+            print("=" * 50)
+
+    return aggregated_metrics
+
+def plot_predictions(X, y_true, y_pred, data_show=100, outlier_threshold=0.9, device_id=None) -> None:
+    """
+    Plots the original vs predicted values for the beginning, middle, and end of the dataset.
+
+    Parameters:
+    - X: numpy.ndarray, input data containing timestamps and other features.
+    - y_true: numpy.ndarray or pandas.Series, original target values.
+    - y_pred: numpy.ndarray or pandas.Series, predicted target values.
+    - data_show: int, number of data points to show in each plot (default is 100).
+    - outlier_threshold: float, threshold to mark outliers (default 0.9 = 90% difference).
+    - device_id: str, optional device ID to display in the title.
+    """
+    # Ensure y_true and y_pred are pandas Series for easier processing
+    if not isinstance(y_true, pd.Series):
+        if isinstance(X[:, 0][0], (str, pd.Timestamp)):
+            y_true = pd.Series(y_true, index=pd.to_datetime(X[:, 0]))
+        else:
+            # Assume timestamps are already datetime objects
+            y_true = pd.Series(y_true, index=X[:, 0])
+    
+    if not isinstance(y_pred, pd.Series):
+        y_pred = pd.Series(y_pred, index=y_true.index)
+    
+    # Get period information for title
+    start_time = y_true.index.min().strftime('%Y-%m-%d %H:%M:%S') if hasattr(y_true.index.min(), 'strftime') else str(y_true.index.min())
+    end_time = y_true.index.max().strftime('%Y-%m-%d %H:%M:%S') if hasattr(y_true.index.max(), 'strftime') else str(y_true.index.max())
+    period = f"{start_time} - {end_time}"
+    
+    # Calculate metrics for legend
+    metrics = calculate_metrics(y_true, y_pred, device_id or "Unknown", period, verbose=False)
+    
+    # Calculate percent difference to identify outliers
+    pct_diff = abs(y_true - y_pred) / (y_true + 1e-8)  # Add small epsilon to avoid division by zero
+    outliers = pct_diff > outlier_threshold
+    
+    # Extract timestamps and values for the beginning, middle, and end
+    total_length = len(y_true)
+    data_show = min(data_show, total_length // 3)  # Ensure we don't try to show more than a third of the data
+    
+    # Get slices for beginning, middle, and end
+    beginning_slice = slice(0, data_show)
+    middle_start = (total_length - data_show) // 2
+    middle_slice = slice(middle_start, middle_start + data_show)
+    end_slice = slice(total_length - data_show, total_length)
+    
+    # Create series for these sections
+    y_true_beginning = y_true.iloc[beginning_slice]
+    y_pred_beginning = y_pred.iloc[beginning_slice]
+    outliers_beginning = outliers.iloc[beginning_slice]
+    
+    y_true_middle = y_true.iloc[middle_slice]
+    y_pred_middle = y_pred.iloc[middle_slice]
+    outliers_middle = outliers.iloc[middle_slice]
+    
+    y_true_end = y_true.iloc[end_slice]
+    y_pred_end = y_pred.iloc[end_slice]
+    outliers_end = outliers.iloc[end_slice]
+    
+    # Plot the results
+    fig, axes = plt.subplots(3, 1, figsize=(14, 18))
+    
+    # Add metrics to graph titles
+    metrics_text = (f'RMSE: {metrics["5_min"]["rmse"]:.2f}, '
+                    f'MAE: {metrics["5_min"]["mae"]:.2f}, '
+                    f'MAPE: {metrics["5_min"]["mape"]:.2%}')
+    
+    # Title prefix
+    title_prefix = "Original vs Predicted Values"
+    if device_id:
+        title_prefix = f"{title_prefix} - Device: {device_id}"
+    
+    # Beginning plot
+    axes[0].plot(y_true_beginning.index, y_true_beginning.values, label='Original Values', marker='o')
+    axes[0].plot(y_pred_beginning.index, y_pred_beginning.values, label='Predicted Values', marker='x')
+    if outliers_beginning.any():
+        axes[0].plot(y_pred_beginning[outliers_beginning].index, 
+                    y_pred_beginning[outliers_beginning].values,
+                    'ro', markersize=10, markerfacecolor='none', 
+                    label=f'Outliers (>{outlier_threshold*100}% diff)')
+    axes[0].plot([], [], ' ', label=metrics_text)  # Add metrics to legend
+    axes[0].set_title(f'{title_prefix}\nBeginning: {y_true_beginning.index.min()} - {y_true_beginning.index.max()}')
+    axes[0].set_xlabel('Timestamp')
+    axes[0].set_ylabel('Total Power Active')
+    axes[0].legend()
+    axes[0].grid(True)
+
+    # Middle plot
+    axes[1].plot(y_true_middle.index, y_true_middle.values, label='Original Values', marker='o')
+    axes[1].plot(y_pred_middle.index, y_pred_middle.values, label='Predicted Values', marker='x')
+    if outliers_middle.any():
+        axes[1].plot(y_pred_middle[outliers_middle].index, 
+                    y_pred_middle[outliers_middle].values,
+                    'ro', markersize=10, markerfacecolor='none', 
+                    label=f'Outliers (>{outlier_threshold*100}% diff)')
+    axes[1].plot([], [], ' ', label=metrics_text)  # Add metrics to legend
+    axes[1].set_title(f'{title_prefix}\nMiddle: {y_true_middle.index.min()} - {y_true_middle.index.max()}')
+    axes[1].set_xlabel('Timestamp')
+    axes[1].set_ylabel('Value')
+    axes[1].legend()
+    axes[1].grid(True)
+
+    # End plot
+    axes[2].plot(y_true_end.index, y_true_end.values, label='Original Values', marker='o')
+    axes[2].plot(y_pred_end.index, y_pred_end.values, label='Predicted Values', marker='x')
+    if outliers_end.any():
+        axes[2].plot(y_pred_end[outliers_end].index, 
+                    y_pred_end[outliers_end].values,
+                    'ro', markersize=10, markerfacecolor='none', 
+                    label=f'Outliers (>{outlier_threshold*100}% diff)')
+    axes[2].plot([], [], ' ', label=metrics_text)  # Add metrics to legend
+    axes[2].set_title(f'{title_prefix}\nEnd: {y_true_end.index.min()} - {y_true_end.index.max()}')
+    axes[2].set_xlabel('Timestamp')
+    axes[2].set_ylabel('Value')
+    axes[2].legend()
+    axes[2].grid(True)
+
+    # Format x-axis for better readability
+    for ax in axes:
+        plt.sca(ax)
+        plt.gcf().autofmt_xdate()
+
+    # Adjust layout and show the plot
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_hourly_predictions(X, y_true, y_pred, device_id=None, outlier_threshold=0.9, data_show=None) -> None:
+    """
+    Plots hourly aggregated predictions against actual values with outliers highlighted.
+    
+    Parameters:
+    - X: numpy.ndarray, input data containing timestamps and other features.
+    - y_true: pandas.Series or array-like, original target values with timestamps as index.
+    - y_pred: pandas.Series or array-like, predicted target values with timestamps as index.
+    - device_id: str, the device ID for display in the title.
+    - outlier_threshold: float, threshold to mark outliers (default 0.9 = 90% difference).
+    - data_show: int, number of data points to show (default is all).
+    """
+    # Ensure data has datetime index
+    if not isinstance(y_true, pd.Series):
+        if isinstance(X[:, 0][0], (str, pd.Timestamp)):
+            y_true = pd.Series(y_true, index=pd.to_datetime(X[:, 0]))
+        else:
+            # Assume timestamps are already datetime objects
+            y_true = pd.Series(y_true, index=X[:, 0])
+    
+    if not isinstance(y_pred, pd.Series):
+        y_pred = pd.Series(y_pred, index=y_true.index)
+    
+    # Aggregate hourly
+    y_true_hourly, y_pred_hourly = aggregate_values(y_true, y_pred, 'H')
+    
+    # Calculate percent difference to identify outliers
+    pct_diff = abs(y_true_hourly - y_pred_hourly) / (y_true_hourly + 1e-8)  # Add small epsilon to avoid division by zero
+    outliers = pct_diff > outlier_threshold
+    
+    # Limit data points if specified
+    if data_show is not None:
+        if data_show < len(y_true_hourly):
+            y_true_hourly = y_true_hourly[-data_show:]
+            y_pred_hourly = y_pred_hourly[-data_show:]
+            outliers = outliers[-data_show:]
+    
+    # Get period information
+    start_time = y_true_hourly.index.min().strftime('%Y-%m-%d %H:%M:%S')
+    end_time = y_true_hourly.index.max().strftime('%Y-%m-%d %H:%M:%S')
+    period = f"{start_time} - {end_time}"
+    
+    # Calculate metrics for legend
+    metrics = calculate_metrics(y_true, y_pred, device_id or "Unknown", period, verbose=False)
+    hourly_metrics = metrics['hourly']
+    
+    # Create the plot
+    plt.figure(figsize=(14, 8))
+    
+    # Plot regular points
+    plt.plot(y_true_hourly.index, y_true_hourly.values, label='Original Values', marker='o')
+    plt.plot(y_pred_hourly.index, y_pred_hourly.values, label='Predicted Values', marker='x')
+    
+    # Highlight outliers
+    if outliers.any():
+        plt.plot(y_pred_hourly[outliers].index, y_pred_hourly[outliers], 
+                 'ro', markersize=10, markerfacecolor='none', label=f'Outliers (>{outlier_threshold*100}% diff)')
+    
+    # Add metrics to legend
+    metrics_text = (f'RMSE: {hourly_metrics["rmse"]:.2f}, '
+                    f'MAE: {hourly_metrics["mae"]:.2f}, '
+                    f'MAPE: {hourly_metrics["mape"]:.2%}')
+    plt.plot([], [], ' ', label=metrics_text)
+    
+    # Set title and labels
+    title = f"Hourly Aggregated Values"
+    if device_id:
+        title = f"{title}\nDevice: {device_id}"
+    title = f"{title}\nPeriod: {period}"
+    plt.title(title)
+    plt.xlabel('Time')
+    plt.ylabel('Total Power Active')
+    
+    # Format x-axis for better readability
+    plt.gcf().autofmt_xdate()
+    
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+
+

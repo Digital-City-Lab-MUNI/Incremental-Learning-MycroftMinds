@@ -13,12 +13,12 @@ from .io import (
     load_data_pickle
 )
 
-# Utility functions
-# from .utils import (
-#     calculate_memory_usage, 
-#     print_memory_stats,
-#     optimize_memory_usage
-# )
+#Memory functions
+from .memory import (
+    calculate_memory_usage, 
+    print_memory_stats,
+    optimize_memory_usage
+)
 
 # Preprocessing functions
 from .preprocessing import (
