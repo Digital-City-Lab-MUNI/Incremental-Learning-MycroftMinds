@@ -27,6 +27,9 @@ class BaseTree(BaseLeaner):
         self.root = self.__grow(X,y,depth = 0)
 
     def predict(self,X) -> float:
+        if not isinstance(X,np.ndarray):
+            X = np.array([X])
+
         return self.__traverse(X,self.root)
 
     def __traverse(self,X,node) -> float:
@@ -117,6 +120,21 @@ class BaseTree(BaseLeaner):
 
     def show_final(self):
         self.__traverse_show_final(self.root,"")
+
+    def is_filled(self):
+        return self.__check_if_filled(self.root,0)
+
+    def __check_if_filled(self, node, depth = 0):
+        ret_val = False
+        if depth == self.depth:
+            return True
+        
+        if(node.left):
+            ret_val += self.__check_if_filled(node.left,depth+1)
+        if(node.right):
+            ret_val += self.__check_if_filled(node.right,depth+1)
+
+        return ret_val
 
     def __traverse_show_final(self,node,prefix):
         

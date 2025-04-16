@@ -31,7 +31,6 @@ class FastODT(BaseTree):
         if verbose:
             for i in tqdm.tqdm(range(len(X))):
                 self._update_tree(self.root, X[i], y[i], depth = 0)
-
         else:
             for i in range(len(X)):
                 self._update_tree(self.root, X[i], y[i], depth = 0)
@@ -41,8 +40,11 @@ class FastODT(BaseTree):
         if depth >= self.depth:
             return
 
+        # print(node.left,node.right)
+        if not isinstance(x, np.ndarray):
+            x = np.array([x])
+
         if node.left is None and node.right is None:
-            # print(node.left,node.right)
             node.update_stats(x, y)
             if node.samples_seen >= self.grace_period:
                 self._attempt_split(node, x, y, depth)
@@ -91,7 +93,6 @@ class FastODT(BaseTree):
 
 if __name__ == "__main__":
 
-    print(os.getcwd())
     X = np.load('./smoke_data/X.npy', allow_pickle=True)
     Y = np.load('./smoke_data/y.npy', allow_pickle=True)
     print(X.shape, Y.shape)
@@ -101,6 +102,7 @@ if __name__ == "__main__":
     PRINT_BUFFOR_START = 3000
     PRINT_BUFFOR_END = 3500
     SAMPLES = X.shape[0]
+
     # Generate synthetic data following a sine wave pattern
     # T = np.linspace(0, 5, SAMPLES).reshape(-1, 1)  # Features: 100 points from 0 to 5
     # Y = np.sin(T).ravel() + np.random.normal(0, 0.1, T.shape[0])  # Sine wave with noise

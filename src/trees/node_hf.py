@@ -39,6 +39,7 @@ class NodeHoeffdingBound:
         self.sum_y += y
         self.sum_y_squared += y**2
         self.value = self.sum_y/self.samples_seen
+
         for feature, val in enumerate(x):
             self.attribute_stats[feature][self.__SUM_X] += val
             self.attribute_stats[feature][self.__COUNT] += 1

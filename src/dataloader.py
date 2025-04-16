@@ -9,7 +9,7 @@ from sklearn.model_selection import TimeSeriesSplit
 
 # Import modules from the new structure
 from src.io import save_dataset, load_dataset
-from src.utils import calculate_memory_usage, optimize_memory_usage
+from src.memory import calculate_memory_usage, optimize_memory_usage
 from src.preprocessing import preprocess_df, concat_dataframes_by_time, get_complete_time_series, clean_data
 from src.feature_engineering import add_lag_features, add_cyclical_time_features
 
