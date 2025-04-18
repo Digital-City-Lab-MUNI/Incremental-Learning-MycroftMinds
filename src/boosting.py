@@ -9,12 +9,13 @@ import os
 
 class IncubationBoost:
 
-    def __init__(self, baseLearner, length = 5, baseLearnerOptions = (5, 10, 1.0, "HF")):
+    def __init__(self, baseLearner, length = 5, incubationMode = "DEFAULT",  baseLearnerOptions = (5, 10, 1.0, "HF")):
         self.chain = []
         self.length = length
         self.incubatingNode = None 
         self.baseLearner = baseLearner
         self.baseLearnerOptions = baseLearnerOptions
+        self.incubationMode = incubationMode
         self.filling_counter = 0
 
     def partial_fit(self,X,y,verbose = False):
@@ -34,31 +35,49 @@ class IncubationBoost:
                 residual = y - y_pred
                 __y_pred = node.predict(X)
                 y_pred += __y_pred
-        else:
+ 
+            hatchedNode = self.incubate(X,residual)
+            if hatchedNode:
+                self.chain.append(hatchedNode)
+
+        elif self.incubationMode == "DEFAULT":
             for node in self.chain[:-1]:
                 residual = y - y_pred
                 __y_pred = node.predict(X)
                 y_pred += __y_pred
+ 
+            hatchedNode = self.incubate(X,residual)
+            if hatchedNode:
+                self.chain[self.length - 1] = hatchedNode
 
+        elif self.incubationMode == "BREAK":
+            hatchedNode = self.incubate(X,y)
+            if hatchedNode:
+                self.chain[0] = hatchedNode
+
+                for node in self.chain[:-1]:
+                    residual = y - y_pred
+                    __y_pred = node.predict(X)
+                    y_pred += __y_pred
+
+
+    def incubate(self, X, residual):
         if self.incubatingNode == None:
-            self.incubatingNode = FastODT(
+            self.incubatingNode = self.baseLearner(
                 *self.baseLearnerOptions
             )
             self.incubatingNode.partial_fit(X, residual)
-            self.filling_counter = 0
+
         else:
             self.incubatingNode.partial_fit(X, residual)
 
             if self.incubatingNode.is_filled():
-                self.filling_counter += 1
 
-                if len(self.chain) < self.length:
-                    self.chain.append(self.incubatingNode)
-                else:
-                    self.chain[self.length - 1] = self.incubatingNode
+                hatchedNode = self.incubatingNode
                 self.incubatingNode = None
+                return hatchedNode
             else:
-                print(f"not filled: {self.filling_counter}")
+                return None
 
     def predict(self,X):
         __y = 0.0
@@ -68,11 +87,19 @@ class IncubationBoost:
     
 
 if __name__=="__main__":
-    split_confidence_hf = 0.01
-    incubation = IncubationBoost(
+    split_confidence_hf = 0.0001
+    n_trees = 10
+    incubationBreak = IncubationBoost(
         FastODT,
-        10,
-        baseLearnerOptions = (10, 20, split_confidence_hf, "hf")
+        n_trees,
+        incubationMode = "BREAK",
+        baseLearnerOptions = (5, 10, split_confidence_hf, "hf")
+    )
+    incubationDefault = IncubationBoost(
+        FastODT,
+        n_trees,
+        incubationMode = "DEFAULT",
+        baseLearnerOptions = (5, 10, split_confidence_hf, "hf")
     )
 
     # [:,2:] to remove timestamp and device_id
@@ -83,25 +110,29 @@ if __name__=="__main__":
 
     start = time.time()
 
-    PRINT_BUFFOR_START = 3000
-    PRINT_BUFFOR_END = 4500
+    PRINT_BUFFOR_START = 0
+    PRINT_BUFFOR_END = X.shape[0]
     SAMPLES = X.shape[0]
 
     print(f"Working with: {SAMPLES} SAMPLES")
     print(len(X),len(Y))
     # depth = 20
 
-    incubation.partial_fit(X, Y, verbose=True)
+    incubationBreak.partial_fit(X, Y, verbose=True)
+    incubationDefault.partial_fit(X, Y, verbose=True)
 
-    Y_pred = []
+    Y_pred_def = []
+    Y_pred_break = []
     for x,y in zip(X,Y):
-        print(f"=>>>> {y} <<<<=")
-        Y_pred.append(incubation.predict(x))
-    Y_pred = np.array(Y_pred)
+        Y_pred_def.append(incubationBreak.predict(x))
+        Y_pred_break.append(incubationDefault.predict(x))
+    Y_pred_def = np.array(Y_pred_def)
+    Y_pred_break = np.array(Y_pred_break)
 
     plt.figure(figsize=(12, 6))
     plt.plot(Y[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Actual Y", linewidth=2)
-    plt.plot(Y_pred[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Predicted Y", linewidth=2)
+    plt.plot(Y_pred_break[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Predicted BREAK Y", linewidth=2)
+    plt.plot(Y_pred_def[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Predicted DEFAULT Y", linewidth=2)
 
     plt.xlabel(f"Samples")
     plt.ylabel("Target Y")
