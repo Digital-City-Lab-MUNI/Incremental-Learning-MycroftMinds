@@ -136,19 +136,23 @@ class BaseTree(BaseLeaner):
         self.__traverse_show_final(self.root,"")
 
     def is_filled(self):
+        print("====== is filled ======")
+        print(self.__check_if_filled(self.root,0))
         return self.__check_if_filled(self.root,0)
 
     def __check_if_filled(self, node, depth = 0):
-        ret_val = False
-        if depth == self.depth:
-            return True
-        
-        if(node.left):
-            ret_val += self.__check_if_filled(node.left,depth+1)
-        if(node.right):
-            ret_val += self.__check_if_filled(node.right,depth+1)
+        if node == None:
+            return False
 
-        return ret_val
+        if depth == self.depth:
+            print("ret true")
+            return True
+
+        if(node.left):
+            return self.__check_if_filled(node.left,depth+1)
+        if(node.right):
+            return self.__check_if_filled(node.right,depth+1)
+        return False
 
     def __traverse_show_final(self,node,prefix):
         

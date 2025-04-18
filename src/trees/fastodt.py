@@ -28,8 +28,14 @@ class FastODT(BaseTree):
             self.root = NodeConfidenceBound()
 
     def partial_fit(self, X, y, verbose = False):
+
+        if len(X.shape) == 1:
+            X = [X]
+            y = [y]
+
         if verbose:
             for i in tqdm.tqdm(range(len(X))):
+                print(i,len(X))
                 self._update_tree(self.root, X[i], y[i], depth = 0)
         else:
             for i in range(len(X)):
@@ -98,6 +104,18 @@ if __name__ == "__main__":
     print(X.shape, Y.shape)
     X = X[:,2:]
     print(type(X), type(Y), X[0])
+
+    # Test if model will be partially filled after receiving only one sample
+    model_hf = FastODT(
+        depth=20, 
+        grace_period=10,
+        split_confidence=1.0,
+        option="hf"
+    )
+    model_hf.partial_fit(X[0,:], Y[0], verbose=True)
+    # only one depth split at most should be created
+    assert(False == model_hf.is_filled())
+
     start = time.time()
     PRINT_BUFFOR_START = 3000
     PRINT_BUFFOR_END = 3500
