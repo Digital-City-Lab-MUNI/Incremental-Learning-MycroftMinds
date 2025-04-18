@@ -117,7 +117,6 @@ if __name__ == "__main__":
     predictions_hf = {}
 
     for d in depths:
-        print(d)
         split_confidence_cb = 0.0001
         split_confidence_hf = 0.0001
 
@@ -135,8 +134,8 @@ if __name__ == "__main__":
         )
         model_cb.partial_fit(X, Y, verbose=True)
         model_hf.partial_fit(X, Y, verbose=True)
-        Y_pred_cb = np.array([model_cb.predict(x) for x in X])
-        Y_pred_hf = np.array([model_hf.predict(x) for x in X])
+        Y_pred_cb = model_cb.predict(X)
+        Y_pred_hf = model_hf.predict(X)
         predictions_cb[d] = Y_pred_cb
         predictions_hf[d] = Y_pred_hf
         mae_cb = mean_absolute_error(Y, Y_pred_cb)
@@ -147,12 +146,9 @@ if __name__ == "__main__":
     print(f"Training for 1 label data (1D) took: {time.time()-start}s")
     # Plot predicted values (vs true Y)
     plt.figure(figsize=(12, 6))
-    print(Y[PRINT_BUFFOR_START:PRINT_BUFFOR_END].shape)
     plt.plot(Y[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Actual Y", color="black", linewidth=2)
 
     for d in depths:
-        print(predictions_hf[d][PRINT_BUFFOR_START:PRINT_BUFFOR_END].shape)
-        print(predictions_cb[d][PRINT_BUFFOR_START:PRINT_BUFFOR_END].shape)
         plt.plot(predictions_hf[d][PRINT_BUFFOR_START:PRINT_BUFFOR_END], label=f"Depth {d} Prediction HF")
         plt.plot(predictions_cb[d][PRINT_BUFFOR_START:PRINT_BUFFOR_END], label=f"Depth {d} Prediction CB")
 

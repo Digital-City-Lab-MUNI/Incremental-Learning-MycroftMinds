@@ -27,10 +27,24 @@ class BaseTree(BaseLeaner):
         self.root = self.__grow(X,y,depth = 0)
 
     def predict(self,X) -> float:
-        if not isinstance(X,np.ndarray):
-            X = np.array([X])
+        # For batches
+        if len(X.shape) == 2:
+            y = []
+            for x in X:
+                if not isinstance(x,np.ndarray):
+                    x = np.array([x])
 
-        return self.__traverse(X,self.root)
+                y.append(self.__traverse(x,self.root))
+            return np.array(y)
+        # For singlar sample
+        if len(X.shape) == 1:
+            x = X
+            if not isinstance(x,np.ndarray):
+                x = np.array([x])
+
+            return self.__traverse(x,self.root)
+        else:
+            print(f"ERROR: received not matching dimensions of data: {len(X.shape)}, but expected 2D or 1D data")
 
     def __traverse(self,X,node) -> float:
         ret = node.value

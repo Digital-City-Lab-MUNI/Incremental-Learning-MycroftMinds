@@ -28,11 +28,15 @@ class IncubationBoost:
 
         if len(self.chain) < self.length:
             for node in self.chain:
+                print(f"Before: {__y}")
                 __y = node.predict(__y)
+                print(f"After: {__y}")
         else:
             for node in self.chain[:-1]:
+                print(f"Before: {__y}")
                 __y = node.predict(__y)
-                
+                print(f"After: {__y}")
+
         if self.incubatingNode == None:
             self.incubatingNode = self.baseLearner(
                 *self.baseLearnerOptions
@@ -61,35 +65,32 @@ if __name__=="__main__":
     split_confidence_hf = 1.0
     incubation = IncubationBoost(
         FastODT,
-        10,
-        baseLearnerOptions = (5, 10, split_confidence_hf, "hf")
+        2,
+        baseLearnerOptions = (10, 10, split_confidence_hf, "hf")
     )
 
-    X = np.load('./smoke_data/X.npy', allow_pickle=True)
+    # [:,2:] to remove timestamp and device_id
+    X = np.load('./smoke_data/X.npy', allow_pickle=True)[:,2:]
     Y = np.load('./smoke_data/y.npy', allow_pickle=True)
+    Y = np.clip(Y,0,200)
     print(f"X: {X.shape}, Y: {Y.shape}")
-    X = X[:,2:]
+
     start = time.time()
 
     PRINT_BUFFOR_START = 3000
     PRINT_BUFFOR_END = 3500
-
     SAMPLES = X.shape[0]
 
     print(f"Working with: {SAMPLES} SAMPLES")
     print(len(X),len(Y))
     # depth = 20
 
-    predictions_cb = {}
-    predictions_hf = {}
-
     incubation.partial_fit(X, Y, verbose=True)
     Y_pred = np.array([incubation.predict(x) for x in X])
-    print(f"Y_pred: {Y_pred.shape}")
-    # Plot predicted values (vs true Y)
+
     plt.figure(figsize=(12, 6))
-    print(Y_pred[PRINT_BUFFOR_START:PRINT_BUFFOR_END].shape)
-    plt.plot(Y_pred[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Actual Y", color="black", linewidth=2)
+    plt.plot(Y_pred[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Predicted Y", linewidth=2)
+    plt.plot(Y[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Actual Y", linewidth=2)
 
     plt.xlabel(f"Samples")
     plt.ylabel("Target Y")
