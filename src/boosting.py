@@ -29,23 +29,22 @@ class IncubationBoost:
     def __partial_fit(self,X,y):
         residual = y
         y_pred = 0
-
         if len(self.chain) < self.length:
             for node in self.chain:
-                residual = y - y_pred
                 __y_pred = node.predict(X)
                 y_pred += __y_pred
- 
+
+            residual = y - y_pred
             hatchedNode = self.incubate(X,residual)
             if hatchedNode:
                 self.chain.append(hatchedNode)
 
         elif self.incubationMode == "DEFAULT":
             for node in self.chain[:-1]:
-                residual = y - y_pred
                 __y_pred = node.predict(X)
                 y_pred += __y_pred
- 
+            residual = y - y_pred
+
             hatchedNode = self.incubate(X,residual)
             if hatchedNode:
                 self.chain[self.length - 1] = hatchedNode
@@ -84,22 +83,24 @@ class IncubationBoost:
         for node in self.chain:
             __y += node.predict(X)
         return __y
-    
+
 
 if __name__=="__main__":
     split_confidence_hf = 0.0001
-    n_trees = 10
+    n_trees = 3
+    depth = 10
+    grace_period = 10
     incubationBreak = IncubationBoost(
         FastODT,
         n_trees,
         incubationMode = "BREAK",
-        baseLearnerOptions = (5, 10, split_confidence_hf, "hf")
+        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf")
     )
     incubationDefault = IncubationBoost(
         FastODT,
         n_trees,
         incubationMode = "DEFAULT",
-        baseLearnerOptions = (5, 10, split_confidence_hf, "hf")
+        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf")
     )
 
     # [:,2:] to remove timestamp and device_id
@@ -110,7 +111,7 @@ if __name__=="__main__":
 
     start = time.time()
 
-    PRINT_BUFFOR_START = 0
+    PRINT_BUFFOR_START = -3500
     PRINT_BUFFOR_END = X.shape[0]
     SAMPLES = X.shape[0]
 
