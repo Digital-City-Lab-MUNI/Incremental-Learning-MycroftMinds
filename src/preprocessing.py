@@ -1,7 +1,59 @@
 import pandas as pd
 import numpy as np
 import traceback
-from typing import List, Optional
+from pandas.tseries.frequencies import to_offset
+from typing import List, Optional, Optional, Dict, Tuple
+
+def aggregate_and_validate_lags(
+    data_concat: pd.DataFrame,
+    lag_freqs: Dict[str, int],
+    time_agg: Optional[str] = None
+) -> Tuple[pd.DataFrame, Dict[str, int]]:
+    """
+    Aggregates the time series data and filters lag frequencies that are incompatible
+    with the aggregation level.
+
+    Parameters:
+        data_concat (pd.DataFrame): Original time series dataframe with 'time' and 'serial_number' columns.
+        lag_freqs (dict): Dictionary mapping lag frequency strings (e.g., '1H', '1D') to the number of lags.
+        time_agg (str, optional): Aggregation frequency string (e.g., '1H', '30min'). If None, no aggregation.
+
+    Returns:
+        Tuple of:
+        - Aggregated (or original) data_concat
+        - Filtered lag_freqs dict where each lag >= aggregation level
+    """
+    if not time_agg:
+        return data_concat, lag_freqs
+
+    try:
+        print(f"[INFO] Aggregating data by: {time_agg}")
+        data_concat['time'] = pd.to_datetime(data_concat['time'])
+        data_concat = data_concat.set_index('time')
+        agg_cols = data_concat.select_dtypes(include='number').columns
+        data_concat = data_concat.groupby(['serial_number', pd.Grouper(freq=time_agg)]).agg({col: 'mean' for col in agg_cols})
+        data_concat = data_concat.reset_index()
+    except Exception as e:
+        print(f"[ERROR] Aggregation failed: {e}")
+        raise
+
+    # Validate and filter lag frequencies
+    try:
+        agg_offset = to_offset(time_agg)
+        valid_lag_freqs = {}
+        for freq, val in lag_freqs.items():
+            try:
+                lag_offset = to_offset(freq)
+                if lag_offset.nanos < agg_offset.nanos:
+                    print(f"[WARNING] Skipping lag '{freq}' — smaller than aggregation level '{time_agg}'")
+                else:
+                    valid_lag_freqs[freq] = val
+            except Exception as e:
+                print(f"[WARNING] Invalid lag frequency '{freq}': {e}")
+        return data_concat, valid_lag_freqs
+    except Exception as e:
+        print(f"[ERROR] Lag validation failed: {e}")
+        raise
 
 def preprocess_df(dataframes: List[pd.DataFrame],
                  device_list: Optional[List[str]] = None,
