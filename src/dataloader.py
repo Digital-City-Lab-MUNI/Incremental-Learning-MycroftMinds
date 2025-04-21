@@ -31,6 +31,7 @@ def get_train_test_sets(data_dir: str,
                         add_cyclical_features: bool = False,
                         optimize_memory: bool = True,
                         save_intermediate: bool = True,
+                        time_agg: Optional[str] = None
                         intermediate_prefix: str = '5_min_wfv') -> Tuple[
                                                 Any, 
                                                 Any, 
@@ -100,7 +101,10 @@ def get_train_test_sets(data_dir: str,
         if data_concat.empty:
             print("[ERROR] Concatenation returned empty DataFrame")
             return (None, None), (None, None), (None, None)
-            
+
+        # Aggregation (if any)
+        data_concat, lag_freqs = aggregate_and_validate_lags(data_concat, lag_freqs, time_agg)
+        
         data_concat.drop(columns='values_state', inplace=True, errors='ignore')
         complete_time_series = get_complete_time_series(data_concat)
         if not complete_time_series:
