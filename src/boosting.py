@@ -10,6 +10,19 @@ import os
 class IncubationBoost:
 
     def __init__(self, baseLearner, length = 5, incubationMode = "DEFAULT",  baseLearnerOptions = (5, 10, 1.0, "HF")):
+        """
+        Initializes IncubationBoost.
+
+        Parameters:
+            baseLearner (object): The base learning model, for example: FastODT.
+            length (int, optional): The max length of boosting chain - after this nodes are being replaced instead of addded.
+            incubationMode (str, optional): Mode of operation or configuration for incubation (e.g., "DEFAULT"). In "DEFAULT" algorithm add new node to the end,
+                                            or replaces youngest tree. In "BREAK" mode algorithm replaces the first tree in the chain (the oldest one).
+                                            "SHIFT_LEFT" shifts youngest nodes left, append new node to the end (it becomes last node), and removes oldest node.
+                                            "SHIFT_RIGHT" shifts oldest nodes right, append new node to the start (it takes place of oldest node), and removes last node. 
+            baseLearnerOptions (tuple, optional): A tuple of options or hyperparameters for the base learner. 
+                                                Default is FastOOT setting (5, 10, 1.0, "HF") - (Depth, Grace_period, HF_bound, Mode).
+        """
         self.chain = []
         self.length = length
         self.incubatingNode = None 
@@ -59,6 +72,25 @@ class IncubationBoost:
                     __y_pred = node.predict(X)
                     y_pred += __y_pred
 
+        elif self.incubationMode == "SHIFT_LEFT":
+            # Generate residual without first tree (which will go out of the scope after adding new tree)
+            for node in self.chain[1:]: 
+                __y_pred = node.predict(X)
+                y_pred += __y_pred
+            residual = y - y_pred
+
+            hatchedNode = self.incubate(X,residual)
+            if hatchedNode:
+                self.chain = self.chain[:-1]
+                self.chain.append(hatchedNode) 
+
+        elif self.incubationMode == "SHIFT_RIGHT":
+
+            hatchedNode = self.incubate(X,y)
+            if hatchedNode:
+                self.chain = self.chain[1:]
+                self.chain.insert(0,hatchedNode)
+
 
     def incubate(self, X, residual):
         if self.incubatingNode == None:
@@ -88,7 +120,7 @@ class IncubationBoost:
 if __name__=="__main__":
     split_confidence_hf = 0.0001
     n_trees = 3
-    depth = 10
+    depth = 20
     grace_period = 10
     incubationBreak = IncubationBoost(
         FastODT,
@@ -102,6 +134,19 @@ if __name__=="__main__":
         incubationMode = "DEFAULT",
         baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf")
     )
+    incubationShiftLeft = IncubationBoost(
+        FastODT,
+        n_trees,
+        incubationMode = "SHIFT_LEFT",
+        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf")
+    )
+    incubationShiftRight = IncubationBoost(
+        FastODT,
+        n_trees,
+        incubationMode = "SHIFT_RIGHT",
+        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf")
+    )
+
 
     # [:,2:] to remove timestamp and device_id
     X = np.load('./smoke_data/X.npy', allow_pickle=True)[:,2:]
@@ -111,8 +156,8 @@ if __name__=="__main__":
 
     start = time.time()
 
-    PRINT_BUFFOR_START = -3500
-    PRINT_BUFFOR_END = X.shape[0]
+    PRINT_BUFFOR_START = -6000
+    PRINT_BUFFOR_END = -5000
     SAMPLES = X.shape[0]
 
     print(f"Working with: {SAMPLES} SAMPLES")
@@ -121,19 +166,29 @@ if __name__=="__main__":
 
     incubationBreak.partial_fit(X, Y, verbose=True)
     incubationDefault.partial_fit(X, Y, verbose=True)
+    incubationShiftLeft.partial_fit(X, Y, verbose=True)
+    incubationShiftRight.partial_fit(X, Y, verbose=True)
 
     Y_pred_def = []
     Y_pred_break = []
+    Y_pred_shift_left = []
+    Y_pred_shift_right = []
     for x,y in zip(X,Y):
-        Y_pred_def.append(incubationBreak.predict(x))
-        Y_pred_break.append(incubationDefault.predict(x))
+        Y_pred_def.append(incubationDefault.predict(x))
+        Y_pred_break.append(incubationBreak.predict(x))
+        Y_pred_shift_left.append(incubationShiftLeft.predict(x))
+        Y_pred_shift_right.append(incubationShiftRight.predict(x))
     Y_pred_def = np.array(Y_pred_def)
     Y_pred_break = np.array(Y_pred_break)
+    Y_pred_shift_left = np.array(Y_pred_shift_left)
+    Y_pred_shift_right = np.array(Y_pred_shift_right)
 
     plt.figure(figsize=(12, 6))
     plt.plot(Y[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Actual Y", linewidth=2)
-    plt.plot(Y_pred_break[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Predicted BREAK Y", linewidth=2)
-    plt.plot(Y_pred_def[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Predicted DEFAULT Y", linewidth=2)
+    plt.plot(Y_pred_def[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Predicted DEFAULT Y", linewidth=5)
+    plt.plot(Y_pred_break[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Predicted BREAK Y", linewidth=4)
+    plt.plot(Y_pred_shift_left[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Predicted SHIFT LEFT Y", linewidth=3)
+    plt.plot(Y_pred_shift_right[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Predicted SHIFT RIGHT Y", linewidth=2)
 
     plt.xlabel(f"Samples")
     plt.ylabel("Target Y")
