@@ -17,17 +17,20 @@ class ElasticGBDT:
     It also supports incremental tree addition.
     """
 
-    def __init__(self, pretrained_model, y_train, m_threshold=40, alpha=None, max_depth=5, random_state=42, error_metric=None):
+    def __init__(self, pretrained_model, y_train, m_threshold=40, alpha=None,
+                max_depth=5, random_state=42, error_metric=None, number_of_incremental_trees = 5, mape_contribution_metric = False):
         # Set the threshold below which too few trees trigger full retraining.
         self.m_threshold = m_threshold
         self.max_depth = max_depth
         self.random_state = random_state
+        self.number_of_incremental_trees = number_of_incremental_trees
         
         # Use provided error_metric or default to mean absolute error.
         self.error_metric = error_metric if error_metric is not None else mean_absolute_error
         
         # Use the pretrained model's learning rate as alpha (shrinkage) if not provided.
         self.alpha = pretrained_model.learning_rate if alpha is None else alpha
+        self.mape_contribution_metric = mape_contribution_metric
         
         # The initial prediction is the mean of the training target.
         self.initial_pred = np.mean(y_train)
@@ -94,7 +97,10 @@ class ElasticGBDT:
         for i in range(n_trees):
             new_pred = partial_pred + self.alpha * self.trees[i].predict(X_new)
             new_error = self.error_metric(y_new, new_pred)
-            improvement = old_error - new_error
+            if self.mape_contribution_metric:
+                improvement = (old_error - new_error) /old_error
+            else:
+                improvement = old_error - new_error
             contributions.append((improvement, i))
             partial_pred = new_pred
             old_error = new_error
@@ -128,16 +134,20 @@ class ElasticGBDT:
         initial_pred = np.full(y.shape, self.initial_pred)
         partial_pred = initial_pred.copy()
         contributions = []
-        error_before = self.error_metric(y, initial_pred)
+        old_error = self.error_metric(y, initial_pred)
         for i, tree in enumerate(self.trees):
             tree_pred = tree.predict(X)
             new_pred = partial_pred + self.alpha * tree_pred
             new_error = self.error_metric(y, new_pred)
-            improvement = error_before - new_error
+            
+            if self.mape_contribution_metric:
+                improvement = (old_error - new_error) /old_error
+            else:
+                improvement = old_error - new_error
             contributions.append((improvement, i))
             partial_pred = new_pred
-            error_before = new_error
-        final_error = error_before
+            old_error = new_error
+        final_error = old_error
 
         if moving_avg_window > 1:
             # Initialize and update the history of errors.
@@ -194,7 +204,11 @@ class ElasticGBDT:
         for i, tree in enumerate(self.trees):
             new_pred = partial_pred + self.alpha * tree.predict(X_new)
             new_error = self.error_metric(y_new, new_pred)
-            improvement = old_error - new_error
+            if self.mape_contribution_metric:
+                improvement = (old_error - new_error) /old_error
+            else:
+                improvement = old_error - new_error
+
             contributions.append((improvement, i))
             partial_pred = new_pred
             old_error = new_error
@@ -221,7 +235,10 @@ class ElasticGBDT:
             tree_pred = tree.predict(X)
             new_pred = partial_pred + self.alpha * tree_pred
             new_error = self.error_metric(y, new_pred)
-            improvement = old_error - new_error
+            if self.mape_contribution_metric:
+                improvement = (old_error - new_error) /old_error
+            else:
+                improvement = old_error - new_error
             contributions.append((improvement, i))
             partial_pred = new_pred
             old_error = new_error
@@ -289,15 +306,18 @@ class ElasticGBDT:
         
         partial_pred = np.full(y.shape, self.initial_pred)
         contributions = []
-        error_before = self.error_metric(y, partial_pred)
+        old_error = self.error_metric(y, partial_pred)
         for i, tree in enumerate(self.trees):
             tree_pred = tree.predict(X)
             new_pred = partial_pred + self.alpha * tree_pred
             new_error = self.error_metric(y, new_pred)
-            improvement = error_before - new_error
+            if self.mape_contribution_metric:
+                improvement = (old_error - new_error) /old_error
+            else:
+                improvement = old_error - new_error
             contributions.append((improvement, i))
             partial_pred = new_pred
-            error_before = new_error
+            old_error = new_error
         
         contributions.sort(key=lambda x: x[0])
         to_remove = [idx for _, idx in contributions[:removal_count]]
@@ -311,14 +331,14 @@ class ElasticGBDT:
             
         return self
 
-    def build_incremental_trees(self, X_new, Y_residuals_left, number_of_incremental_trees=5):
+    def build_incremental_trees(self, X_new, Y_residuals_left, number_of_incremental_trees = 5):
         """
         Incrementally adds new trees to the ensemble.
           - Each new tree is trained on the current residuals.
           - After each tree is added, the residuals are updated.
         """
         from sklearn.tree import DecisionTreeRegressor
-        
+     
         for _ in range(number_of_incremental_trees):
             tree = DecisionTreeRegressor(max_depth=self.max_depth, random_state=self.random_state + len(self.trees))
             tree.fit(X_new, Y_residuals_left)
