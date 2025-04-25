@@ -5,7 +5,7 @@ from sklearn.base import BaseEstimator
 import time
 
 # Import from our project's modules
-from src.memory import calculate_memory_usage
+from src.utils.memory import calculate_memory_usage
 
 def seq_fit_predict_batch_model(model: BaseEstimator, 
                               X_train: np.array, 

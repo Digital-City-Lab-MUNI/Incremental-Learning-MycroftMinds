@@ -3,8 +3,8 @@ import pandas as pd
 import numpy as np
 from typing import Dict, List, Any
 
-# Import aggregate_values from utils to avoid circular import
-from src.utils import aggregate_values
+# Import aggregate_values from utils
+from src.utils.utils import aggregate_values
 
 def calculate_metrics(y_true, y_pred, device_id:str, period: str, verbose=True) -> dict:
     """

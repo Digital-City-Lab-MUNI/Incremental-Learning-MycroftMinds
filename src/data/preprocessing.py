@@ -14,7 +14,7 @@ def aggregate_and_validate_lags(
     with the aggregation level.
 
     Parameters:
-        data_concat (pd.DataFrame): Original time series dataframe with 'time' and 'serial_number' columns.
+        data_concat (pd.DataFrame): Original time series dataframe with 'time', 'device_id' and 'serial_number' columns.
         lag_freqs (dict): Dictionary mapping lag frequency strings (e.g., '1H', '1D') to the number of lags.
         time_agg (str, optional): Aggregation frequency string (e.g., '1H', '30min'). If None, no aggregation.
 
@@ -31,8 +31,9 @@ def aggregate_and_validate_lags(
         data_concat['time'] = pd.to_datetime(data_concat['time'])
         data_concat = data_concat.set_index('time')
         agg_cols = data_concat.select_dtypes(include='number').columns
-        data_concat = data_concat.groupby(['serial_number', pd.Grouper(freq=time_agg)]).agg({col: 'mean' for col in agg_cols})
+        data_concat = data_concat.groupby(['device_id', 'serial_number', pd.Grouper(freq=time_agg)]).agg({col: 'mean' for col in agg_cols})
         data_concat = data_concat.reset_index()
+    
     except Exception as e:
         print(f"[ERROR] Aggregation failed: {e}")
         raise
@@ -43,7 +44,7 @@ def aggregate_and_validate_lags(
         valid_lag_freqs = {}
         for freq, val in lag_freqs.items():
             try:
-                lag_offset = to_offset(freq)
+                lag_offset = to_offset(val)
                 if lag_offset.nanos < agg_offset.nanos:
                     print(f"[WARNING] Skipping lag '{freq}' — smaller than aggregation level '{time_agg}'")
                 else:
@@ -51,6 +52,7 @@ def aggregate_and_validate_lags(
             except Exception as e:
                 print(f"[WARNING] Invalid lag frequency '{freq}': {e}")
         return data_concat, valid_lag_freqs
+    
     except Exception as e:
         print(f"[ERROR] Lag validation failed: {e}")
         raise
@@ -94,7 +96,7 @@ def preprocess_df(dataframes: List[pd.DataFrame],
             # Optionally add cyclical features if requested
             if add_cyclical_features:
                 # Import directly from feature_engineering
-                from .feature_engineering import add_cyclical_time_features
+                from src.data.feature_engineering import add_cyclical_time_features
                 df = add_cyclical_time_features(df)
                 
             processed.append(df)

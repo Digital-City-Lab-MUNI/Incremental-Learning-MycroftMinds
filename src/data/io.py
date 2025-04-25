@@ -6,7 +6,6 @@ import sys
 import pickle
 from typing import List, Tuple, Dict, Optional, Union, Any
 
-
 def save_data_numpy(data: Union[List[Tuple[np.ndarray, np.ndarray]], Tuple[np.ndarray, np.ndarray]], 
                    filename: str, 
                    save_dir: str = '../data') -> str:
@@ -56,7 +55,6 @@ def save_data_numpy(data: Union[List[Tuple[np.ndarray, np.ndarray]], Tuple[np.nd
         traceback.print_exc()
         return ""
 
-
 def save_data_pickle(data: Union[List[Tuple[np.ndarray, np.ndarray]], Tuple[np.ndarray, np.ndarray]],
                     filename: str,
                     save_dir: str = '../data') -> str:
@@ -85,7 +83,6 @@ def save_data_pickle(data: Union[List[Tuple[np.ndarray, np.ndarray]], Tuple[np.n
         print(f"[ERROR] Failed to save data using pickle: {e}")
         traceback.print_exc()
         return ""
-
 
 def load_data_numpy(filename: str, 
                    load_dir: str = '../data') -> Union[List[Tuple[np.ndarray, np.ndarray]], 
@@ -137,7 +134,6 @@ def load_data_numpy(filename: str,
         traceback.print_exc()
         return None
 
-
 def load_data_pickle(filename: str,
                     load_dir: str = '../data') -> Union[List[Tuple[np.ndarray, np.ndarray]], 
                                                        Tuple[np.ndarray, np.ndarray],
@@ -166,7 +162,6 @@ def load_data_pickle(filename: str,
         print(f"[ERROR] Failed to load data using pickle: {e}")
         traceback.print_exc()
         return None
-
 
 def save_dataset(train, valid, test, data_dir='../data', prefix='', use_numpy=True):
     """Save the train, validation, and test datasets.
@@ -204,7 +199,6 @@ def save_dataset(train, valid, test, data_dir='../data', prefix='', use_numpy=Tr
         test_path = save_data_pickle(test, f"{prefix}test", data_dir)
             
     return train_path, valid_path, test_path
-
 
 def load_dataset(data_dir='../data', prefix='', use_numpy=True, train=True, valid=True, test=True):
     """Load the train, validation, and test datasets.

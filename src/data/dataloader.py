@@ -8,10 +8,10 @@ from typing import List, Tuple, Dict, Optional, Union, Any
 from sklearn.model_selection import TimeSeriesSplit
 
 # Import modules from the new structure
-from src.io import save_dataset, load_dataset
-from src.memory import calculate_memory_usage, optimize_memory_usage
-from src.preprocessing import preprocess_df, concat_dataframes_by_time, get_complete_time_series, clean_data, aggregate_and_validate_lags
-from src.feature_engineering import add_lag_features, add_cyclical_time_features
+from src.data.io import save_dataset, load_dataset
+from src.utils.memory import calculate_memory_usage, optimize_memory_usage
+from src.data.preprocessing import preprocess_df, concat_dataframes_by_time, get_complete_time_series, clean_data, aggregate_and_validate_lags
+from src.data.feature_engineering import add_lag_features, add_cyclical_time_features
 
 warnings.filterwarnings("ignore")
 
@@ -323,7 +323,7 @@ def get_train_test_sets(data_dir: str,
 
                 # Save memory usage info
                 train_mem = sum(calculate_memory_usage(ts) for ts in all_train_sets)
-                valid_mem = sum(calculate_memory_usage(vs) for vs in all_valid_sets)
+                valid_mem = sum(calculate_memory_usage(vs) for ts in all_valid_sets)
                 test_mem = calculate_memory_usage(final_test)
 
                 print(f"Memory usage after optimization: Train={train_mem:.2f}MB, Valid={valid_mem:.2f}MB, Test={test_mem:.2f}MB")

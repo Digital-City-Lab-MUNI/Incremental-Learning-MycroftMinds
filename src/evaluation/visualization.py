@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 from typing import Optional
 
 # Import functions needed for plot calculations
-from src.utils import aggregate_values
-from src.metrics import calculate_metrics
+from src.utils.utils import aggregate_values
+from src.evaluation.metrics import calculate_metrics
 
 def plot_predictions(X, y_true, y_pred, data_show=100, outlier_threshold=0.9, device_id=None) -> None:
     """
