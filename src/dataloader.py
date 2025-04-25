@@ -10,7 +10,7 @@ from sklearn.model_selection import TimeSeriesSplit
 # Import modules from the new structure
 from src.io import save_dataset, load_dataset
 from src.memory import calculate_memory_usage, optimize_memory_usage
-from src.preprocessing import preprocess_df, concat_dataframes_by_time, get_complete_time_series, clean_data
+from src.preprocessing import preprocess_df, concat_dataframes_by_time, get_complete_time_series, clean_data, aggregate_and_validate_lags
 from src.feature_engineering import add_lag_features, add_cyclical_time_features
 
 warnings.filterwarnings("ignore")
@@ -31,7 +31,7 @@ def get_train_test_sets(data_dir: str,
                         add_cyclical_features: bool = False,
                         optimize_memory: bool = True,
                         save_intermediate: bool = True,
-                        time_agg: Optional[str] = None
+                        time_agg: Optional[str] = None,
                         intermediate_prefix: str = '5_min_wfv') -> Tuple[
                                                 Any, 
                                                 Any, 
