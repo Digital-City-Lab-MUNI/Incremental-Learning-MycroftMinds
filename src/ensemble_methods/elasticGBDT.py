@@ -18,12 +18,15 @@ class ElasticGBDT:
     """
 
     def __init__(self, pretrained_model, y_train, m_threshold=40, alpha=None,
-                max_depth=5, random_state=42, error_metric=None, number_of_incremental_trees = 5, mape_contribution_metric = False):
-        # Set the threshold below which too few trees trigger full retraining.
-        self.m_threshold = m_threshold
+                max_depth=5, random_state=42, error_metric=None,
+                number_of_incremental_trees = None, mape_contribution_metric = False,
+                ratio_fixed_multiplier = None, alpha_multiplier = None,
+                beta_multiplier = None, gamma_multiplier = None):
+       
         self.max_depth = max_depth
         self.random_state = random_state
-        self.number_of_incremental_trees = number_of_incremental_trees
+
+        self.number_of_incremental_trees = number_of_incremental_trees if number_of_incremental_trees is not None else 5
         
         # Use provided error_metric or default to mean absolute error.
         self.error_metric = error_metric if error_metric is not None else mean_absolute_error
@@ -38,7 +41,19 @@ class ElasticGBDT:
         # Extract trees from the pretrained model.
         # We assume a single-output model, so we take the first column of the estimator array.
         self.trees = [estimator for estimator in pretrained_model.estimators_[:, 0]]
-        print(f"Loaded {len(self.trees)} trees from the pretrained model. m_threshold={self.m_threshold}")
+        
+        # Hyperarams to tune for the pr
+        self.ratio_fixed_multiplier = ratio_fixed_multiplier if ratio_fixed_multiplier is not None else 1.0
+
+        # These multipliers are used in the weighted ratio strategy.
+        # ratio_fixed_multiplier is used both in the ratio-based and the weighted ratio method.
+        self.alpha_multiplier = alpha_multiplier if alpha_multiplier is not None else 0.7
+        self.beta_multiplier = beta_multiplier if beta_multiplier is not None else 0.4
+        self.gamma_multiplier = gamma_multiplier if gamma_multiplier is not None else 0.2
+
+         # Set the threshold below which too few trees trigger full retraining.
+        self.m_threshold = m_threshold
+
 
     def update_index_based(self, X_new, y_new):
         """
@@ -176,7 +191,7 @@ class ElasticGBDT:
             self.trees.pop(idx)
         return self
 
-    def update_ratio_based(self, X_new, y_new, fixed_multiplier=1.0):
+    def update_ratio_based(self, X_new, y_new):
         """
         Ratio-Based Update:
           - Computes the final error using all current trees.
@@ -194,7 +209,7 @@ class ElasticGBDT:
             ratio = final_error / self.last_error
             self.last_error = final_error
 
-        base_removal = round(fixed_multiplier * ratio)
+        base_removal = round(self.ratio_fixed_multiplier * ratio)
         removal_count = base_removal if ratio >= 1 else max(base_removal - 1, 0)
         removal_count = min(removal_count, len(self.trees))
 

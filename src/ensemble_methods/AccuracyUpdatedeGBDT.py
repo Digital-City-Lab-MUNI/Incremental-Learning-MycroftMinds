@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.metrics import root_mean_squared_error  # Default error metric
+from sklearn.metrics import mean_squared_error  # Default error metric
 
 class AccuracyUpdatedGBDT:
     """
@@ -10,41 +10,36 @@ class AccuracyUpdatedGBDT:
     Trees with low weight are pruned and replaced.
     """
     
-    def __init__(self, y_train, alpha=0.01, max_depth=5, random_state=42,
+    def __init__(self, pretrained_model, y_train, alpha=0.01, max_depth=5, random_state=42,
                 error_metric=None, eps=1e-8,
                 buffer_size=30, error_damping=1, 
-                reg_coef = 1,
-                num_trees=40):
-        self.max_depth = max_depth
-        self.random_state = random_state
-        self.error_damping = error_damping
-        self.num_trees = num_trees
-        self.alpha = alpha
+                reg_coef = 1, weight_threshold_ratio=None):
+        '''
+        Parameters:
+        - pretrained_model: Pre-trained GBDT model (e.g., from sklearn). 
+        '''
+
+        self.max_depth = pretrained_model.max_depth
+        self.random_state = pretrained_model.random_state if pretrained_model.random_state is not None else 42
+        self.alpha = pretrained_model.alpha
+        self.pretrained_model = pretrained_model
+        self.y_train = y_train
+        self.trees = [estimator for estimator in pretrained_model.estimators_[:, 0]]
+
         self.eps = eps
-        self.error_metric = error_metric if error_metric is not None else root_mean_squared_error
-        self.error_damping = error_damping
-        self.reg_coef = reg_coef
+        self.error_metric = error_metric if error_metric is not None else mean_squared_error
+
         self.initial_pred = np.mean(y_train)
-        self.trees = []
+        
         self.weights = np.array([])
         self.buffer_size = buffer_size
         self.data_buffer = [] 
-    
-    def train(self, X, y, num_trees=40):
-        from sklearn.ensemble import GradientBoostingRegressor
-        print("Training triggered.")
-        self.initial_pred = np.mean(y)
-        new_gbdt = GradientBoostingRegressor(
-            n_estimators=self.num_trees,
-            learning_rate=self.alpha,
-            max_depth=self.max_depth,
-            random_state=self.random_state
-        )
-        new_gbdt.fit(X, y)
-        self.trees = [estimator for estimator in new_gbdt.estimators_[:,0]]
-        self.weights = np.ones(len(self.trees))
-        print(f"Trained with {len(self.trees)} trees.")
-        return self
+
+        # hyperparameters to tune
+        self.error_damping = error_damping  # Damping factor for error contribution
+        self.reg_coef = reg_coef  # Regularization coefficient for weights
+        self.weight_threshold_ratio = weight_threshold_ratio if weight_threshold_ratio is not None else 0.1
+        self.__init_subclass__
 
     def predict(self, X):
         predictions = np.full(X.shape[0], self.initial_pred)
@@ -52,8 +47,7 @@ class AccuracyUpdatedGBDT:
             predictions += self.alpha * w * tree.predict(X)
         return predictions
 
-    def update_weights_by_contribution_rel(self, X_new, y_new,
-                                           weight_threshold_ratio=0.1, eps=1e-8):
+    def update_weights_by_contribution_rel(self, X_new, y_new, eps=1e-8):
 
         X_new = np.array(X_new).reshape(1,-1) if len(np.array(X_new).shape)==1 else X_new
 
@@ -79,7 +73,7 @@ class AccuracyUpdatedGBDT:
         #self.weights = self.weights / (avg_weight + eps)
         
         max_weight = np.max(self.weights) if n > 0 else 1.0
-        threshold = weight_threshold_ratio * max_weight
+        threshold = self.weight_threshold_ratio * max_weight
         indices_to_keep = [i for i, w in enumerate(self.weights) if w >= threshold]
         removed_indices = [i for i in range(n) if i not in indices_to_keep]
         if removed_indices:
