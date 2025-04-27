@@ -8,3 +8,5 @@
 .pytest_cache/
 data/*.csv
 data/*.npz
+*.joblib
+saved_models/*
