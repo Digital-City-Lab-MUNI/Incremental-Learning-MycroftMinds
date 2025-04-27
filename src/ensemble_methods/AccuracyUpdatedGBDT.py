@@ -12,7 +12,7 @@ class AccuracyUpdatedGBDT:
     
     def __init__(self, pretrained_model, y_train, alpha=0.01, max_depth=5, random_state=42,
                 error_metric=None, eps=1e-8,
-                buffer_size=30, error_damping=1, 
+                buffer_size=None, error_damping=1, 
                 reg_coef = 1, weight_threshold_ratio=None):
         '''
         Parameters:
@@ -32,7 +32,7 @@ class AccuracyUpdatedGBDT:
         self.initial_pred = np.mean(y_train)
         
         self.weights = np.array([])
-        self.buffer_size = buffer_size
+        self.buffer_size = buffer_size if buffer_size is not None else 30
         self.data_buffer = [] 
 
         # hyperparameters to tune
@@ -40,12 +40,29 @@ class AccuracyUpdatedGBDT:
         self.reg_coef = reg_coef  # Regularization coefficient for weights
         self.weight_threshold_ratio = weight_threshold_ratio if weight_threshold_ratio is not None else 0.1
         self.__init_subclass__
+        self.__init_params__()
+
 
     def predict(self, X):
         predictions = np.full(X.shape[0], self.initial_pred)
         for w, tree in zip(self.weights, self.trees):
             predictions += self.alpha * w * tree.predict(X)
         return predictions
+    
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        if not hasattr(self, "params_"):
+            self.params_ = {
+                'alpha': self.alpha,
+                'max_depth': self.max_depth,
+                'random_state': self.random_state,
+                'eps': self.eps,
+                'buffer_size': self.buffer_size,
+                'error_damping': self.error_damping,
+                'reg_coef': self.reg_coef,
+                'weight_threshold_ratio': self.weight_threshold_ratio
+            }
+
 
     def update_weights_by_contribution_rel(self, X_new, y_new, eps=1e-8):
 
@@ -64,7 +81,7 @@ class AccuracyUpdatedGBDT:
             re_before = re_after
         
         for i in range(n):
-            update = self.error_damping * contributions[i]
+            update = self.error_damping * contributions[i] 
             reg = self.reg_coef * (1 - self.weights[i])
             self.weights[i] = self.weights[i] * (1 + update) + reg
             self.weights[i] = max(self.weights[i], eps)
@@ -80,8 +97,9 @@ class AccuracyUpdatedGBDT:
             print(f"Removing trees at indices {removed_indices} due to low relative weight.")
             self.trees = [self.trees[i] for i in indices_to_keep]
             self.weights = self.weights[indices_to_keep]
-            for _ in range(len(removed_indices)):
-                self.add_tree_from_buffer()
+        #    self.add_data_to_data_buffer(X_new, y_new, self.buffer_size)
+        #     for _ in range(len(removed_indices)):
+        #        self.add_tree_from_buffer()
         return removed_indices
 
     def add_tree_from_buffer(self):
@@ -139,6 +157,21 @@ class AccuracyUpdatedGBDT:
                     self.data_buffer.pop(0)
             for i in range(n_new):
                 self.data_buffer.append((X[i:i+1], y[i]))
+
+    def build_incremental_trees(self, X_new, Y_residuals_left, number_of_incremental_trees = 5):
+        """
+        Incrementally adds new trees to the ensemble.
+          - Each new tree is trained on the current residuals.
+          - After each tree is added, the residuals are updated.
+        """
+        from sklearn.tree import DecisionTreeRegressor
+     
+        for _ in range(number_of_incremental_trees):
+            tree = DecisionTreeRegressor(max_depth=self.max_depth, random_state=self.random_state + len(self.trees))
+            tree.fit(X_new, Y_residuals_left)
+            self.trees.append(tree)
+            # Update the residuals using the newly added tree.
+            Y_residuals_left -= self.alpha * tree.predict(X_new)
 
     def get_number_of_trees(self):
         """

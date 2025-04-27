@@ -18,8 +18,10 @@ class ElasticGBDT:
     """
 
     def __init__(self, pretrained_model, y_train, m_threshold=40, alpha=None,
-                max_depth=5, random_state=42, error_metric=None,
-                number_of_incremental_trees = None, mape_contribution_metric = False,
+                max_depth=5, random_state=42,
+                error_metric=None,
+                number_of_incremental_trees = None,
+                 mape_contribution_metric = False,
                 ratio_fixed_multiplier = None, alpha_multiplier = None,
                 beta_multiplier = None, gamma_multiplier = None):
        
@@ -52,7 +54,7 @@ class ElasticGBDT:
         self.gamma_multiplier = gamma_multiplier if gamma_multiplier is not None else 0.2
 
          # Set the threshold below which too few trees trigger full retraining.
-        self.m_threshold = m_threshold
+        self.m_threshold =  len(pretrained_model.estimators_) -2
 
 
     def update_index_based(self, X_new, y_new):
@@ -283,14 +285,14 @@ class ElasticGBDT:
             self.trees.pop(idx)
         return self
 
-    def update_contribution_weighted_ratio(self, X, y, fixed_multiplier, gamma_multiplier, beta_multiplier, alpha_multiplier, baseline=0):
+    def update_contribution_weighted_ratio(self, X, y):
         """
         Weighted Ratio Strategy Update:
           - Uses a weighted combination of past error ratios:
                 weighted_ratio = gamma_multiplier * (e(t-3)/e(t-4))
                                + beta_multiplier * (e(t-2)/e(t-3))
                                + alpha_multiplier * (e(t)/e(t-1))
-          - Computes removal_count = round(fixed_multiplier * weighted_ratio + baseline)
+          - Computes removal_count = round(ratio_fixed_multiplier * weighted_ratio + baseline)
           - Requires at least 4 past errors stored in self.error_history.
         """
         final_error = self.error_metric(y, self.predict(X))
@@ -311,8 +313,8 @@ class ElasticGBDT:
         ratio2 = e_t2 / e_t3 if e_t3 != 0 else 1.0
         ratio3 = final_error / e_t1 if e_t1 != 0 else 1.0
         
-        weighted_ratio = gamma_multiplier * ratio1 + beta_multiplier * ratio2 + alpha_multiplier * ratio3
-        removal_count = round(fixed_multiplier * weighted_ratio + baseline)
+        weighted_ratio = self.gamma_multiplier * ratio1 + self.beta_multiplier * ratio2 + self.alpha_multiplier * ratio3
+        removal_count = round(self.ratio_fixed_multiplier * weighted_ratio)
         removal_count = max(removal_count, 0)
         removal_count = min(removal_count, len(self.trees))
         
@@ -376,7 +378,7 @@ class ElasticGBDT:
         
         # Train a new GradientBoostingRegressor with the desired number of trees.
         new_gbdt = GradientBoostingRegressor(
-            n_estimators=num_trees,
+            n_estimators=len(self.trees),
             learning_rate=self.alpha,
             max_depth=self.max_depth,
             random_state=self.random_state
