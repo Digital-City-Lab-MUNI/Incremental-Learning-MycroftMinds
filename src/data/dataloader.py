@@ -323,7 +323,7 @@ def get_train_test_sets(data_dir: str,
 
                 # Save memory usage info
                 train_mem = sum(calculate_memory_usage(ts) for ts in all_train_sets)
-                valid_mem = sum(calculate_memory_usage(vs) for ts in all_valid_sets)
+                valid_mem = sum(calculate_memory_usage(vs) for vs in all_valid_sets)
                 test_mem = calculate_memory_usage(final_test)
 
                 print(f"Memory usage after optimization: Train={train_mem:.2f}MB, Valid={valid_mem:.2f}MB, Test={test_mem:.2f}MB")
