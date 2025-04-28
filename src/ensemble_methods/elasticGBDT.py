@@ -21,9 +21,9 @@ class ElasticGBDT:
                 max_depth=5, random_state=42,
                 error_metric=None,
                 number_of_incremental_trees = None,
-                 mape_contribution_metric = False,
+                mape_contribution_metric = False,
                 ratio_fixed_multiplier = None, alpha_multiplier = None,
-                beta_multiplier = None, gamma_multiplier = None):
+                beta_multiplier = None, gamma_multiplier = None, baseline = None):
        
         self.max_depth = max_depth
         self.random_state = random_state
@@ -39,6 +39,7 @@ class ElasticGBDT:
         
         # The initial prediction is the mean of the training target.
         self.initial_pred = np.mean(y_train)
+        self.number_of_trees_at_start = len(pretrained_model.estimators_[:, 0])
         
         # Extract trees from the pretrained model.
         # We assume a single-output model, so we take the first column of the estimator array.
@@ -52,9 +53,10 @@ class ElasticGBDT:
         self.alpha_multiplier = alpha_multiplier if alpha_multiplier is not None else 0.7
         self.beta_multiplier = beta_multiplier if beta_multiplier is not None else 0.4
         self.gamma_multiplier = gamma_multiplier if gamma_multiplier is not None else 0.2
+        self.baseline = baseline if baseline is not None else 0.0
 
          # Set the threshold below which too few trees trigger full retraining.
-        self.m_threshold =  len(pretrained_model.estimators_) -2
+        self.m_threshold =    m_threshold if m_threshold is not None else   self.number_of_trees_at_start - 2
 
 
     def update_index_based(self, X_new, y_new):
@@ -71,7 +73,7 @@ class ElasticGBDT:
             self._retrain(X_new, y_new)
             return self
 
-        partial_pred = np.full(y_new.shape, self.initial_pred)
+        partial_pred = self.trees[0].predict(X_new)
         best_error = self.error_metric(y_new, partial_pred)
         best_i = 0
 
@@ -185,8 +187,6 @@ class ElasticGBDT:
         removal_count = max(removal_count, 0)
         removal_count = min(removal_count, len(self.trees))
         
-        print(f"[EMA Strategy] final_error={final_error:.3f}, baseline_error={baseline_error:.3f}, removal_count={removal_count}")
-        
         contributions.sort(key=lambda x: x[0])
         to_remove = [idx for _, idx in contributions[:removal_count]]
         for idx in sorted(to_remove, reverse=True):
@@ -211,31 +211,31 @@ class ElasticGBDT:
             ratio = final_error / self.last_error
             self.last_error = final_error
 
-        base_removal = round(self.ratio_fixed_multiplier * ratio)
-        removal_count = base_removal if ratio >= 1 else max(base_removal - 1, 0)
-        removal_count = min(removal_count, len(self.trees))
+        base_removal = round(self.ratio_fixed_multiplier * ratio) - self.baseline
+        base_removal = max(base_removal, 0)
+        if base_removal > 0:
 
-        partial_pred = np.full(y_new.shape, self.initial_pred)
-        contributions = []
-        old_error = self.error_metric(y_new, partial_pred)
-        for i, tree in enumerate(self.trees):
-            new_pred = partial_pred + self.alpha * tree.predict(X_new)
-            new_error = self.error_metric(y_new, new_pred)
-            if self.mape_contribution_metric:
-                improvement = (old_error - new_error) /old_error
-            else:
-                improvement = old_error - new_error
+            partial_pred = np.full(y_new.shape, self.initial_pred)
+            contributions = []
+            old_error = self.error_metric(y_new, partial_pred)
+            for i, tree in enumerate(self.trees):
+                new_pred = partial_pred + self.alpha * tree.predict(X_new)
+                new_error = self.error_metric(y_new, new_pred)
+                if self.mape_contribution_metric:
+                    improvement = (old_error - new_error) /old_error
+                else:
+                    improvement = old_error - new_error
 
-            contributions.append((improvement, i))
-            partial_pred = new_pred
-            old_error = new_error
+                contributions.append((improvement, i))
+                partial_pred = new_pred
+                old_error = new_error
 
-        contributions.sort(key=lambda x: x[0])
-        to_remove = [idx for _, idx in contributions[:removal_count]]
-        for idx in sorted(to_remove, reverse=True):
-            self.trees.pop(idx)
+            contributions.sort(key=lambda x: x[0])
+            to_remove = [idx for _, idx in contributions[:base_removal]]
+            for idx in sorted(to_remove, reverse=True):
+                self.trees.pop(idx)
 
-        print(f"[Ratio-Based] final_error={final_error:.3f}, ratio={ratio:.3f}, removal_count={removal_count}")
+        print(f"[Ratio-Based] final_error={final_error:.3f}, ratio={ratio:.3f}, removal_count={base_removal}")
         return self
 
     def update_contribution_ratio_adapt(self, X, y, fixed_multiplier):
@@ -272,7 +272,7 @@ class ElasticGBDT:
         base_removal = round(fixed_multiplier * ratio)
         # If the ratio is below 1, subtract 1 from the computed removal count (but not below 0)
         if ratio < 1:
-            removal_count = max(base_removal - 1, 0)
+            removal_count = max(base_removal -1 , 0)
         else:
             removal_count = base_removal
         removal_count = min(removal_count, len(self.trees))
@@ -314,12 +314,10 @@ class ElasticGBDT:
         ratio3 = final_error / e_t1 if e_t1 != 0 else 1.0
         
         weighted_ratio = self.gamma_multiplier * ratio1 + self.beta_multiplier * ratio2 + self.alpha_multiplier * ratio3
-        removal_count = round(self.ratio_fixed_multiplier * weighted_ratio)
+        removal_count = round(self.ratio_fixed_multiplier * weighted_ratio) - self.baseline
         removal_count = max(removal_count, 0)
         removal_count = min(removal_count, len(self.trees))
         
-        print(f"[Weighted Ratio] e(t-4)={e_t4:.3f}, e(t-3)={e_t3:.3f}, e(t-2)={e_t2:.3f}, e(t-1)={e_t1:.3f}, e(t)={final_error:.3f}")
-        print(f"[Weighted Ratio] ratio1={ratio1:.3f}, ratio2={ratio2:.3f}, ratio3={ratio3:.3f}, weighted_ratio={weighted_ratio:.3f}, removal_count={removal_count}")
         
         partial_pred = np.full(y.shape, self.initial_pred)
         contributions = []
@@ -363,7 +361,7 @@ class ElasticGBDT:
             # Update the residuals using the newly added tree.
             Y_residuals_left -= self.alpha * tree.predict(X_new)
 
-    def _retrain(self, X, y, num_trees=40):
+    def _retrain(self, X, y):
         """
         Full Retraining:
           - Resets the ensemble by retraining a new GradientBoostingRegressor on the data.
@@ -378,7 +376,7 @@ class ElasticGBDT:
         
         # Train a new GradientBoostingRegressor with the desired number of trees.
         new_gbdt = GradientBoostingRegressor(
-            n_estimators=len(self.trees),
+            n_estimators=self.number_of_trees_at_start,
             learning_rate=self.alpha,
             max_depth=self.max_depth,
             random_state=self.random_state

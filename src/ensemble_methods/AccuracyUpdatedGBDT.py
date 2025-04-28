@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.metrics import mean_squared_error  # Default error metric
+from sklearn.metrics import root_mean_squared_error   # Default error metric
 
 class AccuracyUpdatedGBDT:
     """
@@ -10,37 +10,53 @@ class AccuracyUpdatedGBDT:
     Trees with low weight are pruned and replaced.
     """
     
-    def __init__(self, pretrained_model, y_train, alpha=0.01, max_depth=5, random_state=42,
-                error_metric=None, eps=1e-8,
-                buffer_size=None, error_damping=1, 
-                reg_coef = 1, weight_threshold_ratio=None):
-        '''
-        Parameters:
-        - pretrained_model: Pre-trained GBDT model (e.g., from sklearn). 
-        '''
 
-        self.max_depth = pretrained_model.max_depth
-        self.random_state = pretrained_model.random_state if pretrained_model.random_state is not None else 42
-        self.alpha = pretrained_model.alpha
-        self.pretrained_model = pretrained_model
-        self.y_train = y_train
-        self.trees = [estimator for estimator in pretrained_model.estimators_[:, 0]]
+    def __init__(
+        self,
+        pretrained_model,
+        y_train,
+        alpha=0.01,
+        max_depth=5,
+        random_state=42,
+        error_metric=None,
+        eps=1e-10,
+        buffer_size=None,
+        error_damping=1,
+        reg_coef=1,
+        weight_threshold_ratio=None
+    ):
+        # … your existing setup …
+        self.max_depth             = pretrained_model.max_depth
+        self.random_state          = pretrained_model.random_state or random_state
+        self.alpha                 = pretrained_model.learning_rate if hasattr(pretrained_model, 'learning_rate') else alpha
+        self.pretrained_model      = pretrained_model
+        self.y_train               = y_train
+        self.trees                 = [t for t in pretrained_model.estimators_[:,0]]
 
-        self.eps = eps
-        self.error_metric = error_metric if error_metric is not None else mean_squared_error
+        self.eps                   = eps
+        self.error_metric          = error_metric or root_mean_squared_error
+        self.initial_pred          = np.mean(y_train)
 
-        self.initial_pred = np.mean(y_train)
-        
-        self.weights = np.array([])
-        self.buffer_size = buffer_size if buffer_size is not None else 30
-        self.data_buffer = [] 
+        self.weights               = np.ones(len(self.trees))
+        self.buffer_size           = buffer_size or 30
+        self.data_buffer           = []
 
-        # hyperparameters to tune
-        self.error_damping = error_damping  # Damping factor for error contribution
-        self.reg_coef = reg_coef  # Regularization coefficient for weights
+        self.error_damping         = error_damping
+        self.reg_coef              = reg_coef
         self.weight_threshold_ratio = weight_threshold_ratio if weight_threshold_ratio is not None else 0.1
-        self.__init_subclass__
-        self.__init_params__()
+
+
+        self.params_ = {
+            'alpha':                 self.alpha,
+            'max_depth':             self.max_depth,
+            'random_state':          self.random_state,
+            'eps':                   self.eps,
+            'buffer_size':           self.buffer_size,
+            'error_damping':         self.error_damping,
+            'reg_coef':              self.reg_coef,
+            'weight_threshold_ratio':self.weight_threshold_ratio
+        }
+
 
 
     def predict(self, X):
@@ -64,7 +80,7 @@ class AccuracyUpdatedGBDT:
             }
 
 
-    def update_weights_by_contribution_rel(self, X_new, y_new, eps=1e-8):
+    def update_weights_by_contribution_rel(self, X_new, y_new, eps=1e-10):
 
         X_new = np.array(X_new).reshape(1,-1) if len(np.array(X_new).shape)==1 else X_new
 
@@ -74,7 +90,7 @@ class AccuracyUpdatedGBDT:
 
         re_before = self.error_metric(y_new, partial_pred)
         for i in range(n):
-            pred_i = self.alpha * self.weights[i] * self.trees[i].predict(X_new)[0]
+            pred_i = self.alpha * self.weights[i] * self.trees[i].predict(X_new)
             re_after = self.error_metric(y_new, partial_pred + pred_i)
             contributions[i] = (re_before - re_after) / (re_before + eps)
             partial_pred += pred_i
