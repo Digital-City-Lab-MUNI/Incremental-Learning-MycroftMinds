@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from typing import Tuple
 
 def aggregate_values(x1: pd.Series, x2: pd.Series, freq: str) -> Tuple[pd.Series, pd.Series]:
@@ -19,3 +20,15 @@ def aggregate_values(x1: pd.Series, x2: pd.Series, freq: str) -> Tuple[pd.Series
     # Resample and aggregate the series
     
     return x1.resample(freq).sum(), x2.resample(freq).sum()
+
+def get_device_data(data_split: Tuple[np.ndarray, np.ndarray],
+                    device_id) -> Tuple[np.ndarray, np.ndarray] | Tuple[None, None]:
+    """Extract data for a specific device from a data split. Turns the y values into a pandas Series with the first column of X as the index."""
+    
+    if isinstance(data_split, tuple) and len(data_split) == 2:
+        X, y = data_split
+        mask = X[:, 1] == device_id
+        y_series = pd.Series(y[mask], index=X[mask, 0])
+        return X[mask], y_series
+    
+    return None, None
