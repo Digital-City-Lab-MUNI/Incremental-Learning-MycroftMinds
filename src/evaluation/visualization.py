@@ -7,28 +7,17 @@ from typing import Optional
 from src.utils.utils import aggregate_values
 from src.evaluation.metrics import calculate_metrics
 
-def plot_predictions(X, y_true, y_pred, data_show=100, outlier_threshold=0.9, device_id=None) -> None:
+def plot_predictions(y_true, y_pred, data_show=100, outlier_threshold=0.9, device_id=None) -> None:
     """
     Plots the original vs predicted values for the beginning, middle, and end of the dataset.
 
     Args:
-        X (numpy.ndarray): input data containing timestamps and other features.
         y_true (numpy.ndarray): or pandas.Series, original target values.
         y_pred (numpy.ndarray): or pandas.Series, predicted target values.
         data_show (int): number of data points to show in each plot (default is 100).
         outlier_threshold (float): threshold to mark outliers (default 0.9 = 90% difference).
         device_id (str): optional device ID to display in the title.
     """
-    # Ensure y_true and y_pred are pandas Series for easier processing
-    if not isinstance(y_true, pd.Series):
-        if isinstance(X[:, 0][0], (str, pd.Timestamp)):
-            y_true = pd.Series(y_true, index=pd.to_datetime(X[:, 0]))
-        else:
-            # Assume timestamps are already datetime objects
-            y_true = pd.Series(y_true, index=X[:, 0])
-    
-    if not isinstance(y_pred, pd.Series):
-        y_pred = pd.Series(y_pred, index=y_true.index)
     
     # Get period information for title
     start_time = y_true.index.min().strftime('%Y-%m-%d %H:%M:%S') if hasattr(y_true.index.min(), 'strftime') else str(y_true.index.min())
@@ -132,28 +121,17 @@ def plot_predictions(X, y_true, y_pred, data_show=100, outlier_threshold=0.9, de
     plt.tight_layout()
     plt.show()
 
-def plot_hourly_predictions(X, y_true, y_pred, device_id=None, outlier_threshold=0.9, data_show=None) -> None:
+def plot_hourly_predictions(y_true, y_pred, device_id=None, outlier_threshold=0.9, data_show=None) -> None:
     """
     Plots hourly aggregated predictions against actual values with outliers highlighted.
     
     Args:
-        X (numpy.ndarray): input data containing timestamps and other features.
-        y_true (pandas.Series):or array-like, original target values with timestamps as index.
-        y_pred (pandas.Series):or array-like, predicted target values with timestamps as index.
+        y_true (pandas.Series): original target values with timestamps as index.
+        y_pred (pandas.Series): predicted target values with timestamps as index.
         device_id (str): the device ID for display in the title.
         outlier_threshold: (float): threshold to mark outliers (default 0.9 = 90% difference).
         data_show (int): number of data points to show (default is all).
     """
-    # Ensure data has datetime index
-    if not isinstance(y_true, pd.Series):
-        if isinstance(X[:, 0][0], (str, pd.Timestamp)):
-            y_true = pd.Series(y_true, index=pd.to_datetime(X[:, 0]))
-        else:
-            # Assume timestamps are already datetime objects
-            y_true = pd.Series(y_true, index=X[:, 0])
-    
-    if not isinstance(y_pred, pd.Series):
-        y_pred = pd.Series(y_pred, index=y_true.index)
     
     # Aggregate hourly
     y_true_hourly, y_pred_hourly = aggregate_values(y_true, y_pred, 'H')
