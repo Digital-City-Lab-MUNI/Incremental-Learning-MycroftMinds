@@ -117,7 +117,11 @@ def all_time_aggregation_metrics(period_metrics: Dict[str, List[Dict]], verbose=
             for agg_name, metrics in agg_dict.items():
                 print(f"{agg_name.capitalize()} Metrics:")
                 for metric, values in metrics.items():
-                    print(f"\t{metric.upper()}: {values['mean']:.4f} ± {values['std']:.4f}")
+                    if metric == 'MAPE':
+                        print(f"\t{metric.upper()}: {values['mean']:.4%} ± {values['std']:.4%}")
+                    else:
+                        # For RMSE and MAE, we use the original scale      
+                        print(f"\t{metric.upper()}: {values['mean']:.4f} ± {values['std']:.4f}")
             print("=" * 50)
 
     return aggregated_metrics
