@@ -1,11 +1,14 @@
 import pandas as pd
 import numpy as np
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List, Dict, Any
+from tqdm.notebook import tqdm
 from sklearn.base import BaseEstimator
 import time
 
 # Import from our project's modules
+from src.evaluation.metrics import calculate_metrics
 from src.utils.memory import calculate_memory_usage
+from src.utils.utils import get_device_data
 
 def seq_fit_predict_batch_model(model: BaseEstimator, 
                               X_train: np.array, 
@@ -20,7 +23,7 @@ def seq_fit_predict_batch_model(model: BaseEstimator,
     the training data with each new point. You may also specify the time-frequency at which to update the model.
 
     Args:
-        model (BaseEstimator): The regular batch learning model to use for predictions. Must have `.fit` and `.predict` methods.
+        model (sklearn.BaseEstimator): The regular batch learning model to use for predictions. Must have `.fit` and `.predict` methods.
         X_train (np.ndarray): Training features, where the first `index_cols` columns are not features.
         y_train (pd.Series): Training labels.
         X_valid (np.ndarray): Validation features, where the first `index_cols` columns are not features.
@@ -93,7 +96,7 @@ def seq_fit_predict_incremental_model(model: BaseEstimator,
                                     y_train: pd.Series, 
                                     X_valid: np.array, 
                                     y_valid: pd.Series,
-                                    update_freq: str = "14 days",
+                                    update_freq: str = "5 min",
                                     predict_train: bool = True,
                                     index_cols=2) -> Tuple[Optional[pd.Series], pd.Series]:
     """
@@ -101,12 +104,12 @@ def seq_fit_predict_incremental_model(model: BaseEstimator,
     the model with each new point. You may also specify the time-frequency at which to update the model.
 
     Args:
-        model (BaseEstimator): The incremental learning model to use for predictions. Must have `.partial_fit` and `.predict` methods.
+        model (sklearn.BaseEstimator): The incremental learning model to use for predictions. Must have `.partial_fit` and `.predict` methods.
         X_train (np.ndarray): Training features, where the first `index_cols` columns are not features.
         y_train (pd.Series): Training labels.
         X_valid (np.ndarray): Validation features, where the first `index_cols` columns are not features.
         y_valid (pd.Series): Validation labels.
-        update_freq (str, optional): Frequency at which to update the model (e.g., "28 days", "14 days", "1 hour"). Default is "14 days".
+        update_freq (str, optional): Frequency at which to update the model (e.g., "28 days", "14 days", "1 hour"). Default is "5 min".
         predict_train (bool, optional): Whether to predict on the training set. Default is False.
         index_cols (int, optional): Number of columns in `X_train` and `X_valid` that are not features (e.g., timestamps, device IDs). Default is 2.
 
@@ -153,3 +156,107 @@ def seq_fit_predict_incremental_model(model: BaseEstimator,
     y_pred_valid = pd.Series(y_pred_valid, index=y_valid.index)
 
     return y_pred_train, y_pred_valid
+
+
+def all_splits_seq_fit_predict(model: BaseEstimator,
+                             train: List[Tuple[np.ndarray, np.ndarray]], 
+                             valid: List[Tuple[np.ndarray, np.ndarray]], 
+                             incremental: bool,
+                             update_freq="14D",
+                             start_split: int = 0, 
+                             end_split: Optional[int] = None,
+                             verbose: bool = True
+                             ) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
+    """
+    Fit and predict for each device in the training and validation splits. The model is updated every update_freq days.
+
+    Args:
+        model (sklearn.BaseEstimator): The model to be used for fitting and predicting.
+        train (List[Tuple[np.ndarray, np.ndarray]]): The training data splits.
+        valid (List[Tuple[np.ndarray, np.ndarray]]): The validation data splits.
+        incremental (bool): If True, use incremental learning; otherwise, use batch learning.
+        update_freq (str): The frequency at which the model is updated. Must be a valid pandas offset string (e.g., "14D" for 14 days, "5m" for 5 minutes, etc.).
+        start_split (int): The starting split for processing the splits.
+        end_split (Optional[int]): The ending split for processing the splits. If None, it will process all splits.
+        verbose (bool): If True, print validation metrics for each device and split (period).
+
+    Returns:
+        Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
+            device_train_period_predictions (Dict[str, Any]): Predictions for the training period for each device.
+            device_valid_period_predictions (Dict[str, Any]): Predictions for the validation period for each device.
+            device_train_period_metrics (Dict[str, Any]): Metrics for the training period for each device.
+            device_valid_period_metrics (Dict[str, Any]): Metrics for the validation period for each device.
+    """
+
+    device_train_period_metrics = {}
+    device_train_period_predictions = {}
+    device_valid_period_metrics = {}
+    device_valid_period_predictions = {}
+    end_split = len(train) if not end_split else end_split
+
+    for split in tqdm(range(start_split, end_split), 
+                      desc="Processing splits", 
+                      position=0):
+        for device_id in tqdm(set(train[split][0][:, 1]), 
+                              desc=f"Processing devices in split {split}", 
+                              position=1, 
+                              leave=False):
+            X_train, y_train = get_device_data(train[split], device_id=device_id)
+            X_valid, y_valid = get_device_data(valid[split], device_id=device_id)
+
+            if incremental:
+                y_pred_train, y_pred_valid = seq_fit_predict_incremental_model(model, X_train, y_train, X_valid, y_valid, update_freq)
+            else:
+                y_pred_train, y_pred_valid = seq_fit_predict_batch_model(model, X_train, y_train, X_valid, y_valid, update_freq)
+            
+            train_period = f"{X_train[0, 0]} - {X_train[-1, 0]}"
+            valid_period = f"{X_valid[0, 0]} - {X_valid[-1, 0]}"
+            
+            device_train_predictions = {
+                'period': train_period,
+                'y_true': y_train,
+                'y_pred': y_pred_train
+            }
+
+            device_valid_predictions = {
+                'period': valid_period,
+                'y_true': y_valid,
+                'y_pred': y_pred_valid
+            }
+
+            device_train_metrics = calculate_metrics(
+                y_train,
+                y_pred_train,
+                device_id,
+                train_period, 
+                verbose=False
+                )
+            device_valid_metrics = calculate_metrics(
+                y_valid,
+                y_pred_valid,
+                device_id,
+                valid_period, 
+                verbose=verbose
+                )
+            
+            if device_id not in device_train_period_predictions:
+                device_train_period_predictions[device_id] = []
+            device_train_period_predictions[device_id].append(device_train_predictions)
+
+            if device_id not in device_valid_period_predictions:
+                device_valid_period_predictions[device_id] = []
+            device_valid_period_predictions[device_id].append(device_valid_predictions)
+
+            if device_id not in device_train_period_metrics:
+                device_train_period_metrics[device_id] = []
+            device_train_period_metrics[device_id].append(device_train_metrics)
+            
+            if device_id not in device_valid_period_metrics:
+                device_valid_period_metrics[device_id] = []
+            device_valid_period_metrics[device_id].append(device_valid_metrics)
+
+    return (device_train_period_predictions, 
+            device_valid_period_predictions, 
+            device_train_period_metrics, 
+            device_valid_period_metrics)
+
