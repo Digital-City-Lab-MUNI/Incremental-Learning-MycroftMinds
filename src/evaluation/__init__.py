@@ -6,11 +6,13 @@ from .metrics import (
 )
 
 from .visualization import (
-    plot_predictions,
-    plot_hourly_predictions
+    plot_part_predictions,
+    plot_hourly_predictions,
+    plot_date_range
 )
 
 from .training import (
     seq_fit_predict_batch_model,
-    seq_fit_predict_incremental_model
+    seq_fit_predict_incremental_model,
+    all_splits_seq_fit_predict
 )

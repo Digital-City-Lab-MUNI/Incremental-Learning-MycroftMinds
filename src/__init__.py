@@ -1,9 +1,14 @@
 # This file makes the src directory a Python package
 
-# Core dataloader functionality
-from src.data.dataloader import get_train_test_sets
+# First import utility functions that other modules depend on
+from src.utils.utils import aggregate_values, get_device_data
+from src.utils.memory import (
+    calculate_memory_usage, 
+    print_memory_stats,
+    optimize_memory_usage
+)
 
-# I/O functions
+# I/O and data loading functions
 from src.data.io import (
     save_dataset, 
     load_dataset, 
@@ -13,12 +18,8 @@ from src.data.io import (
     load_data_pickle
 )
 
-# Memory functions
-from src.utils.memory import (
-    calculate_memory_usage, 
-    print_memory_stats,
-    optimize_memory_usage
-)
+# Core dataloader functionality
+from src.data.dataloader import get_train_test_sets
 
 # Preprocessing functions
 from src.data.preprocessing import (
@@ -26,7 +27,8 @@ from src.data.preprocessing import (
     concat_dataframes_by_time,
     get_complete_time_series,
     create_supervised_data_from_series,
-    clean_data
+    clean_data,
+    aggregate_and_validate_lags
 )
 
 # Feature engineering functions
@@ -43,15 +45,14 @@ from src.evaluation.metrics import (
 
 # Visualization functions
 from src.evaluation.visualization import (
-    plot_predictions,
-    plot_hourly_predictions
+    plot_part_predictions,
+    plot_hourly_predictions,
+    plot_date_range
 )
 
 # Training functions
 from src.evaluation.training import (
     seq_fit_predict_batch_model,
-    seq_fit_predict_incremental_model
+    seq_fit_predict_incremental_model,
+    all_splits_seq_fit_predict
 )
-
-# Utility functions
-from src.utils.utils import aggregate_values
