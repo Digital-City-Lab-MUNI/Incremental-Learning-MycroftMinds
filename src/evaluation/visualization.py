@@ -3,13 +3,134 @@ import numpy as np
 import matplotlib.pyplot as plt
 from typing import Optional
 
-# Import functions needed for plot calculations
 from src.utils.utils import aggregate_values
 from src.evaluation.metrics import calculate_metrics
 
-def plot_predictions(y_true, y_pred, data_show=100, outlier_threshold=0.9, device_id=None) -> None:
+def plot_date_range(y_true, y_pred, start_date, end_date, device_id=None, 
+                    outlier_threshold=0.9, figure_size=(14, 8), aggregation=None):
     """
-    Plots the original vs predicted values for the beginning, middle, and end of the dataset.
+    Plots predictions against actual values for a specific date range with optional data aggregation.
+    
+    Args:
+        y_true (pandas.Series): Original target values with timestamps as index.
+        y_pred (pandas.Series): Predicted target values with timestamps as index.
+        start_date (str or datetime): Start date for the range to plot.
+        end_date (str or datetime): End date for the range to plot.
+        device_id (str): Optional device ID to display in the title.
+        outlier_threshold (float): Threshold to mark outliers (default 0.9 = 90% difference).
+        figure_size (tuple): Size of the figure (width, height) in inches.
+        aggregation (str): Optional aggregation level ('15min', '30m', '1H', '6h', 'D', etc.).
+                           If None, no aggregation is applied.
+    """
+    # Convert string dates to datetime if needed
+    if isinstance(start_date, str):
+        start_date = pd.to_datetime(start_date)
+    if isinstance(end_date, str):
+        end_date = pd.to_datetime(end_date)
+    
+    # Filter data based on date range
+    mask = (y_true.index >= start_date) & (y_true.index <= end_date)
+    y_true_filtered = y_true[mask]
+    y_pred_filtered = y_pred[mask]
+    
+    if len(y_true_filtered) == 0:
+        raise ValueError("No data found in the specified date range")
+    
+    # Parse aggregation string to a standard format if needed
+    metrics_key = "5_min"  # Default metrics key
+    agg_label = "Raw"      # Default label for plot
+    
+    # Apply aggregation if specified
+    if aggregation:
+        # Normalize aggregation string to pandas format
+        agg_norm = aggregation.lower()
+        
+        # Convert common variations to pandas format
+        if agg_norm.endswith('m') and agg_norm[:-1].isdigit():
+            agg_norm = f"{agg_norm[:-1]}min"
+        elif agg_norm.endswith('minutes'):
+            agg_norm = f"{agg_norm.replace('minutes', '')}min"
+        elif agg_norm.endswith('h') and agg_norm[:-1].isdigit():
+            agg_norm = f"{agg_norm[:-1]}H"
+        elif agg_norm.endswith('hours'):
+            agg_norm = f"{agg_norm.replace('hours', '')}H"
+        
+        # Determine display label and metrics key
+        if 'min' in agg_norm:
+            agg_label = f"{agg_norm.replace('min', ' Minute')}"
+            metrics_key = "5_min" if agg_norm == "5min" else "5_min"  # Fallback to 5min metrics
+        elif 'h' in agg_norm.lower():
+            agg_label = f"{agg_norm.replace('H', ' Hour').replace('h', ' Hour')}"
+            metrics_key = "hourly"
+        elif agg_norm == 'd':
+            agg_label = "Daily"
+            metrics_key = "daily"
+        elif agg_norm == 'w':
+            agg_label = "Weekly"
+        elif agg_norm == 'm':
+            agg_label = "Monthly"
+        else:
+            agg_label = aggregation
+        
+        # Apply aggregation
+        y_true_filtered, y_pred_filtered = aggregate_values(y_true_filtered, y_pred_filtered, agg_norm)
+        
+        
+    
+    # Calculate percent difference to identify outliers
+    pct_diff = abs(y_true_filtered - y_pred_filtered) / (y_true_filtered + 1e-8)
+    outliers = pct_diff > outlier_threshold
+    
+    # Get period information for title
+    period = f"{start_date.strftime('%Y-%m-%d %H:%M:%S')} - {end_date.strftime('%Y-%m-%d %H:%M:%S')}"
+    
+    # Calculate metrics for legend (metrics are for the filtered period only)
+    metrics = calculate_metrics(y_true_filtered, y_pred_filtered, device_id or "Unknown", period, verbose=False)
+    
+    # Create the plot
+    plt.figure(figsize=figure_size)
+    
+    # Plot regular points
+    plt.plot(y_true_filtered.index, y_true_filtered.values, label='Original Values', marker='o')
+    plt.plot(y_pred_filtered.index, y_pred_filtered.values, label='Predicted Values', marker='x')
+    
+    # Highlight outliers
+    if outliers.any():
+        plt.plot(y_pred_filtered[outliers].index, y_pred_filtered[outliers].values,
+                 'ro', markersize=10, markerfacecolor='none', 
+                 label=f'Outliers (>{outlier_threshold*100}% diff)')
+    
+    # Add metrics to legend (metrics for filtered period only)
+    if metrics_key in metrics:
+        metrics_text = (f'Metrics for selected period:\nRMSE: {metrics[metrics_key]["rmse"]:.2f}, '
+                        f'MAE: {metrics[metrics_key]["mae"]:.2f}, '
+                        f'MAPE: {metrics[metrics_key]["mape"]:.2%}')
+    else:
+        metrics_text = (f'Metrics for selected period:\nRMSE: {metrics["5_min"]["rmse"]:.2f}, '
+                        f'MAE: {metrics["5_min"]["mae"]:.2f}, '
+                        f'MAPE: {metrics["5_min"]["mape"]:.2%}')
+    plt.plot([], [], ' ', label=metrics_text)
+    
+    # Set title and labels
+    title = f"{agg_label} Original vs Predicted Values for Selected Date Range"
+    if device_id:
+        title = f"{title}\nDevice: {device_id}"
+    title = f"{title}\nPeriod: {period}"
+    plt.title(title)
+    plt.xlabel('Time')
+    plt.ylabel('Total Power Active')
+    
+    # Format x-axis for better readability
+    plt.gcf().autofmt_xdate()
+    
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+def plot_part_predictions(y_true, y_pred, data_show=100, outlier_threshold=0.9, device_id=None) -> None:
+    """
+    Plots parts of the original vs predicted values for the beginning, middle, and end of the dataset.
 
     Args:
         y_true (numpy.ndarray): or pandas.Series, original target values.
