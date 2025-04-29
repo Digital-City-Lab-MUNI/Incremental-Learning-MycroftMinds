@@ -31,7 +31,7 @@ def aggregate_and_validate_lags(
         data_concat['time'] = pd.to_datetime(data_concat['time'])
         data_concat = data_concat.set_index('time')
         agg_cols = data_concat.select_dtypes(include='number').columns
-        data_concat = data_concat.groupby(['device_id', 'serial_number', pd.Grouper(freq=time_agg)]).agg({col: 'mean' for col in agg_cols})
+        data_concat = data_concat.groupby([pd.Grouper(freq=time_agg), 'device_id', 'serial_number']).agg({col: 'mean' for col in agg_cols})
         data_concat = data_concat.reset_index()
     
     except Exception as e:
