@@ -1,6 +1,7 @@
 from sklearn.metrics import mean_absolute_error
 from matplotlib import pyplot as plt 
 from src.trees.fastodt import FastODT
+from src.utils.adwin import ADWIN
 import numpy as np
 import tqdm
 import time
@@ -30,6 +31,8 @@ class IncubationBoost:
         self.baseLearnerOptions = baseLearnerOptions
         self.incubationMode = incubationMode
         self.filling_counter = 0
+        self.drift_detector = ADWIN(delta = 0.000002)
+        self.under_drift_latch = False
 
     def partial_fit(self,X,y,verbose = False):
         if verbose == False:
@@ -42,6 +45,12 @@ class IncubationBoost:
     def __partial_fit(self,X,y):
         residual = y
         y_pred = 0
+
+        self.drift_detector.add_sample(X)
+
+        # detect if drift happens - if drift already happened then keep it latched (with +) until new tree is deployed
+        self.under_drift_latch = bool(self.drift_detector.isDrift() + self.under_drift_latch)
+
         if len(self.chain) < self.length:
             for node in self.chain:
                 __y_pred = node.predict(X)
@@ -52,44 +61,49 @@ class IncubationBoost:
             if hatchedNode:
                 self.chain.append(hatchedNode)
 
-        elif self.incubationMode == "DEFAULT":
-            for node in self.chain[:-1]:
-                __y_pred = node.predict(X)
-                y_pred += __y_pred
-            residual = y - y_pred
-
-            hatchedNode = self.incubate(X,residual)
-            if hatchedNode:
-                self.chain[self.length - 1] = hatchedNode
-
-        elif self.incubationMode == "BREAK":
-            hatchedNode = self.incubate(X,y)
-            if hatchedNode:
-                self.chain[0] = hatchedNode
-
+        elif self.under_drift_latch:
+            if self.incubationMode == "DEFAULT":
                 for node in self.chain[:-1]:
-                    residual = y - y_pred
                     __y_pred = node.predict(X)
                     y_pred += __y_pred
+                residual = y - y_pred
 
-        elif self.incubationMode == "SHIFT_LEFT":
-            # Generate residual without first tree (which will go out of the scope after adding new tree)
-            for node in self.chain[1:]: 
-                __y_pred = node.predict(X)
-                y_pred += __y_pred
-            residual = y - y_pred
+                hatchedNode = self.incubate(X,residual)
+                if hatchedNode:
+                    self.chain[self.length - 1] = hatchedNode
+                    self.under_drift_latch = False
 
-            hatchedNode = self.incubate(X,residual)
-            if hatchedNode:
-                self.chain = self.chain[:-1]
-                self.chain.append(hatchedNode) 
+            elif self.incubationMode == "BREAK":
+                hatchedNode = self.incubate(X,y)
+                if hatchedNode:
+                    self.chain[0] = hatchedNode
 
-        elif self.incubationMode == "SHIFT_RIGHT":
+                    for node in self.chain[:-1]:
+                        residual = y - y_pred
+                        __y_pred = node.predict(X)
+                        y_pred += __y_pred
+                        self.under_drift_latch = False
 
-            hatchedNode = self.incubate(X,y)
-            if hatchedNode:
-                self.chain = self.chain[1:]
-                self.chain.insert(0,hatchedNode)
+            elif self.incubationMode == "SHIFT_LEFT":
+                # Generate residual without first tree (which will go out of the scope after adding new tree)
+                for node in self.chain[1:]: 
+                    __y_pred = node.predict(X)
+                    y_pred += __y_pred
+                residual = y - y_pred
+
+                hatchedNode = self.incubate(X,residual)
+                if hatchedNode:
+                    self.chain = self.chain[:-1]
+                    self.chain.append(hatchedNode)
+                    self.under_drift_latch = False
+
+            elif self.incubationMode == "SHIFT_RIGHT":
+
+                hatchedNode = self.incubate(X,y)
+                if hatchedNode:
+                    self.chain = self.chain[1:]
+                    self.chain.insert(0,hatchedNode)
+                    self.under_drift_latch = False
 
 
     def incubate(self, X, residual):
