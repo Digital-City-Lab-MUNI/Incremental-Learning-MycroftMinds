@@ -5,7 +5,7 @@ import traceback
 from pandas.tseries.frequencies import to_offset
 from typing import List, Optional, Optional, Dict, Tuple
 
-def read_new_meter_data(data_path, meter_names=None, aggregation=None):
+def read_new_meter_data(extract_path, meter_names=None, aggregation=None):
     """
     Reads data from specified meter files into pandas DataFrames.
 
@@ -24,10 +24,10 @@ def read_new_meter_data(data_path, meter_names=None, aggregation=None):
     all_meter_data = []
     for meter_name in meter_names:
         individual_meter_data  = []
-        for filename in os.listdir(data_path):
+        for filename in os.listdir(extract_path):
             if filename.startswith(meter_name) and filename.endswith(".csv"):  # Assuming CSV files
                 #print(filename)
-                filepath = os.path.join(data_path, filename)
+                filepath = os.path.join(extract_path, filename)
                 try:
                     df = pd.read_csv(filepath)  # Or pd.read_excel(...) for Excel files
                     df['device_id'] = meter_name
@@ -52,7 +52,7 @@ def read_new_meter_data(data_path, meter_names=None, aggregation=None):
                     print(f"Warning: Could not parse file {filename}. Skipping.")
                 except Exception as e:
                     print(f"Error reading {filename}: {e}")
-                all_meter_data.append(pd.concat(individual_meter_data, ignore_index=True))
+        all_meter_data.append(pd.concat(individual_meter_data, ignore_index=True))
     return all_meter_data
 
 def aggregate_and_validate_lags(
