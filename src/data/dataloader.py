@@ -10,7 +10,7 @@ from sklearn.model_selection import TimeSeriesSplit
 # Import modules from the new structure
 from src.data.io import save_dataset, load_dataset
 from src.utils.memory import calculate_memory_usage, optimize_memory_usage
-from src.data.preprocessing import preprocess_df, concat_dataframes_by_time, get_complete_time_series, clean_data, aggregate_and_validate_lags
+from src.data.preprocessing import preprocess_df, concat_dataframes_by_time, get_complete_time_series, clean_data, aggregate_and_validate_lags, read_new_meter_data
 from src.data.feature_engineering import add_lag_features, add_cyclical_time_features
 
 warnings.filterwarnings("ignore")
@@ -32,7 +32,8 @@ def get_train_test_sets(data_dir: str,
                         optimize_memory: bool = True,
                         save_intermediate: bool = True,
                         time_agg: Optional[str] = None,
-                        intermediate_prefix: str = '5_min_wfv') -> Tuple[
+                        intermediate_prefix: str = '5_min_wfv', 
+                        new_data=True) -> Tuple[
                                                 Any, 
                                                 Any, 
                                                 Tuple[np.ndarray, np.ndarray]
@@ -58,7 +59,8 @@ def get_train_test_sets(data_dir: str,
         optimize_memory (bool): Whether to optimize memory usage by using efficient dtypes. Defaults to True.
         save_intermediate (bool): Whether to save intermediate results to disk. Defaults to True.
         intermediate_prefix (str): Prefix for intermediate files. Defaults to 'processed'.
-
+        new_data (bool): whether to use new or old provided meter data (defaults True)
+        
     Returns:
         tuple: A tuple containing training, validation, and test sets. Each set is a tuple of (X, y), 
                where X is the feature matrix and y is the target vector.
@@ -79,12 +81,15 @@ def get_train_test_sets(data_dir: str,
         return (None, None), (None, None), (None, None)
 
     try:
-        csv_files = glob.glob(os.path.join(data_dir, "smart_meter_data_*.csv"))
-        if not csv_files:
-            print(f"[ERROR] No matching CSV files found in {data_dir}")
-            return (None, None), (None, None), (None, None)
-            
-        dataframes = [pd.read_csv(file) for file in csv_files]
+        if new_data:
+            dataframes = read_new_meter_data(data_dir, device_list, aggregation=time_agg)
+        else:
+            csv_files = glob.glob(os.path.join(data_dir, "smart_meter_data_*.csv"))
+            if not csv_files:
+                print(f"[ERROR] No matching CSV files found in {data_dir}")
+                return (None, None), (None, None), (None, None)
+                
+            dataframes = [pd.read_csv(file) for file in csv_files]
     
     except Exception as e:
         print(f"[ERROR] Failed to read CSV files: {e}")
@@ -107,8 +112,9 @@ def get_train_test_sets(data_dir: str,
         
         data_concat.drop(columns='values_state', inplace=True, errors='ignore')
         complete_time_series = get_complete_time_series(data_concat)
+
         if not complete_time_series:
-            print("[ERROR] No complete time series found in the data")
+            print("f[ERROR] No complete time series found in the data")
             return (None, None), (None, None), (None, None)
         
     except Exception as e:
@@ -181,7 +187,7 @@ def get_train_test_sets(data_dir: str,
             print(f"[WARNING] Skipped one time series (index {idx}) due to error:")
             traceback.print_exc()
             continue
-
+    #print(len(train_sets))
     # Stack all sets
     try:
         if walk_forward_sets:
@@ -216,7 +222,9 @@ def get_train_test_sets(data_dir: str,
             print()
 
             print("(Train + Valid) data range: ", X_train_all[:, 0].min(), X_train_all[:, 0].max())
-            total_timestamps = pd.date_range(start=X_train_all[:, 0].min(), end=X_train_all[:, 0].max(), periods=X_train_all.shape[0])
+            total_timestamps = pd.date_range(start=X_train_all[:, 0].min(), end=X_train_all[:, 0].max(), periods=X_train_all.shape[0])#periods=X_train_all.shape[0]
+            # print(total_timestamps)
+            
 
             num_days = (X_train_all[:, 0].max() - X_train_all[:, 0].min()).days
             train_valid = train_days + valid_days
@@ -232,10 +240,13 @@ def get_train_test_sets(data_dir: str,
 
             i = 0
             while current_valid_end <= series_end:
+                #print(i)
                 train_mask = (total_timestamps >= series_start) & (total_timestamps <= current_train_end)
+                # print('train mask', train_mask)
                 valid_mask = (total_timestamps > current_train_end) & (total_timestamps <= current_valid_end)
 
                 X_train_split = X_train_all[train_mask]
+                #print('X_train_split', X_train_split)
                 y_train_split = y_train_all[train_mask]
 
                 X_valid_split = X_train_all[valid_mask]
@@ -251,11 +262,11 @@ def get_train_test_sets(data_dir: str,
                 train_indices = np.where(train_mask)[0]
                 valid_indices = np.where(valid_mask)[0]
 
-                train_start_time = total_timestamps[train_indices[0]]
-                train_end_time = total_timestamps[train_indices[-1]]
+                train_start_time = X_train_split[:, 0].min()#total_timestamps[train_indices[0]]
+                train_end_time = X_train_split[:, 0].max()#total_timestamps[train_indices[-1]]
 
-                valid_start_time = total_timestamps[valid_indices[0]]
-                valid_end_time = total_timestamps[valid_indices[-1]]
+                valid_start_time = X_valid_split[:, 0].min()#total_timestamps[valid_indices[0]]
+                valid_end_time = X_valid_split[:, 0].max()#total_timestamps[valid_indices[-1]]
 
                 print(f"Split {i + 1}:")
                 print(f"  Train window: {train_start_time} to {train_end_time}")
@@ -285,11 +296,11 @@ def get_train_test_sets(data_dir: str,
                     train_indices = np.where(train_mask)[0]
                     valid_indices = np.where(valid_mask)[0]
 
-                    train_start_time = total_timestamps[train_indices[0]]
-                    train_end_time = total_timestamps[train_indices[-1]]
+                    train_start_time = X_train_split[:, 0].min()#total_timestamps[train_indices[0]]
+                    train_end_time = X_train_split[:, 0].max()#total_timestamps[train_indices[-1]]
 
-                    valid_start_time = total_timestamps[valid_indices[0]]
-                    valid_end_time = total_timestamps[valid_indices[-1]]
+                    valid_start_time = X_valid_split[:, 0].min()#total_timestamps[valid_indices[0]]
+                    valid_end_time = X_valid_split[:, 0].max()#total_timestamps[valid_indices[-1]]
 
                     print(f"Split {i + 1}:")
                     print(f"  Train window: {train_start_time} to {train_end_time}")
@@ -323,7 +334,7 @@ def get_train_test_sets(data_dir: str,
 
                 # Save memory usage info
                 train_mem = sum(calculate_memory_usage(ts) for ts in all_train_sets)
-                valid_mem = sum(calculate_memory_usage(vs) for vs in all_valid_sets)
+                valid_mem = sum(calculate_memory_usage(ts) for ts in all_valid_sets)
                 test_mem = calculate_memory_usage(final_test)
 
                 print(f"Memory usage after optimization: Train={train_mem:.2f}MB, Valid={valid_mem:.2f}MB, Test={test_mem:.2f}MB")
