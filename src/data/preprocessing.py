@@ -1,8 +1,59 @@
+import os
 import pandas as pd
 import numpy as np
 import traceback
 from pandas.tseries.frequencies import to_offset
 from typing import List, Optional, Optional, Dict, Tuple
+
+def read_new_meter_data(data_path, meter_names=None, aggregation=None):
+    """
+    Reads data from specified meter files into pandas DataFrames.
+
+    Args:
+        data_path: The path to the directory containing the meter data files.
+        meter_names: A list of meter names to read data for.
+
+    Returns:
+        A list with corresponding DataFrames.
+        Returns an empty list if no valid meter files are found or an error occurs.
+    """
+    if meter_names is None:
+        meter_names = ['df_TRB145-1', 'df_TRB145-2', 'df_TRB145-3', 'df_TRB145-4', 'df_TRB145-5']
+
+
+    all_meter_data = []
+    for meter_name in meter_names:
+        individual_meter_data  = []
+        for filename in os.listdir(data_path):
+            if filename.startswith(meter_name) and filename.endswith(".csv"):  # Assuming CSV files
+                #print(filename)
+                filepath = os.path.join(data_path, filename)
+                try:
+                    df = pd.read_csv(filepath)  # Or pd.read_excel(...) for Excel files
+                    df['device_id'] = meter_name
+                    df['serial_number'] = meter_name
+                    df.drop(columns={'result', 'table', '_time', 'Unnamed: 0'}, inplace=True)
+                    df.rename(columns={'timestamp':'time'}, inplace=True)
+
+                    # if aggregation is not None:
+                    #     df['time'] = pd.to_datetime(df['time'], errors='coerce', utc=True)
+                    #     df['time'] = df['time'].dt.tz_convert(None)
+                    #     df = df.set_index('time')
+                    #     agg_cols = df.select_dtypes(include='number').columns
+                    #     df = df.groupby([pd.Grouper(freq=aggregation), 'device_id', 'serial_number']).agg({col: 'mean' for col in agg_cols})
+                    #     df = df.reset_index()
+
+                    individual_meter_data.append(df)
+                    #meter_data[meter_name] = df
+                      # Move to the next meter name after finding the file
+                except pd.errors.EmptyDataError:
+                    print(f"Warning: File {filename} is empty. Skipping.")
+                except pd.errors.ParserError:
+                    print(f"Warning: Could not parse file {filename}. Skipping.")
+                except Exception as e:
+                    print(f"Error reading {filename}: {e}")
+                all_meter_data.append(pd.concat(individual_meter_data, ignore_index=True))
+    return all_meter_data
 
 def aggregate_and_validate_lags(
     data_concat: pd.DataFrame,
