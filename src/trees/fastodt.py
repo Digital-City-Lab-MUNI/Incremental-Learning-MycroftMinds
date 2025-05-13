@@ -3,7 +3,9 @@ from matplotlib import pyplot as plt
 from src.trees.tree import BaseTree, Node
 from src.trees.node_hf import NodeHoeffdingBound
 from src.trees.node_cb import NodeConfidenceBound
+from src.utils.utils import ensure_2d_array
 import numpy as np
+import pandas as pd
 import tqdm
 import time
 import os
@@ -27,34 +29,57 @@ class FastODT(BaseTree):
             # self.split_confidence = np.log(1/self.split_confidence)
             self.root = NodeConfidenceBound()
 
-    def partial_fit(self, X, y, verbose = False):
-
-        if len(X.shape) == 1:
-            X = [X]
-            y = [y]
+    def partial_fit(self, X: np.ndarray, y: np.ndarray, verbose: bool = False):
+        X = ensure_2d_array(X)
+        y = np.asarray(y)
+        if y.ndim == 0:
+            y = np.array([y])
+        if X.shape[0] != len(y):
+            raise ValueError(f"X and y must have the same number of samples. X: {X.shape}, y: {y.shape}")
 
         if verbose:
             for i in tqdm.tqdm(range(len(X))):
-                print(i,len(X))
-                self._update_tree(self.root, X[i], y[i], depth = 0)
+                print(i, len(X))
+                self._update_tree(self.root, X[i], y[i], depth=0)
         else:
             for i in range(len(X)):
-                self._update_tree(self.root, X[i], y[i], depth = 0)
+                self._update_tree(self.root, X[i], y[i], depth=0)
+
+    def learn_one(self, x, y):
+        """
+        Incrementally update the tree with a single sample (x, y).
+        """
+        if isinstance(x, dict):
+            x = np.asarray(list(x.values()))
+        elif isinstance(x, pd.DataFrame):
+            x = np.asarray(x.values)
+        else:
+            x = np.asarray(x)
+        if x.ndim == 2 and x.shape[0] == 1:
+            x = x[0]
+        self._update_tree(self.root, x, y, depth=0)
+
+    def predict_one(self, x):
+        """
+        Predict the output for a single sample x.
+        """
+        if isinstance(x, dict):
+            x = np.asarray(list(x.values()))
+        else:
+            x = np.asarray(x)
+        if x.ndim == 2 and x.shape[0] == 1:
+            x = x[0]
+        return self.predict(x)
 
     def _update_tree(self, node , x, y, depth = 0):
 
         if depth >= self.depth:
             return
 
-        # print(node.left,node.right)
-        if not isinstance(x, np.ndarray):
-            x = np.array([x])
-
         if node.left is None and node.right is None:
             node.update_stats(x, y)
             if node.samples_seen >= self.grace_period:
                 self._attempt_split(node, x, y, depth)
-            # print(node.left,node.right)
         elif node.feature is not None:
             if x[node.feature] <= node.threshold:
                 self._update_tree(node.left,x,y,depth + 1)
