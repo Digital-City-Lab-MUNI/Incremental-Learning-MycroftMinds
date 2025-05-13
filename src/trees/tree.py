@@ -19,7 +19,7 @@ class Node:
 class BaseTree(BaseLeaner):
 
     def __init__(self,depth):
-        super()
+        super().__init__()
         self.root = None
         self.depth = depth
 
