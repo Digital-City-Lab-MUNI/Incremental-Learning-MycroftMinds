@@ -6,5 +6,8 @@
 *.code-workspace
 *.log
 .pytest_cache/
+data/first_batch
+data/old_data
 data/*.csv
 data/*.npz
+data/*.zip
