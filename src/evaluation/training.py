@@ -10,6 +10,39 @@ from src.evaluation.metrics import calculate_metrics
 from src.utils.memory import calculate_memory_usage
 from src.utils.utils import get_device_data
 
+def _partial_fit_model(model: BaseEstimator,
+                      X: np.array,
+                      Y: pd.Series) -> None:
+    """
+    Fit the model using partial_fit or learn_one method.
+    Args:
+        model (sklearn.BaseEstimator): The model to be fitted.
+        X (np.ndarray): Feature data.
+        y (pd.Series): Target data.
+    """
+    if hasattr(model, 'partial_fit'):
+        model.partial_fit(X, Y)
+    else:
+        X = pd.DataFrame(X).to_dict(orient='records')
+        for x, y in zip(X, Y):
+            model.learn_one(x, y)
+
+def _predict_model(model: BaseEstimator,
+                    X: np.array) -> np.array:
+    """
+    Predict using the model.
+    Args:
+        model (sklearn.BaseEstimator): The model to be used for prediction.
+        X (np.ndarray): Feature data.
+    Returns:
+        np.ndarray: Predicted values.
+    """
+    if hasattr(model, 'predict'):
+        return model.predict(X)
+    else:
+        return np.array([model.predict_one(x) for x in X])
+
+
 def seq_fit_predict_batch_model(model: BaseEstimator, 
                               X_train: np.array, 
                               y_train: pd.Series, 
@@ -130,18 +163,19 @@ def seq_fit_predict_incremental_model(model: BaseEstimator,
 
     # Fit the model on the initial training data
     print(f"Initial training on data from {X_train_seq[0, 0]} to {X_train_seq[-1, 0]}")
-    model.partial_fit(X_train_seq[:, index_cols:], y_train_seq)
+    
+    _partial_fit_model(model, X_train_seq[:, index_cols:], y_train_seq)
 
     # Predict on the training set if required
     if predict_train:
-        y_pred_train = model.predict(X_train_seq[:, index_cols:])
+        y_pred_train = _predict_model(model, X_train_seq[:, index_cols:])
         y_pred_train = pd.Series(y_pred_train, index=y_train.index)
         print("Train predictions completed.")
 
     # Iterate through the validation set
     for i in range(len(X_valid)):
         # Predict the current validation point
-        y_pred = model.predict(X_valid[i:i+1, index_cols:])[0]
+        y_pred = _predict_model(model, X_valid[i:i+1, index_cols:])
         y_pred_valid.append(y_pred)
 
         # Update the model with the current validation point
@@ -150,7 +184,7 @@ def seq_fit_predict_incremental_model(model: BaseEstimator,
             next_time = X_valid[i + 1, 0]
             if pd.Timestamp(next_time) - pd.Timestamp(current_time) >= update_freq:
                 #print(f"Updating model with data up to {next_time}")
-                model.partial_fit(X_valid[i:i+1, index_cols:], y_valid.iloc[i:i+1])
+                _partial_fit_model(model, X_valid[i:i+1, index_cols:], y_valid.iloc[i:i+1])
 
     # Convert predictions list to pandas Series
     y_pred_valid = pd.Series(y_pred_valid, index=y_valid.index)
