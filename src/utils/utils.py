@@ -2,6 +2,15 @@ import pandas as pd
 import numpy as np
 from typing import Tuple
 
+def ensure_2d_array(X: np.ndarray) -> np.ndarray:
+    """
+    Ensure that the input is a 2D numpy array. If the input is 1D, it reshapes it to 2D.
+    """
+    X = np.asarray(X)
+    if X.ndim == 1:
+        X = X.reshape(1, -1)
+    return X
+
 def aggregate_values(x1: pd.Series, x2: pd.Series, freq: str) -> Tuple[pd.Series, pd.Series]:
     """
     Aggregate values of two series based on a given frequency.
