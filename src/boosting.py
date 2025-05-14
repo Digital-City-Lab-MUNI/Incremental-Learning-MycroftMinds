@@ -61,6 +61,7 @@ class IncubationBoost:
         y_pred = 0
 
         self.drift_detector.add_sample(X)
+        # self.under_drift_latch = True
 
         # detect if drift happens - if drift already happened then keep it latched (with +) until new tree is deployed
         self.under_drift_latch = bool(self.drift_detector.isDrift() + self.under_drift_latch)
@@ -181,15 +182,18 @@ if __name__=="__main__":
 
 
     # [:,2:] to remove timestamp and device_id
-    X = np.load('./smoke_data/X.npy', allow_pickle=True)[:,2:]
-    Y = np.load('./smoke_data/y.npy', allow_pickle=True)
-    Y = np.clip(Y,0,200)
+    print(np.load('./data/first_batch/dev_4_hourly_wfv_test.npz', allow_pickle=True))
+    X = np.load('./data/first_batch/dev_4_hourly_wfv_test.npz', allow_pickle=True)["X"][:,2:]
+    Y = np.load('./data/first_batch/dev_4_hourly_wfv_test.npz', allow_pickle=True)["y"]
+    # X = np.load('./smoke_data/X.npy', allow_pickle=True)[:,2:]
+    # Y = np.load('./smoke_data/y.npy', allow_pickle=True)
+    # Y = np.clip(Y,0,200)
     print(f"X: {X.shape}, Y: {Y.shape}")
 
     start = time.time()
 
-    PRINT_BUFFOR_START = -6000
-    PRINT_BUFFOR_END = -5000
+    PRINT_BUFFOR_START = 0
+    PRINT_BUFFOR_END = X.shape[0]
     SAMPLES = X.shape[0]
 
     print(f"Working with: {SAMPLES} SAMPLES")

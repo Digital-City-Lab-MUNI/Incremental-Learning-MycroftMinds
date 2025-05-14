@@ -9,6 +9,7 @@ class ADWIN:
         self.window = deque()
         self.n = 0
         self.change_detected = False
+        self.max_windows = 100
 
     def add_sample(self,sample):
         self.window.append(sample)
@@ -32,6 +33,9 @@ class ADWIN:
                     
                     self.change_detected = True
                     return
+        if len(self.window) > self.max_windows:
+            self.window.popleft()
+            self.n -= 1
 
     def bound(self,n_left,n_right):
         harmonic_mean_n = 1/((1/n_left)+(1/n_right))
