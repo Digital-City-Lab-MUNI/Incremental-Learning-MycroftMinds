@@ -10,7 +10,7 @@ import os
 
 class IncubationBoost:
 
-    def __init__(self, baseLearner, length = 5, incubationMode = "DEFAULT",  baseLearnerOptions = (5, 10, 1.0, "HF")):
+    def __init__(self, baseLearner, length = 5, incubationMode = "DEFAULT", verbose = True,  baseLearnerOptions = (5, 10, 1.0, "HF")):
         """
         Initializes IncubationBoost.
 
@@ -33,13 +33,27 @@ class IncubationBoost:
         self.filling_counter = 0
         self.drift_detector = ADWIN(delta = 0.000002)
         self.under_drift_latch = False
+        self.verbose = verbose
 
-    def partial_fit(self,X,y,verbose = False):
-        if verbose == False:
+        try:
+            # Check if running in a Jupyter notebook
+            from IPython import get_ipython
+            ipython = get_ipython()
+            if ipython is not None and 'IPKernelApp' in ipython.config:
+                self.tqdm = tqdm.notebook.tqdm
+            else:
+                self.tqdm = tqdm.tqdm
+        except Exception:
+            # Fallback in case something goes wrong
+            self.tqdm = tqdm.tqdm
+
+
+    def partial_fit(self,X,y):
+        if self.verbose == False:
             for i in range(len(X)):
                 self.__partial_fit(X[i],y[i])
         else:
-            for i in tqdm.tqdm(range(len(X))):
+            for i in self.tqdm(range(len(X))):
                 self.__partial_fit(X[i],y[i])
 
     def __partial_fit(self,X,y):
@@ -111,10 +125,10 @@ class IncubationBoost:
             self.incubatingNode = self.baseLearner(
                 *self.baseLearnerOptions
             )
-            self.incubatingNode.partial_fit(X, residual)
+            self.incubatingNode.partial_fit([X], residual)
 
         else:
-            self.incubatingNode.partial_fit(X, residual)
+            self.incubatingNode.partial_fit([X], residual)
 
             if self.incubatingNode.is_filled():
 
@@ -140,24 +154,28 @@ if __name__=="__main__":
         FastODT,
         n_trees,
         incubationMode = "BREAK",
+        verbose=True,
         baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf")
     )
     incubationDefault = IncubationBoost(
         FastODT,
         n_trees,
         incubationMode = "DEFAULT",
+        verbose=True,
         baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf")
     )
     incubationShiftLeft = IncubationBoost(
         FastODT,
         n_trees,
         incubationMode = "SHIFT_LEFT",
+        verbose=True,
         baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf")
     )
     incubationShiftRight = IncubationBoost(
         FastODT,
         n_trees,
         incubationMode = "SHIFT_RIGHT",
+        verbose=True,
         baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf")
     )
 
@@ -178,10 +196,10 @@ if __name__=="__main__":
     print(len(X),len(Y))
     # depth = 20
 
-    incubationBreak.partial_fit(X, Y, verbose=True)
-    incubationDefault.partial_fit(X, Y, verbose=True)
-    incubationShiftLeft.partial_fit(X, Y, verbose=True)
-    incubationShiftRight.partial_fit(X, Y, verbose=True)
+    incubationBreak.partial_fit(X, Y)
+    incubationDefault.partial_fit(X, Y)
+    incubationShiftLeft.partial_fit(X, Y)
+    incubationShiftRight.partial_fit(X, Y)
 
     Y_pred_def = []
     Y_pred_break = []
