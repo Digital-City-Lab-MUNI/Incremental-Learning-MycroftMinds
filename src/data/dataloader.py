@@ -33,7 +33,8 @@ def get_train_test_sets(data_dir: str,
                         save_intermediate: bool = True,
                         time_agg: Optional[str] = None,
                         intermediate_prefix: str = '5_min_wfv', 
-                        new_data=True) -> Tuple[
+                        new_data=True, 
+                        fill_missing=True) -> Tuple[
                                                 Any, 
                                                 Any, 
                                                 Tuple[np.ndarray, np.ndarray]
@@ -60,6 +61,7 @@ def get_train_test_sets(data_dir: str,
         save_intermediate (bool): Whether to save intermediate results to disk. Defaults to True.
         intermediate_prefix (str): Prefix for intermediate files. Defaults to 'processed'.
         new_data (bool): whether to use new or old provided meter data (defaults True)
+        fill_missing (bool): whether to fill the missing values (defaults True), method: weekly, hourly mean
         
     Returns:
         tuple: A tuple containing training, validation, and test sets. Each set is a tuple of (X, y), 
@@ -108,7 +110,7 @@ def get_train_test_sets(data_dir: str,
             return (None, None), (None, None), (None, None)
 
         # Aggregation (if any)
-        data_concat, lag_freqs = aggregate_and_validate_lags(data_concat, lag_freqs, time_agg)
+        data_concat, lag_freqs = aggregate_and_validate_lags(data_concat, lag_freqs, time_agg, fill_missing=fill_missing)
         
         data_concat.drop(columns='values_state', inplace=True, errors='ignore')
         complete_time_series = get_complete_time_series(data_concat)
