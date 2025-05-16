@@ -633,6 +633,7 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
             grace_period=self.grace_period,
             depth=self.max_depth,
             split_confidence=self.delta,
+            max_feature = 1.0,
             option="hf"
         )
 

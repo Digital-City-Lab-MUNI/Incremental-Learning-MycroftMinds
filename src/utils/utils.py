@@ -1,6 +1,12 @@
 import pandas as pd
 import numpy as np
+import random
 from typing import Tuple
+
+def get_unique_random_numbers(N, M):
+    if N > M:
+        raise ValueError("N must be less than or equal to M")
+    return random.sample(range(M), N)
 
 def ensure_2d_array(X: np.ndarray) -> np.ndarray:
     """

@@ -1,12 +1,21 @@
-import numpy as np
+import math
 import numpy as np
 from collections import defaultdict
+from src.utils.utils import get_unique_random_numbers
 
-def hoeffding_bound(R,n, delta):
+def hoeffding_bound(n_left,n_right, delta):
     """Computes Hoeffding bound given number of samples and confidence level."""
     """n - samples """
     """delta - confidence factor """
-    return np.sqrt((R**2)*np.log(1 / delta) / (2 * n))
+    # return np.sqrt((R**2)*np.log(1 / delta) / (2 * n))
+    harmonic_mean_n = 0
+    if n_left == 0:
+        harmonic_mean_n = n_right
+    if n_right == 0:
+        harmonic_mean_n = n_left
+    if n_left > 0 and n_right > 0:
+        harmonic_mean_n = 1/((1/n_left)+(1/n_right))
+    return math.sqrt(1/(2*harmonic_mean_n) / delta)
 
 class NodeHoeffdingBound:
 
@@ -20,7 +29,7 @@ class NodeHoeffdingBound:
     __RIGHT_Y_SQUARED = 7 
     __RIGHT_N = 8
     
-    def __init__(self,split_confidence, tie_threshold = 0.05):
+    def __init__(self,split_confidence, tie_threshold = 0.05, max_feature=1.0):
         self.tie_threshold = tie_threshold
         self.delta = split_confidence
         self.samples_seen = 0
@@ -31,16 +40,27 @@ class NodeHoeffdingBound:
         self.right = None  # None means it's a leaf node
         self.feature = None
         self.threshold = None
+
+        self.max_feature = max_feature
+        self.feature_indecies = None
+
         self.attribute_stats = defaultdict(lambda: [0, 0, 0, 0, 0, 0, 0, 0, 0])  # Attribute sum and count
         self.data_from_before_split = []
 
     def update_stats(self, x, y):
+
+        if self.feature_indecies is None:
+            max_feature_length = int(x.shape[0] * self.max_feature)
+            self.feature_indecies = np.sort(get_unique_random_numbers(max_feature_length,x.shape[0]))
+
+        x_shortlisted = x[self.feature_indecies]
+
         self.samples_seen += 1
         self.sum_y += y
         self.sum_y_squared += y**2
         self.value = self.sum_y/self.samples_seen
 
-        for feature, val in enumerate(x):
+        for feature, val in zip(self.feature_indecies,x_shortlisted):
             self.attribute_stats[feature][self.__SUM_X] += val
             self.attribute_stats[feature][self.__COUNT] += 1
             self.attribute_stats[feature][self.__VAL] = val
@@ -65,7 +85,7 @@ class NodeHoeffdingBound:
     def find_best_split(self):
         __best_split_1st = (None, None, 0)
         __best_split_2nd = (None, None, 0)
-        for feature, stats in self.attribute_stats.items():
+        for n_left,(feature, stats) in enumerate(self.attribute_stats.items()):
             (
                 sum_x,
                 count, 
@@ -77,7 +97,7 @@ class NodeHoeffdingBound:
                 right_y_squared, 
                 right_n
             ) = stats
-            
+
             if count < 2:
                 continue
             avg_x = sum_x / count
@@ -93,7 +113,7 @@ class NodeHoeffdingBound:
                 __best_split_2nd = (feature, avg_x, reduction)
 
             R = len(self.attribute_stats)
-            e = hoeffding_bound(np.log2(R),count,self.delta)/200
+            e = hoeffding_bound(n_left,len(self.feature_indecies)-n_left,self.delta)/200
             if R > 1:
                 if __best_split_1st[2] - __best_split_2nd[2] > e:
                     return (__best_split_1st[0],__best_split_1st[1]), __best_split_1st[2]
@@ -118,8 +138,14 @@ class NodeHoeffdingBound:
         
     def split(self, split_info, split_confidence):
         self.feature, self.threshold = split_info
-        self.left = NodeHoeffdingBound(split_confidence)
-        self.right = NodeHoeffdingBound(split_confidence)
+        self.left = NodeHoeffdingBound(
+            split_confidence,
+            max_feature=self.max_feature
+        )
+        self.right = NodeHoeffdingBound(
+            split_confidence,
+            max_feature=self.max_feature
+        )
 
     def show(self,prefix=""):
         print(f"{prefix}feature: {self.feature}")

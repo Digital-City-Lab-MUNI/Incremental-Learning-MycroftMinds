@@ -1,4 +1,5 @@
 import numpy as np
+from src.utils.utils import get_unique_random_numbers
 
 def hoeffding_bound(R,n, delta):
     """Computes Hoeffding bound given number of samples and confidence level."""
@@ -21,7 +22,7 @@ class NodeConfidenceBound:
     __RIGHT_Y_SQUARED = 7 
     __RIGHT_N = 8
 
-    def __init__(self):
+    def __init__(self, max_feature=1.0):
         self.samples_seen = 0
         self.sum_y = 0
         self.sum_y_squared = 0
@@ -30,15 +31,26 @@ class NodeConfidenceBound:
         self.right = None  # None means it's a leaf node
         self.feature = None
         self.threshold = None
+
+        self.max_feature = max_feature
+        self.feature_indecies = None
+
         self.attribute_stats = defaultdict(lambda: [0, 0, 0, 0, 0, 0, 0, 0, 0])  # Attribute sum and count
         self.data_from_before_split = []
 
     def update_stats(self, x, y):
+
+        if self.feature_indecies is None:
+            max_feature_length = int(x.shape[0] * self.max_feature)
+            self.feature_indecies = np.sort(get_unique_random_numbers(max_feature_length,x.shape[0]))
+
+        x_shortlisted = x[self.feature_indecies]
+
         self.samples_seen += 1
         self.sum_y += y
         self.sum_y_squared += y**2
         self.value = self.sum_y/self.samples_seen
-        for feature, val in enumerate(x):
+        for feature, val in zip(self.feature_indecies,x_shortlisted):
             self.attribute_stats[feature][self.__SUM_X] += val
             self.attribute_stats[feature][self.__COUNT] += 1
             self.attribute_stats[feature][self.__VAL] = val
@@ -87,7 +99,6 @@ class NodeConfidenceBound:
                 best_feature, best_value, best_reduction = feature, avg_x, reduction
         return (best_feature, best_value), best_reduction
     
-
     def _variance_reduction(self, left_y, left_y_squared, left_n, right_y, right_y_squared, right_n):
         if left_n == 0 or right_n == 0:
             return 0
@@ -103,8 +114,12 @@ class NodeConfidenceBound:
 
     def split(self, split_info):
         self.feature, self.threshold = split_info
-        self.left = NodeConfidenceBound()
-        self.right = NodeConfidenceBound()
+        self.left = NodeConfidenceBound(
+            max_feature=self.max_feature
+        )
+        self.right = NodeConfidenceBound(
+            max_feature=self.max_feature
+        )
 
     def show(self,prefix=""):
         print(f"{prefix}feature: {self.feature}")

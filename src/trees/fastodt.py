@@ -11,11 +11,13 @@ import time
 import os
 
 class FastODT(BaseTree):
-    def __init__(self, depth = 5, grace_period=10, split_confidence=1.0, option = "HF"):
+    def __init__(self, depth = 5, grace_period=10, split_confidence=1.0, option = "HF", max_feature=1.0):
         self.grace_period = grace_period  # Number of samples before checking for a split
         self.split_confidence = split_confidence  # Confidence level for splitting
         self.depth = depth
         self.splits = [None] * depth
+
+        self.max_feature = max_feature
 
         self.option = option
         nodes_option_list = ["hf","cb"]
@@ -24,10 +26,15 @@ class FastODT(BaseTree):
             print(f"Wrong option in option: {option}, available options: {nodes_option_list}. Falling back to default: 'hf'.")
 
         if self.option == "hf":
-            self.root = NodeHoeffdingBound(self.split_confidence)
+            self.root = NodeHoeffdingBound(
+                self.split_confidence,
+                max_feature=self.max_feature
+            )
         elif self.option == "cb":
             # self.split_confidence = np.log(1/self.split_confidence)
-            self.root = NodeConfidenceBound()
+            self.root = NodeConfidenceBound(
+                max_feature=self.max_feature
+            )
 
     def partial_fit(self, X: np.ndarray, y: np.ndarray, verbose: bool = False):
         X = ensure_2d_array(X)
@@ -39,7 +46,6 @@ class FastODT(BaseTree):
 
         if verbose:
             for i in tqdm.tqdm(range(len(X))):
-                print(i, len(X))
                 self._update_tree(self.root, X[i], y[i], depth=0)
         else:
             for i in range(len(X)):
@@ -94,7 +100,8 @@ class FastODT(BaseTree):
             self._attempt_split_confidence(node, x, y, depth)
 
     def _attempt_split_HF(self, node, x, y, depth):
-        best_split, _ = node.find_best_split()
+        tmp = node.find_best_split()
+        best_split, _ = tmp
         if self.splits[depth] is not None:
             node.split(self.splits[depth],self.split_confidence)
             node.left.update_from_parent_node(node)
@@ -155,7 +162,7 @@ if __name__ == "__main__":
     # depth = 20
 
     # Train and predict with different depths
-    depths = [20, 150, 500]
+    depths = [100]
     predictions_cb = {}
     predictions_hf = {}
 
@@ -167,12 +174,14 @@ if __name__ == "__main__":
             depth=d, 
             grace_period=10,
             split_confidence=split_confidence_cb,
+            max_feature=0.7,
             option="cb"
         )
         model_hf = FastODT(
             depth=d, 
             grace_period=10,
             split_confidence=split_confidence_hf,
+            max_feature=0.7,
             option="hf"
         )
         model_cb.partial_fit(X, Y, verbose=True)
@@ -217,19 +226,20 @@ if __name__ == "__main__":
     predictions_hf = {}
 
     for d in depths:
-        print(d)
         split_confidence_cb = 0.001
         split_confidence_hf = 0.001
         model_cb = FastODT(
             depth=d, 
             grace_period=10,
             split_confidence=split_confidence_cb,
+            max_feature=1.0,
             option="cb"
         )
         model_hf = FastODT(
             depth=d, 
             grace_period=10,
             split_confidence=split_confidence_hf,
+            max_feature=1.0,
             option="hf"
         )
         model_cb.partial_fit(X, Y, verbose=True)

@@ -10,7 +10,7 @@ import os
 
 class IncubationBoost:
 
-    def __init__(self, baseLearner, length = 5, incubationMode = "DEFAULT", verbose = True,  baseLearnerOptions = (5, 10, 1.0, "HF")):
+    def __init__(self, baseLearner, length = 5, incubationMode = "DEFAULT", verbose = True, baseLearnerOptions = (5, 10, 1.0, "HF", 1.0)):
         """
         Initializes IncubationBoost.
 
@@ -65,7 +65,7 @@ class IncubationBoost:
 
         # detect if drift happens - if drift already happened then keep it latched (with +) until new tree is deployed
         self.under_drift_latch = bool(self.drift_detector.isDrift() + self.under_drift_latch)
-
+        
         if len(self.chain) < self.length:
             for node in self.chain:
                 __y_pred = node.predict(X)
@@ -147,37 +147,38 @@ class IncubationBoost:
 
 
 if __name__=="__main__":
-    split_confidence_hf = 0.0001
-    n_trees = 3
+    split_confidence_hf = 0.05
+    n_trees = 5
     depth = 20
     grace_period = 10
+    max_feature = 0.7
     incubationBreak = IncubationBoost(
         FastODT,
         n_trees,
         incubationMode = "BREAK",
         verbose=True,
-        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf")
+        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf", max_feature)
     )
     incubationDefault = IncubationBoost(
         FastODT,
         n_trees,
         incubationMode = "DEFAULT",
         verbose=True,
-        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf")
+        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf", max_feature)
     )
     incubationShiftLeft = IncubationBoost(
         FastODT,
         n_trees,
         incubationMode = "SHIFT_LEFT",
         verbose=True,
-        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf")
+        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf", max_feature)
     )
     incubationShiftRight = IncubationBoost(
         FastODT,
         n_trees,
         incubationMode = "SHIFT_RIGHT",
         verbose=True,
-        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf")
+        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf", max_feature)
     )
 
 
