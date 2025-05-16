@@ -3,17 +3,16 @@ import pandas as pd
 import numpy as np
 from typing import Dict, List, Any
 
-# Import aggregate_values from utils
 from src.utils.utils import aggregate_values
 
-def calculate_metrics(y_true, y_pred, device_id:str, period: str, verbose=True) -> dict:
+def calculate_metrics(y_true: pd.Series, y_pred: pd.Series, device_id: str, period: str, verbose=True) -> dict:
     """
     Calculate RMSE, MAE, and MAPE for predictions.
 
     Args:
-        y_true (array-like): True values.
-        y_pred (array-like): Predicted values.
-        device_id (str): Device type, either 'cpu' or 'gpu'.
+        y_true (pd.Series): True values.
+        y_pred (pd.Series): Predicted values.
+        device_id (str): Device's ID for which the analysis was done.
         period (str): The period for which the metrics are calculated. Ideally in the format `'YYYY-MM-DD HH:MM:SS' - 'YYYY-MM-DD HH:MM:SS'`.
         verbose (bool): If True, print the metrics.
 
@@ -61,6 +60,11 @@ def calculate_metrics(y_true, y_pred, device_id:str, period: str, verbose=True) 
                 print(f"\tMAE: {agg_metrics['mae']:.4f}")
                 print(f"\tMAPE: {agg_metrics['mape']:.4%}")
         print("=" * 50)
+
+    if y_true.isnull().any():
+        print(['[! WARNING !] There are missing values in the y_true!'])
+    if y_pred.isnull().any():
+        print(['[! WARNING !] There are missing values in the y_pred!'])
 
     return metrics
 

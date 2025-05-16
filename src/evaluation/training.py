@@ -289,6 +289,21 @@ def all_splits_seq_fit_predict(model: BaseEstimator,
                 device_valid_period_metrics[device_id] = []
             device_valid_period_metrics[device_id].append(device_valid_metrics)
 
+    # report missing values
+    for device_id in device_train_period_predictions:
+        for period in device_train_period_predictions[device_id]:
+            if period['y_true'].isnull().any():
+                print(f"[! WARNING !] There are missing values in the y_true for device {device_id} during the training period {period['period']}!")
+            if period['y_pred'].isnull().any():
+                print(f"[! WARNING !] There are missing values in the y_pred for device {device_id} during the training period {period['period']}!")
+    
+    for device_id in device_valid_period_predictions:
+        for period in device_valid_period_predictions[device_id]:
+            if period['y_true'].isnull().any():
+                print(f"[! WARNING !] There are missing values in the y_true for device {device_id} during the validation period {period['period']}!")
+            if period['y_pred'].isnull().any():
+                print(f"[! WARNING !] There are missing values in the y_pred for device {device_id} during the validation period {period['period']}!")
+
     return (device_train_period_predictions, 
             device_valid_period_predictions, 
             device_train_period_metrics, 
