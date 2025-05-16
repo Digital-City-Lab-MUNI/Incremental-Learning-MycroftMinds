@@ -58,7 +58,8 @@ def read_new_meter_data(extract_path, meter_names=None, aggregation=None):
 def aggregate_and_validate_lags(
     data_concat: pd.DataFrame,
     lag_freqs: Dict[str, int],
-    time_agg: Optional[str] = None
+    time_agg: Optional[str] = None,
+    fill_missing = False
 ) -> Tuple[pd.DataFrame, Dict[str, int]]:
     """
     Aggregates the time series data and filters lag frequencies that are incompatible
@@ -68,6 +69,7 @@ def aggregate_and_validate_lags(
         data_concat (pd.DataFrame): Original time series dataframe with 'time', 'device_id' and 'serial_number' columns.
         lag_freqs (dict): Dictionary mapping lag frequency strings (e.g., '1H', '1D') to the number of lags.
         time_agg (str, optional): Aggregation frequency string (e.g., '1H', '30min'). If None, no aggregation.
+        fill_missing (bool): fill missing values
 
     Returns:
         Tuple of:
@@ -84,6 +86,34 @@ def aggregate_and_validate_lags(
         agg_cols = data_concat.select_dtypes(include='number').columns
         data_concat = data_concat.groupby([pd.Grouper(freq=time_agg), 'device_id', 'serial_number']).agg({col: 'mean' for col in agg_cols})
         data_concat = data_concat.reset_index()
+        
+        if fill_missing:
+            # Identify missing timestamps per (device_id, serial_number) pair
+            missing_entries = []
+
+            for (device_id, serial_number), group in data_concat.groupby(['device_id', 'serial_number']):
+                full_range = pd.date_range(start=group['time'].min(), end=group['time'].max(), freq='1H')
+                existing_times = set(group['time'])
+                missing_times = [t for t in full_range if t not in existing_times]
+                
+                for t in missing_times:
+                    missing_entries.append({
+                        'time': t,
+                        'device_id': device_id,
+                        'serial_number': serial_number,
+                        **{col: pd.NA for col in agg_cols}  # Fill numeric cols with NaNs
+                    })
+
+            # Convert to DataFrame and concatenate with original
+            missing_df = pd.DataFrame(missing_entries)
+
+            # Append and sort
+            data_concat = pd.concat([data_concat, missing_df], ignore_index=True)
+            data_concat = data_concat.sort_values(['device_id', 'serial_number', 'time']).reset_index(drop=True)
+
+            fill_values = data_concat.groupby([data_concat['time'].dt.dayofweek, data_concat['time'].dt.hour])[agg_cols].transform('mean')
+            for col in agg_cols:
+                data_concat[col] = data_concat[col].fillna(fill_values[col])
     
     except Exception as e:
         print(f"[ERROR] Aggregation failed: {e}")
