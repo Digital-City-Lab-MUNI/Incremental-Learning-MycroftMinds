@@ -3,19 +3,19 @@ import numpy as np
 from collections import defaultdict
 from src.utils.utils import get_unique_random_numbers
 
-def hoeffding_bound(n_left,n_right, delta):
+def hoeffding_bound(R,n, delta):
     """Computes Hoeffding bound given number of samples and confidence level."""
     """n - samples """
     """delta - confidence factor """
-    # return np.sqrt((R**2)*np.log(1 / delta) / (2 * n))
-    harmonic_mean_n = 0
-    if n_left == 0:
-        harmonic_mean_n = n_right
-    if n_right == 0:
-        harmonic_mean_n = n_left
-    if n_left > 0 and n_right > 0:
-        harmonic_mean_n = 1/((1/n_left)+(1/n_right))
-    return math.sqrt(1/(2*harmonic_mean_n) / delta)
+    return np.sqrt((R**2)*np.log(1 / delta) / (2 * n))
+    # harmonic_mean_n = 0
+    # if n_left == 0:
+    #     harmonic_mean_n = n_right
+    # if n_right == 0:
+    #     harmonic_mean_n = n_left
+    # if n_left > 0 and n_right > 0:
+    #     harmonic_mean_n = 1/((1/n_left)+(1/n_right))
+    # return math.sqrt(1/(2*harmonic_mean_n) / delta)
 
 class NodeHoeffdingBound:
 
@@ -29,7 +29,7 @@ class NodeHoeffdingBound:
     __RIGHT_Y_SQUARED = 7 
     __RIGHT_N = 8
     
-    def __init__(self,split_confidence, tie_threshold = 0.05, max_feature=1.0):
+    def __init__(self,split_confidence, tie_threshold = 0.05, max_feature=1.0, eagerness=0.0):
         self.tie_threshold = tie_threshold
         self.delta = split_confidence
         self.samples_seen = 0
@@ -40,6 +40,13 @@ class NodeHoeffdingBound:
         self.right = None  # None means it's a leaf node
         self.feature = None
         self.threshold = None
+
+        self.eagerness = eagerness
+        # 200 is magic number but it is hyperparam which makes hf work for us
+        self.eager_splitting_counter = 200.0
+        self.split_period_counter = 0
+        self.split_ideal_period = 10
+        self.prev_splitting_period = self.split_ideal_period
 
         self.max_feature = max_feature
         self.feature_indecies = None
@@ -53,6 +60,7 @@ class NodeHoeffdingBound:
             max_feature_length = int(x.shape[0] * self.max_feature)
             self.feature_indecies = np.sort(get_unique_random_numbers(max_feature_length,x.shape[0]))
 
+        # x_shortlisted = x
         x_shortlisted = x[self.feature_indecies]
 
         self.samples_seen += 1
@@ -83,9 +91,12 @@ class NodeHoeffdingBound:
         self.value = parent.sum_y/self.samples_seen
 
     def find_best_split(self):
+        self.eager_splitting_counter += self.prev_splitting_period/self.split_ideal_period * self.eagerness
+        self.split_period_counter += 1
+
         __best_split_1st = (None, None, 0)
         __best_split_2nd = (None, None, 0)
-        for n_left,(feature, stats) in enumerate(self.attribute_stats.items()):
+        for feature, stats in self.attribute_stats.items():
             (
                 sum_x,
                 count, 
@@ -113,12 +124,19 @@ class NodeHoeffdingBound:
                 __best_split_2nd = (feature, avg_x, reduction)
 
             R = len(self.attribute_stats)
-            e = hoeffding_bound(n_left,len(self.feature_indecies)-n_left,self.delta)/200
+            e = hoeffding_bound(R,count,self.delta)/self.eager_splitting_counter
+
             if R > 1:
                 if __best_split_1st[2] - __best_split_2nd[2] > e:
+                    self.eager_splitting_counter = 200.0  
+                    self.prev_splitting_period = self.split_period_counter
+                    self.split_period_counter = 0.0
                     return (__best_split_1st[0],__best_split_1st[1]), __best_split_1st[2]
             elif R == 1:
                 if __best_split_1st[2] > e:
+                    self.eager_splitting_counter = 200.0 
+                    self.prev_splitting_period = self.split_period_counter
+                    self.split_period_counter = 0.0
                     return (__best_split_1st[0],__best_split_1st[1]), __best_split_1st[2]
 
         return (None, None), 0
@@ -140,11 +158,13 @@ class NodeHoeffdingBound:
         self.feature, self.threshold = split_info
         self.left = NodeHoeffdingBound(
             split_confidence,
-            max_feature=self.max_feature
+            max_feature=self.max_feature,
+            eagerness=self.eagerness
         )
         self.right = NodeHoeffdingBound(
             split_confidence,
-            max_feature=self.max_feature
+            max_feature=self.max_feature,
+            eagerness=self.eagerness
         )
 
     def show(self,prefix=""):

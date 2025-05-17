@@ -11,7 +11,7 @@ import time
 import os
 
 class FastODT(BaseTree):
-    def __init__(self, depth = 5, grace_period=10, split_confidence=1.0, option = "HF", max_feature=1.0):
+    def __init__(self, depth = 5, grace_period=10, split_confidence=1.0, option = "HF", max_feature=1.0, eagerness = 0.0):
         self.grace_period = grace_period  # Number of samples before checking for a split
         self.split_confidence = split_confidence  # Confidence level for splitting
         self.depth = depth
@@ -28,7 +28,8 @@ class FastODT(BaseTree):
         if self.option == "hf":
             self.root = NodeHoeffdingBound(
                 self.split_confidence,
-                max_feature=self.max_feature
+                max_feature=self.max_feature,
+                eagerness = eagerness,
             )
         elif self.option == "cb":
             # self.split_confidence = np.log(1/self.split_confidence)

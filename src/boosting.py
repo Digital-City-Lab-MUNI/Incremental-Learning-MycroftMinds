@@ -2,6 +2,7 @@ from sklearn.metrics import mean_absolute_error
 from matplotlib import pyplot as plt 
 from src.trees.fastodt import FastODT
 from src.utils.adwin import ADWIN
+from sklearn.metrics import mean_absolute_percentage_error
 import numpy as np
 import tqdm
 import time
@@ -34,6 +35,7 @@ class IncubationBoost:
         self.drift_detector = ADWIN(delta = 0.000002)
         self.under_drift_latch = False
         self.verbose = verbose
+        self.first_tree_hatched = False
 
         try:
             # Check if running in a Jupyter notebook
@@ -66,15 +68,27 @@ class IncubationBoost:
         # detect if drift happens - if drift already happened then keep it latched (with +) until new tree is deployed
         self.under_drift_latch = bool(self.drift_detector.isDrift() + self.under_drift_latch)
         
-        if len(self.chain) < self.length:
-            for node in self.chain:
-                __y_pred = node.predict(X)
-                y_pred += __y_pred
+        if len(self.chain) == 0:
+            newNode = self.baseLearner(
+                *self.baseLearnerOptions
+            )
+            self.chain.append(newNode)
 
-            residual = y - y_pred
-            hatchedNode = self.incubate(X,residual)
-            if hatchedNode:
-                self.chain.append(hatchedNode)
+        if len(self.chain) < self.length:
+            for n, node in enumerate(self.chain):
+
+                if node.is_filled():
+                    if n == len(self.chain) - 1:
+                        newNode = self.baseLearner(
+                            *self.baseLearnerOptions
+                        )
+                        self.chain.append(newNode)
+
+                    __y_pred = node.predict(X)
+                    y_pred += __y_pred
+                    residual = y - y_pred
+                else:
+                    node.partial_fit([X], residual)
 
         elif self.under_drift_latch:
             if self.incubationMode == "DEFAULT":
@@ -147,38 +161,39 @@ class IncubationBoost:
 
 
 if __name__=="__main__":
-    split_confidence_hf = 0.05
+    split_confidence_hf = 0.001
     n_trees = 5
-    depth = 20
+    depth = 15
     grace_period = 10
-    max_feature = 0.7
+    max_feature = 1.0
+    eagerness = depth*5
     incubationBreak = IncubationBoost(
         FastODT,
         n_trees,
         incubationMode = "BREAK",
         verbose=True,
-        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf", max_feature)
+        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf", max_feature, eagerness)
     )
     incubationDefault = IncubationBoost(
         FastODT,
         n_trees,
         incubationMode = "DEFAULT",
         verbose=True,
-        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf", max_feature)
+        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf", max_feature, eagerness)
     )
     incubationShiftLeft = IncubationBoost(
         FastODT,
         n_trees,
         incubationMode = "SHIFT_LEFT",
         verbose=True,
-        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf", max_feature)
+        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf", max_feature, eagerness)
     )
     incubationShiftRight = IncubationBoost(
         FastODT,
         n_trees,
         incubationMode = "SHIFT_RIGHT",
         verbose=True,
-        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf", max_feature)
+        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf", max_feature, eagerness)
     )
 
 

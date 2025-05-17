@@ -528,7 +528,7 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
         # Tree parameters
         grace_period: int = 50,
         max_depth: int | None = None,
-        delta: float = 0.01,
+        delta: float = 0.001,
         tau: float = 0.05,
         leaf_prediction: str = "adaptive",
         leaf_model: base.Regressor | None = None,
@@ -543,6 +543,8 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
         remove_poor_attrs: bool = False,
         merit_preprune: bool = True,
         seed: int | None = None,
+        max_feature: float = 1.0,
+        eagerness : float = 200.0,
     ):
         super().__init__(
             n_models=n_models,
@@ -572,6 +574,8 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
         self.stop_mem_management = stop_mem_management
         self.remove_poor_attrs = remove_poor_attrs
         self.merit_preprune = merit_preprune
+        self.max_feature = max_feature
+        self.eagerness = eagerness
 
         if aggregation_method in self._VALID_AGGREGATION_METHOD:
             self.aggregation_method = aggregation_method
@@ -633,7 +637,8 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
             grace_period=self.grace_period,
             depth=self.max_depth,
             split_confidence=self.delta,
-            max_feature = 1.0,
+            max_feature = self.max_feature,
+            eagerness=self.eagerness, # Daniel, this is new feature, you can set it to 0 to disable it, but it basically make FastODT with hf eager to split
             option="hf"
         )
 
