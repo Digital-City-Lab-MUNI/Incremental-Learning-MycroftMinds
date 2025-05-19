@@ -23,6 +23,7 @@ def _partial_fit_model(model: BaseEstimator,
     if hasattr(model, 'partial_fit'):
         model.partial_fit(X, Y)
     else:
+        # Adaptation for River or other models with learn_one method
         X = pd.DataFrame(X).to_dict(orient='records')
         for x, y in zip(X, Y):
             model.learn_one(x, y)
@@ -40,6 +41,7 @@ def _predict_model(model: BaseEstimator,
     if hasattr(model, 'predict'):
         return model.predict(X)
     else:
+        # Adaptation for River or other models with predict_one method
         return np.array([model.predict_one(x) for x in X])
 
 
@@ -108,8 +110,8 @@ def seq_fit_predict_batch_model(model: BaseEstimator,
         print(f"Predicting for chunk from {X_valid[current_chunk_start, 0]} to {X_valid[chunk_end-1, 0]}")
         print()
         print("-" * 25)
-        y_pred__valid_chunk = model.predict(X_valid[current_chunk_start:chunk_end, index_cols:])
-        y_pred_valid.extend(y_pred__valid_chunk)
+        y_pred_valid_chunk = model.predict(X_valid[current_chunk_start:chunk_end, index_cols:])
+        y_pred_valid.extend(y_pred_valid_chunk)
 
         # Add the current chunk of validation data to the training set
         X_train_seq = np.vstack([X_train_seq, X_valid[current_chunk_start:chunk_end]])
@@ -176,7 +178,7 @@ def seq_fit_predict_incremental_model(model: BaseEstimator,
     for i in range(len(X_valid)):
         # Predict the current validation point
         y_pred = _predict_model(model, X_valid[i:i+1, index_cols:])
-        y_pred_valid.append(y_pred)
+        y_pred_valid.extend(y_pred)
 
         # Update the model with the current validation point
         if i + 1 < len(X_valid):  # Ensure we don't go out of bounds
@@ -188,6 +190,7 @@ def seq_fit_predict_incremental_model(model: BaseEstimator,
 
     # Convert predictions list to pandas Series
     y_pred_valid = pd.Series(y_pred_valid, index=y_valid.index)
+    print("Validation predictions completed.")
 
     return y_pred_train, y_pred_valid
 
@@ -196,6 +199,7 @@ def all_splits_seq_fit_predict(model: BaseEstimator,
                              train: List[Tuple[np.ndarray, np.ndarray]], 
                              valid: List[Tuple[np.ndarray, np.ndarray]], 
                              incremental: bool,
+                             data_freq: str,
                              update_freq="14D",
                              start_split: int = 0, 
                              end_split: Optional[int] = None,
@@ -209,6 +213,7 @@ def all_splits_seq_fit_predict(model: BaseEstimator,
         train (List[Tuple[np.ndarray, np.ndarray]]): The training data splits.
         valid (List[Tuple[np.ndarray, np.ndarray]]): The validation data splits.
         incremental (bool): If True, use incremental learning; otherwise, use batch learning.
+        data_freq (str): The frequency of the data (e.g., "1s", "5min", "H", etc.).
         update_freq (str): The frequency at which the model is updated. Must be a valid pandas offset string (e.g., "14D" for 14 days, "5m" for 5 minutes, etc.).
         start_split (int): The starting split for processing the splits.
         end_split (Optional[int]): The ending split for processing the splits. If None, it will process all splits.
@@ -262,17 +267,19 @@ def all_splits_seq_fit_predict(model: BaseEstimator,
                 y_train,
                 y_pred_train,
                 device_id,
-                train_period, 
+                train_period,
+                data_freq=data_freq,
                 verbose=False
                 )
             device_valid_metrics = calculate_metrics(
                 y_valid,
                 y_pred_valid,
                 device_id,
-                valid_period, 
+                valid_period,
+                data_freq=data_freq,
                 verbose=verbose
                 )
-            
+
             if device_id not in device_train_period_predictions:
                 device_train_period_predictions[device_id] = []
             device_train_period_predictions[device_id].append(device_train_predictions)
@@ -308,4 +315,3 @@ def all_splits_seq_fit_predict(model: BaseEstimator,
             device_valid_period_predictions, 
             device_train_period_metrics, 
             device_valid_period_metrics)
-

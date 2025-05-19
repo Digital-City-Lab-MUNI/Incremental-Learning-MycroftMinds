@@ -242,7 +242,7 @@ def plot_part_predictions(y_true, y_pred, data_show=100, outlier_threshold=0.9, 
     plt.tight_layout()
     plt.show()
 
-def plot_hourly_predictions(y_true, y_pred, device_id=None, outlier_threshold=0.9, data_show=None) -> None:
+def plot_hourly_predictions(y_true: pd.Series, y_pred: pd.Series, data_freq: str, device_id=None, outlier_threshold=0.9, data_show=None) -> None:
     """
     Plots hourly aggregated predictions against actual values with outliers highlighted.
     
@@ -250,8 +250,9 @@ def plot_hourly_predictions(y_true, y_pred, device_id=None, outlier_threshold=0.
         y_true (pandas.Series): original target values with timestamps as index.
         y_pred (pandas.Series): predicted target values with timestamps as index.
         device_id (str): the device ID for display in the title.
+        data_freq (str): frequency of the data (default is 'H' for hourly).
         outlier_threshold: (float): threshold to mark outliers (default 0.9 = 90% difference).
-        data_show (int): number of data points to show (default is all).
+        data_show (int): number of data points to show from the end (default is all).
     """
     
     # Aggregate hourly
@@ -274,7 +275,7 @@ def plot_hourly_predictions(y_true, y_pred, device_id=None, outlier_threshold=0.
     period = f"{start_time} - {end_time}"
     
     # Calculate metrics for legend
-    metrics = calculate_metrics(y_true, y_pred, device_id or "Unknown", period, verbose=False)
+    metrics = calculate_metrics(y_true, y_pred, device_id or "Unknown", period, data_freq, verbose=False)
     hourly_metrics = metrics['hourly']
     
     # Create the plot
@@ -292,7 +293,9 @@ def plot_hourly_predictions(y_true, y_pred, device_id=None, outlier_threshold=0.
     # Add metrics to legend
     metrics_text = (f'RMSE: {hourly_metrics["rmse"]:.2f}, '
                     f'MAE: {hourly_metrics["mae"]:.2f}, '
-                    f'MAPE: {hourly_metrics["mape"]:.2%}')
+                    f'MAPE: {hourly_metrics["mape"]:.2%}'
+                    f'\nDA: {hourly_metrics["dir_accuracy"]:.2%}, '
+                    f'1st Diff. Corr.: {hourly_metrics["first_diff_corr"]:.2f}')
     plt.plot([], [], ' ', label=metrics_text)
     
     # Set title and labels
