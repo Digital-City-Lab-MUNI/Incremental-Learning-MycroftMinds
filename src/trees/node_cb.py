@@ -22,7 +22,7 @@ class NodeConfidenceBound:
     __RIGHT_Y_SQUARED = 7 
     __RIGHT_N = 8
 
-    def __init__(self, max_feature=1.0):
+    def __init__(self, max_feature=1.0, grace_period=0.0):
         self.samples_seen = 0
         self.sum_y = 0
         self.sum_y_squared = 0
@@ -33,6 +33,7 @@ class NodeConfidenceBound:
         self.threshold = None
 
         self.max_feature = max_feature
+        self.grace_period = grace_period
         self.feature_indecies = None
 
         self.attribute_stats = defaultdict(lambda: [0, 0, 0, 0, 0, 0, 0, 0, 0])  # Attribute sum and count
@@ -71,6 +72,8 @@ class NodeConfidenceBound:
         self.sum_y = parent.sum_y
         self.sum_y_squared = parent.sum_y_squared
         self.value = parent.sum_y/self.samples_seen
+        if self.grace_period > 0: 
+            self.grace_period += parent.samples_seen
 
     def find_best_split(self):
         best_feature, best_value, best_reduction = (None, None, 0)
@@ -115,11 +118,16 @@ class NodeConfidenceBound:
     def split(self, split_info):
         self.feature, self.threshold = split_info
         self.left = NodeConfidenceBound(
-            max_feature=self.max_feature
+            max_feature=self.max_feature,
+            grace_period=self.grace_period,
         )
         self.right = NodeConfidenceBound(
-            max_feature=self.max_feature
+            max_feature=self.max_feature,
+            grace_period=self.grace_period,
         )
+
+    def reached_grace_period(self):
+        return self.grace_period < self.samples_seen
 
     def show(self,prefix=""):
         print(f"{prefix}feature: {self.feature}")

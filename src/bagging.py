@@ -545,6 +545,7 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
         seed: int | None = None,
         max_feature: float = 1.0,
         eagerness : float = 200.0,
+        grace_period_depth : int = -1,
     ):
         super().__init__(
             n_models=n_models,
@@ -559,6 +560,7 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
 
         # Tree parameters
         self.grace_period = grace_period
+        self.grace_period_depth = grace_period_depth
         self.max_depth = max_depth
         self.delta = delta
         self.tau = tau
@@ -639,7 +641,8 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
             split_confidence=self.delta,
             max_feature = self.max_feature,
             eagerness=self.eagerness, # Daniel, this is new feature, you can set it to 0 to disable it, but it basically make FastODT with hf eager to split
-            option="hf"
+            option="hf",
+            grace_period_depth = self.grace_period_depth,
         )
 
     def _drift_detector_input(

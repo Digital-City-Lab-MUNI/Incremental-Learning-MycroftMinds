@@ -29,7 +29,7 @@ class NodeHoeffdingBound:
     __RIGHT_Y_SQUARED = 7 
     __RIGHT_N = 8
     
-    def __init__(self,split_confidence, tie_threshold = 0.05, max_feature=1.0, eagerness=0.0):
+    def __init__(self,split_confidence, tie_threshold = 0.05, max_feature=1.0, eagerness=0.0, grace_period = 0):
         self.tie_threshold = tie_threshold
         self.delta = split_confidence
         self.samples_seen = 0
@@ -46,6 +46,7 @@ class NodeHoeffdingBound:
         self.eager_splitting_counter = 200.0
         self.split_period_counter = 0
         self.split_ideal_period = 10
+        self.grace_period = grace_period
         self.prev_splitting_period = self.split_ideal_period
 
         self.max_feature = max_feature
@@ -89,6 +90,9 @@ class NodeHoeffdingBound:
         self.sum_y = parent.sum_y
         self.sum_y_squared = parent.sum_y_squared
         self.value = parent.sum_y/self.samples_seen
+        if self.grace_period > 0: 
+            self.grace_period += parent.samples_seen
+
 
     def find_best_split(self):
         self.eager_splitting_counter += self.prev_splitting_period/self.split_ideal_period * self.eagerness
@@ -159,13 +163,18 @@ class NodeHoeffdingBound:
         self.left = NodeHoeffdingBound(
             split_confidence,
             max_feature=self.max_feature,
-            eagerness=self.eagerness
+            eagerness=self.eagerness,
+            grace_period=self.grace_period
         )
         self.right = NodeHoeffdingBound(
             split_confidence,
             max_feature=self.max_feature,
-            eagerness=self.eagerness
+            eagerness=self.eagerness,
+            grace_period=self.grace_period
         )
+
+    def reached_grace_period(self):
+        return self.grace_period < self.samples_seen
 
     def show(self,prefix=""):
         print(f"{prefix}feature: {self.feature}")

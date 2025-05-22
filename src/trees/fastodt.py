@@ -11,13 +11,62 @@ import time
 import os
 
 class FastODT(BaseTree):
-    def __init__(self, depth = 5, grace_period=10, split_confidence=1.0, option = "HF", max_feature=1.0, eagerness = 0.0):
+    def __init__(self, depth = 5, grace_period=10, split_confidence=1.0, option = "HF", max_feature=1.0, eagerness = 0.0, grace_period_depth=-1):
+        """
+        Initialize the FastODT tree model with parameters.
+
+        Parameters:
+        ----------
+        depth : int, optional (default=5)
+            Maximum depth of the decision tree. Controls the number of splits from the root to a leaf.
+
+        grace_period : int, optional (default=10)
+            Number of samples a node should observe before attempting to split.
+
+        split_confidence : float, optional (default=1.0)
+            Confidence level for splitting criterion. A higher value makes splitting more conservative.
+
+        option : str, optional (default="HF")
+            Type of split criterion node to use. Options are:
+                - "HF" for Hoeffding Bound
+                - "CB" for Confidence Bound
+            If an invalid option is passed, defaults to "HF" with a warning.
+
+        max_feature : float, optional (default=1.0)
+            Fraction of features to consider for splitting at each node.
+
+        eagerness : float, optional (default=0.0)
+            Parameter to control the eagerness to split for Hoeffding Bound nodes.
+
+        grace_period_depth : int, optional (default=-1)
+            Grace period value to control to how deep nodes grace period should still apply. 
+            If set to 1, only first node will use grace_period, 
+            If set to 100, first 100 nodes will use grace period,
+            If set to -1, this feature is disabled (set to over 999999999999999 internally).
+
+        Attributes:
+        ----------
+        root : Node
+            The root node of the tree, initialized according to the chosen `option`.
+
+        splits : list
+            A list initialized to hold split information for each depth level.
+
+        Raises:
+        ------
+        None
+        """
         self.grace_period = grace_period  # Number of samples before checking for a split
         self.split_confidence = split_confidence  # Confidence level for splitting
         self.depth = depth
         self.splits = [None] * depth
 
         self.max_feature = max_feature
+        
+        self.grace_period_depth = grace_period_depth
+        if self.grace_period_depth == -1:
+            self.grace_period_depth = 999999999999999
+
 
         self.option = option
         nodes_option_list = ["hf","cb"]
@@ -30,11 +79,13 @@ class FastODT(BaseTree):
                 self.split_confidence,
                 max_feature=self.max_feature,
                 eagerness = eagerness,
+                grace_period=grace_period,
             )
         elif self.option == "cb":
             # self.split_confidence = np.log(1/self.split_confidence)
             self.root = NodeConfidenceBound(
-                max_feature=self.max_feature
+                max_feature=self.max_feature,
+                grace_period=grace_period,
             )
 
     def partial_fit(self, X: np.ndarray, y: np.ndarray, verbose: bool = False):
@@ -85,7 +136,7 @@ class FastODT(BaseTree):
 
         if node.left is None and node.right is None:
             node.update_stats(x, y)
-            if node.samples_seen >= self.grace_period:
+            if node.reached_grace_period() or self.grace_period_depth < depth:
                 self._attempt_split(node, x, y, depth)
         elif node.feature is not None:
             if x[node.feature] <= node.threshold:
@@ -142,7 +193,7 @@ if __name__ == "__main__":
     model_hf = FastODT(
         depth=20, 
         grace_period=10,
-        split_confidence=1.0,
+        split_confidence=0.0001,
         option="hf"
     )
     model_hf.partial_fit(X[0,:], Y[0], verbose=True)
@@ -170,20 +221,24 @@ if __name__ == "__main__":
     for d in depths:
         split_confidence_cb = 0.0001
         split_confidence_hf = 0.0001
+        grace_period = 1
+        grace_period_depth = 1
 
         model_cb = FastODT(
             depth=d, 
-            grace_period=10,
+            grace_period=grace_period,
             split_confidence=split_confidence_cb,
-            max_feature=0.7,
-            option="cb"
+            max_feature=1.0,
+            option="cb",
+            grace_period_depth=grace_period_depth
         )
         model_hf = FastODT(
             depth=d, 
-            grace_period=10,
+            grace_period=grace_period,
             split_confidence=split_confidence_hf,
-            max_feature=0.7,
-            option="hf"
+            max_feature=1.0,
+            option="hf",
+            grace_period_depth=grace_period_depth
         )
         model_cb.partial_fit(X, Y, verbose=True)
         model_hf.partial_fit(X, Y, verbose=True)
@@ -229,19 +284,24 @@ if __name__ == "__main__":
     for d in depths:
         split_confidence_cb = 0.001
         split_confidence_hf = 0.001
+        grace_period = 10
+        grace_period_depth=1
+
         model_cb = FastODT(
             depth=d, 
-            grace_period=10,
+            grace_period=grace_period,
             split_confidence=split_confidence_cb,
             max_feature=1.0,
-            option="cb"
+            option="cb",
+            grace_period_depth = grace_period_depth
         )
         model_hf = FastODT(
             depth=d, 
-            grace_period=10,
+            grace_period=grace_period,
             split_confidence=split_confidence_hf,
             max_feature=1.0,
-            option="hf"
+            option="hf",
+            grace_period_depth = grace_period_depth
         )
         model_cb.partial_fit(X, Y, verbose=True)
         model_hf.partial_fit(X, Y, verbose=True)

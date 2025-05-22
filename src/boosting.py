@@ -167,33 +167,34 @@ if __name__=="__main__":
     grace_period = 10
     max_feature = 1.0
     eagerness = depth*5
+    grace_period_depth = -1
     incubationBreak = IncubationBoost(
         FastODT,
         n_trees,
         incubationMode = "BREAK",
         verbose=True,
-        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf", max_feature, eagerness)
+        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf", max_feature, eagerness, grace_period_depth)
     )
     incubationDefault = IncubationBoost(
         FastODT,
         n_trees,
         incubationMode = "DEFAULT",
         verbose=True,
-        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf", max_feature, eagerness)
+        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf", max_feature, eagerness, grace_period_depth)
     )
     incubationShiftLeft = IncubationBoost(
         FastODT,
         n_trees,
         incubationMode = "SHIFT_LEFT",
         verbose=True,
-        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf", max_feature, eagerness)
+        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf", max_feature, eagerness, grace_period_depth)
     )
     incubationShiftRight = IncubationBoost(
         FastODT,
         n_trees,
         incubationMode = "SHIFT_RIGHT",
         verbose=True,
-        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf", max_feature, eagerness)
+        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf", max_feature, eagerness, grace_period_depth)
     )
 
 
