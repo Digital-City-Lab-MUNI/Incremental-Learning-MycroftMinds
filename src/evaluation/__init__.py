@@ -2,7 +2,8 @@
 
 from .metrics import (
     calculate_metrics,
-    all_time_aggregation_metrics
+    all_time_aggregation_metrics,
+    detect_spikes_and_drops
 )
 
 from .visualization import (
@@ -14,5 +15,6 @@ from .visualization import (
 from .training import (
     seq_fit_predict_batch_model,
     seq_fit_predict_incremental_model,
-    all_splits_seq_fit_predict
+    all_valid_splits_seq_fit_predict,
+    test_set_seq_fit_predict
 )
