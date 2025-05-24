@@ -1,5 +1,6 @@
 import itertools
 import numpy as np
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from src.evaluation.metrics import calculate_metrics, all_time_aggregation_metrics
 from src.evaluation.visualization import plot_part_predictions, plot_hourly_predictions
 from src.evaluation.training import all_valid_splits_seq_fit_predict, test_set_seq_fit_predict
@@ -12,6 +13,9 @@ def train_and_evaluate(model, params, train, valid, data_freq='H', update_freq='
     Returns:
     - hoef_all_time_valid_metrics (dict): All time validation metrics.
     """
+    incremental=True
+    if model in (RandomForestRegressor, GradientBoostingRegressor):
+        incremental=False
 
     model = model(**params)
     
@@ -20,7 +24,7 @@ def train_and_evaluate(model, params, train, valid, data_freq='H', update_freq='
         model=model, 
         train=train, 
         valid=valid, 
-        incremental=True,
+        incremental=incremental,
         data_freq=data_freq,
         update_freq=update_freq, 
         start_split=0, 
