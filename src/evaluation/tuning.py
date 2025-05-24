@@ -14,8 +14,6 @@ def train_and_evaluate(model, params, train, valid, data_freq='H', update_freq='
     """
 
     model = model(**params)
-
-    print('training with:', params)
     
     model_all_train_preds, model_all_valid_preds, \
     model_all_train_metrics, model_all_valid_metrics = all_valid_splits_seq_fit_predict(
@@ -68,6 +66,8 @@ def grid_search_tuning(param_grid, model, train, valid, aggregation='hourly', da
         params = dict(zip(keys, combination))
         results = train_and_evaluate(model, params, train, valid)
 
+        print('training with:', params)
+
         # Aggregate hourly metrics across all devices
         metric_sums = {'rmse': 0.0, 'mae': 0.0, 'mape': 0.0}
         metric_counts = {'rmse': 0, 'mae': 0, 'mape': 0}
@@ -91,7 +91,7 @@ def grid_search_tuning(param_grid, model, train, valid, aggregation='hourly', da
             if avg_metrics[metric] < best_scores[metric]:
                 best_scores[metric] = float(avg_metrics[metric])
                 best_params[metric] = params.copy()
-        # print('best scores:',  best_scores)
-        # print('scores:', avg_metrics)
+        #print('best scores:',  best_scores)
+        print('scores:', avg_metrics)
 
     return best_params, best_scores
