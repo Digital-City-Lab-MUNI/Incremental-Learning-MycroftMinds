@@ -132,7 +132,8 @@ def seq_fit_predict_incremental_model(model: BaseEstimator,
                                     X_valid: np.array, 
                                     y_valid: pd.Series,
                                     update_freq: str = "5 min",
-                                    predict_train: bool = True,
+                                    predict_train: bool = True, 
+                                    verbose = True,
                                     index_cols=2) -> Tuple[Optional[pd.Series], pd.Series]:
     """
     Perform sequential predictions for time series data using incremental learning models by updating 
@@ -164,7 +165,8 @@ def seq_fit_predict_incremental_model(model: BaseEstimator,
     update_freq = pd.Timedelta(update_freq) 
 
     # Fit the model on the initial training data
-    print(f"Initial training on data from {X_train_seq[0, 0]} to {X_train_seq[-1, 0]}")
+    if verbose:
+        print(f"Initial training on data from {X_train_seq[0, 0]} to {X_train_seq[-1, 0]}")
     
     _partial_fit_model(model, X_train_seq[:, index_cols:], y_train_seq)
 
@@ -172,7 +174,9 @@ def seq_fit_predict_incremental_model(model: BaseEstimator,
     if predict_train:
         y_pred_train = _predict_model(model, X_train_seq[:, index_cols:])
         y_pred_train = pd.Series(y_pred_train, index=y_train.index)
-        print("Train predictions completed.")
+
+        if verbose:
+            print("Train predictions completed.")
 
     # Iterate through the validation set
     for i in range(len(X_valid)):
@@ -190,7 +194,8 @@ def seq_fit_predict_incremental_model(model: BaseEstimator,
 
     # Convert predictions list to pandas Series
     y_pred_valid = pd.Series(y_pred_valid, index=y_valid.index)
-    print("Validation predictions completed.")
+    if verbose:
+        print("Validation predictions completed.")
 
     return y_pred_train, y_pred_valid
 
@@ -252,7 +257,7 @@ def all_valid_splits_seq_fit_predict(model: BaseEstimator,
             X_valid, y_valid = get_device_data(valid[split], device_id=device_id)
 
             if incremental:
-                y_pred_train, y_pred_valid = seq_fit_predict_incremental_model(model, X_train, y_train, X_valid, y_valid, update_freq, predict_train, index_cols)
+                y_pred_train, y_pred_valid = seq_fit_predict_incremental_model(model, X_train, y_train, X_valid, y_valid, update_freq, predict_train, verbose, index_cols)
             else:
                 y_pred_train, y_pred_valid = seq_fit_predict_batch_model(model, X_train, y_train, X_valid, y_valid, update_freq, predict_train, index_cols)
 
