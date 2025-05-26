@@ -1,13 +1,18 @@
 import itertools
 import numpy as np
+from datetime import datetime
 from typing import Tuple, Optional, List, Dict, Any
 from sklearn.base import BaseEstimator
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
-from tqdm.notebook import tqdm  # Import tqdm for notebooks
+from tqdm.notebook import tqdm
 
 from src.evaluation.metrics import calculate_metrics, all_time_aggregation_metrics
 from src.evaluation.visualization import plot_part_predictions, plot_hourly_predictions
 from src.evaluation.training import all_valid_splits_seq_fit_predict, test_set_seq_fit_predict
+from src.utils.logging import (
+    setup_log_directory, create_log_file, log_and_print, 
+    save_checkpoint_results, format_metric_value
+)
 
 def train_and_evaluate(model: BaseEstimator, 
                        params: dict, 
@@ -35,9 +40,13 @@ def train_and_evaluate(model: BaseEstimator,
         model_all_time_valid_metrics (Dict[str, Any]): Aggregated validation metrics across all devices.
     """
 
-    incremental=True
-    if model in (RandomForestRegressor, GradientBoostingRegressor):
-        incremental=False
+    incremental = True
+    # Check if the model is a class (not instantiated) and determine if it's batch learning
+    if hasattr(model, '__name__'):
+        if model.__name__ in ['RandomForestRegressor', 'GradientBoostingRegressor']:
+            incremental = False
+    elif model.__class__.__name__ in ['RandomForestRegressor', 'GradientBoostingRegressor']:
+        incremental = False
 
     model = model(**params)
     
@@ -70,9 +79,13 @@ def grid_search_tuning(param_grid: dict,
                        data_freq: str = 'H', 
                        update_freq: str = '1h',
                        start_split: int = 0,
-                       end_split: Optional[int] = None) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+                       end_split: Optional[int] = None,
+                       log_dir: str = None,
+                       log_prefix: str = None,
+                       file_prefix: str = None,
+                       save_intermediate: bool = True) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """
-    Perform grid search to tune hyperparameters.
+    Perform grid search to tune hyperparameters with conservative checkpoint output and logging.
     Aggregates validation metrics across devices and returns
     the best params for each metric (rmse, mae, mape) separately.
     
@@ -86,12 +99,26 @@ def grid_search_tuning(param_grid: dict,
         update_freq (str): Frequency of updates (default is '1h').
         start_split (int): Starting index for the splits (default is 0).
         end_split (Optional[int]): Ending index for the splits (default is None, which means all splits).
+        log_dir (str): Directory to save tuning results logs. If None, uses default.
+        log_prefix (str): Prefix for log directory and files. If None, uses 'tuning'.
+        file_prefix (str): Prefix for result filenames (e.g., 'dev_4_wfv'). If None, uses no prefix.
+        save_intermediate (bool): Whether to save intermediate results.
 
     Returns:
-        best_params (dict): Best hyperparameters for each metric based on average validation score across all devices for a given aggregation.
-        best_scores (dict): Best scores for each metric based on average validation score across all devices for a given aggregation.
+        best_params (dict): Best hyperparameters for each metric.
+        best_scores (dict): Best scores for each metric.
     """
 
+    # Setup logging with defaults
+    model_name = model.__name__ if hasattr(model, '__name__') else model.__class__.__name__
+    
+    # Setup directories with defaults
+    if log_prefix is None:
+        log_prefix = "hyperparameter_tuning"
+    
+    log_dir = setup_log_directory(log_dir, log_prefix)
+    log_file = create_log_file(log_dir, model_name, file_prefix)
+    
     keys = list(param_grid.keys())
     values = list(param_grid.values())
 
@@ -123,9 +150,73 @@ def grid_search_tuning(param_grid: dict,
 
     # Generate all parameter combinations
     param_combinations = list(itertools.product(*values))
+    total_combinations = len(param_combinations)
     
-    # Create progress bar
-    for combination in tqdm(param_combinations, desc="Grid Search Progress"):
+    def print_checkpoint(iteration, params, current_metrics, improvements):
+        separator = "=" * 80
+        
+        log_and_print(log_file, f"\n{separator}")
+        log_and_print(log_file, f"CHECKPOINT: Iteration {iteration}/{total_combinations}")
+        log_and_print(log_file, f"Current Parameters: {params}")
+        log_and_print(log_file, separator)
+        
+        if improvements:
+            log_and_print(log_file, "NEW BEST SCORES FOUND!")
+            for metric, (old_score, new_score) in improvements.items():
+                is_perc = metric in ['mape', 'dir_accuracy', 'first_diff_corr', 'spikes_f1', 'drops_f1']
+                old_str = format_metric_value(old_score, is_perc)
+                new_str = format_metric_value(new_score, is_perc)
+                direction = "decreased" if metric in ['rmse', 'mae', 'mape'] else "increased"
+                log_and_print(log_file, f"   {metric.upper()}: {old_str} -> {new_str} ({direction})")
+        
+        log_and_print(log_file, "\nCURRENT ITERATION RESULTS:")
+        for metric in ['rmse', 'mae', 'mape', 'dir_accuracy', 'first_diff_corr', 'spikes_f1', 'drops_f1']:
+            if metric in current_metrics:
+                is_perc = metric in ['mape', 'dir_accuracy', 'first_diff_corr', 'spikes_f1', 'drops_f1']
+                value_str = format_metric_value(current_metrics[metric], is_perc)
+                log_and_print(log_file, f"   {metric.upper()}: {value_str}")
+        
+        log_and_print(log_file, "\nCURRENT BEST SCORES:")
+        # Lower is better metrics
+        for metric in ['rmse', 'mae', 'mape']:
+            best_score = best_scores_lower_better[metric]
+            best_params = best_params_lower_better[metric]
+            score_str = format_metric_value(best_score, metric == 'mape')
+            log_and_print(log_file, f"   {metric.upper()} (best: {score_str})")
+            if best_params:
+                log_and_print(log_file, f"     Parameters: {best_params}")
+        
+        # Higher is better metrics
+        for metric in ['dir_accuracy', 'first_diff_corr', 'spikes_f1', 'drops_f1']:
+            best_score = best_scores_higher_better[metric]
+            best_params = best_params_higher_better[metric]
+            score_str = format_metric_value(best_score, True)
+            log_and_print(log_file, f"   {metric.upper()} (best: {score_str})")
+            if best_params:
+                log_and_print(log_file, f"     Parameters: {best_params}")
+        
+        progress = (iteration / total_combinations) * 100
+        log_and_print(log_file, f"\nProgress: {progress:.1f}% ({iteration}/{total_combinations} combinations)")
+        log_and_print(log_file, separator)
+    
+    # Initial log setup
+    log_and_print(log_file, f"Grid Search Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    log_and_print(log_file, f"Model: {model_name}")
+    log_and_print(log_file, f"File prefix: {file_prefix or 'None'}")
+    log_and_print(log_file, f"Total parameter combinations: {total_combinations}")
+    log_and_print(log_file, f"Aggregation: {aggregation} | Data Frequency: {data_freq} | Update Frequency: {update_freq}")
+    log_and_print(log_file, f"Parameter grid: {param_grid}")
+    log_and_print(log_file, f"Log directory: {log_dir}")
+    log_and_print(log_file, "")
+    
+    print(f"Starting Grid Search with {total_combinations} parameter combinations...")
+    print(f"Model: {model_name}")
+    print(f"File prefix: {file_prefix or 'None'}")
+    print(f"Aggregation: {aggregation} | Data Frequency: {data_freq} | Update Frequency: {update_freq}")
+    print(f"Results will be logged to: {log_file}")
+    print(f"Log directory: {log_dir}")
+    
+    for iteration, combination in enumerate(tqdm(param_combinations, desc="Grid Search Progress"), 1):
         params = dict(zip(keys, combination))
         results = train_and_evaluate(model, 
                                      params, 
@@ -135,8 +226,6 @@ def grid_search_tuning(param_grid: dict,
                                      update_freq=update_freq,
                                      start_split=start_split, 
                                      end_split=end_split)
-
-        print('Training with:', params)
 
         # Initialize aggregate metrics
         metric_sums = {
@@ -200,24 +289,63 @@ def grid_search_tuning(param_grid: dict,
             if metric_counts[metric] > 0 else float('-inf')
             for metric in ['dir_accuracy', 'first_diff_corr', 'spikes_f1', 'drops_f1']
         }
-
+        
+        # Combine current metrics for display
+        current_metrics = {**avg_metrics_lower_better, **avg_metrics_higher_better}
+        
+        # Track improvements
+        improvements = {}
+        
         # Update best scores for lower-better metrics
         for metric in ['rmse', 'mae', 'mape']:
             if avg_metrics_lower_better[metric] < best_scores_lower_better[metric]:
+                improvements[metric] = (best_scores_lower_better[metric], avg_metrics_lower_better[metric])
                 best_scores_lower_better[metric] = float(avg_metrics_lower_better[metric])
                 best_params_lower_better[metric] = params.copy()
         
         # Update best scores for higher-better metrics
         for metric in ['dir_accuracy', 'first_diff_corr', 'spikes_f1', 'drops_f1']:
             if avg_metrics_higher_better[metric] > best_scores_higher_better[metric]:
+                improvements[metric] = (best_scores_higher_better[metric], avg_metrics_higher_better[metric])
                 best_scores_higher_better[metric] = float(avg_metrics_higher_better[metric])
                 best_params_higher_better[metric] = params.copy()
-                
-        print('Scores (lower better):', avg_metrics_lower_better)
-        print('Scores (higher better):', avg_metrics_higher_better)
+        
+        # Print checkpoint every iteration
+        print_checkpoint(iteration, params, current_metrics, improvements)
+        
+        # Save intermediate results periodically (every 10% or every 10 iterations)
+        if save_intermediate and (iteration % max(1, total_combinations // 10) == 0 or iteration % 10 == 0):
+            best_params_combined = {**best_params_lower_better, **best_params_higher_better}
+            best_scores_combined = {**best_scores_lower_better, **best_scores_higher_better}
+            save_checkpoint_results(log_dir, f"{model_name}_intermediate", best_params_combined, best_scores_combined, file_prefix)
 
+    # Final summary
+    log_and_print(log_file, "\n" + "=" * 80)
+    log_and_print(log_file, "GRID SEARCH COMPLETED!")
+    log_and_print(log_file, "FINAL BEST RESULTS:")
+    log_and_print(log_file, "=" * 80)
+    
     # Combine results
     best_params = {**best_params_lower_better, **best_params_higher_better}
     best_scores = {**best_scores_lower_better, **best_scores_higher_better}
+
+    for metric in ['rmse', 'mae', 'mape']:
+        score_str = format_metric_value(best_scores[metric], metric == 'mape')
+        log_and_print(log_file, f"BEST {metric.upper()}: {score_str}")
+        log_and_print(log_file, f"   Best Parameters: {best_params[metric]}")
+        log_and_print(log_file, "")
+    
+    for metric in ['dir_accuracy', 'first_diff_corr', 'spikes_f1', 'drops_f1']:
+        score_str = format_metric_value(best_scores[metric], True)
+        log_and_print(log_file, f"BEST {metric.upper()}: {score_str}")
+        log_and_print(log_file, f"   Best Parameters: {best_params[metric]}")
+        log_and_print(log_file, "")
+    
+    log_and_print(log_file, "=" * 80)
+    log_and_print(log_file, f"Grid Search Completed: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+    # Save final results
+    if save_intermediate:
+        save_checkpoint_results(log_dir, model_name, best_params, best_scores, file_prefix)
 
     return best_params, best_scores
