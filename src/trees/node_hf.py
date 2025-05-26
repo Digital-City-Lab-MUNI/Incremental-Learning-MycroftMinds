@@ -47,6 +47,7 @@ class NodeHoeffdingBound:
         self.split_period_counter = 0
         self.split_ideal_period = 10
         self.grace_period = grace_period
+        self.grace_period_offset = 0
         self.prev_splitting_period = self.split_ideal_period
 
         self.max_feature = max_feature
@@ -54,6 +55,9 @@ class NodeHoeffdingBound:
 
         self.attribute_stats = defaultdict(lambda: [0, 0, 0, 0, 0, 0, 0, 0, 0])  # Attribute sum and count
         self.data_from_before_split = []
+
+    def check_grace_period(self):
+        return self.grace_period_offset + self.grace_period < self.samples_seen
 
     def update_stats(self, x, y):
 
@@ -91,7 +95,7 @@ class NodeHoeffdingBound:
         self.sum_y_squared = parent.sum_y_squared
         self.value = parent.sum_y/self.samples_seen
         if self.grace_period > 0: 
-            self.grace_period += parent.samples_seen
+            self.grace_period_offset = parent.samples_seen
 
 
     def find_best_split(self):
@@ -129,7 +133,6 @@ class NodeHoeffdingBound:
 
             R = len(self.attribute_stats)
             e = hoeffding_bound(R,count,self.delta)/self.eager_splitting_counter
-
             if R > 1:
                 if __best_split_1st[2] - __best_split_2nd[2] > e:
                     self.eager_splitting_counter = 200.0  
@@ -174,7 +177,7 @@ class NodeHoeffdingBound:
         )
 
     def reached_grace_period(self):
-        return self.grace_period < self.samples_seen
+        return self.grace_period_offset + self.grace_period < self.samples_seen
 
     def show(self,prefix=""):
         print(f"{prefix}feature: {self.feature}")

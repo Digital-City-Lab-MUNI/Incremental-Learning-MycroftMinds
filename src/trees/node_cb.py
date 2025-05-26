@@ -34,6 +34,7 @@ class NodeConfidenceBound:
 
         self.max_feature = max_feature
         self.grace_period = grace_period
+        self.grace_period_offset = 0
         self.feature_indecies = None
 
         self.attribute_stats = defaultdict(lambda: [0, 0, 0, 0, 0, 0, 0, 0, 0])  # Attribute sum and count
@@ -73,7 +74,7 @@ class NodeConfidenceBound:
         self.sum_y_squared = parent.sum_y_squared
         self.value = parent.sum_y/self.samples_seen
         if self.grace_period > 0: 
-            self.grace_period += parent.samples_seen
+            self.grace_period_offset = parent.samples_seen
 
     def find_best_split(self):
         best_feature, best_value, best_reduction = (None, None, 0)
@@ -127,7 +128,7 @@ class NodeConfidenceBound:
         )
 
     def reached_grace_period(self):
-        return self.grace_period < self.samples_seen
+        return self.grace_period_offset + self.grace_period < self.samples_seen
 
     def show(self,prefix=""):
         print(f"{prefix}feature: {self.feature}")

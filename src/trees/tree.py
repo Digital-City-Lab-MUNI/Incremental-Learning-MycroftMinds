@@ -222,6 +222,24 @@ class BaseTree(BaseLeaner):
             return self.__check_if_filled(node.right, depth + 1)
         return False
 
+    def how_deep(self) -> bool:
+        """Check if the tree is fully grown to the specified depth."""
+        return self.__how_deep(self.root, 0)
+
+    def __how_deep(self, node: Node, depth: int = 0) -> bool:
+        if node is None:
+            return depth
+
+        if depth == self.depth:
+            return depth
+
+        if node.left:
+            return self.__how_deep(node.left, depth + 1)
+        if node.right:
+            return self.__how_deep(node.right, depth + 1)
+        return depth
+
+
     def __traverse_show_final(self, node: Node, prefix: str) -> None:
         if node.left is None and node.right is None:
             node.show(prefix)
