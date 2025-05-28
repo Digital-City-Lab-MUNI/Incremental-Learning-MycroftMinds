@@ -61,6 +61,8 @@ class FastODT(BaseTree):
         self.depth = depth
         self.splits = [None] * depth
 
+        self.error_rates = np.zeros(20).tolist() 
+
         self.max_feature = max_feature
         
         self.grace_period_depth = grace_period_depth
@@ -87,6 +89,11 @@ class FastODT(BaseTree):
                 max_feature=self.max_feature,
                 grace_period=grace_period,
             )
+
+    def measure_error(self,y_baseline,y_predicted):
+        self.error_rates.pop(0)
+        self.error_rates.append(y_baseline - y_predicted)
+        return np.mean(self.error_rates)
 
     def partial_fit(self, X: np.ndarray, y: np.ndarray, verbose: bool = False):
         X = ensure_2d_array(X)

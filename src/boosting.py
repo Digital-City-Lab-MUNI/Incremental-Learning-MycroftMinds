@@ -31,6 +31,7 @@ class IncubationBoost:
         self.baseLearner = baseLearner
         self.baseLearnerOptions = baseLearnerOptions
         self.incubationMode = incubationMode
+        self.modes = ["DEFAULT","SHIFT_LEFT","SHIFT_RIGHT"]
         self.filling_counter = 0
         self.drift_detector = ADWIN(delta = 0.000002)
         self.under_drift_latch = False
@@ -65,6 +66,9 @@ class IncubationBoost:
         residual = y
         __y_pred_strong = 0.0
 
+        pruning_index = None
+        prev_pruning_error_rate = 9999.0
+
         self.drift_detector.add_sample(X)
         # self.under_drift_latch = True
 
@@ -77,64 +81,51 @@ class IncubationBoost:
             )
             self.chain.append(newNode)
 
-        if len(self.chain) < self.length:
-            for n, node in enumerate(self.chain):
-                if node.is_filled():
-                    if n == len(self.chain) - 1:
-                        newNode = self.baseLearner(
-                            *self.baseLearnerOptions
-                        )
-                        self.chain.append(newNode)
+        if self.incubationMode == "DEFAULT" or self.incubatingNode not in self.modes:
+            for n,node in enumerate(self.chain):
+                __y_pred = node.predict(X) * (1.0 if n == 0 else self.learning_rate) 
+                __y_pred_strong += __y_pred
+                residual = y - __y_pred_strong
 
-                    __y_pred = node.predict(X) * (1.0 if n == 0 else self.learning_rate) 
-                    __y_pred_strong += __y_pred
-                    residual = y - __y_pred_strong
+                if node.is_filled():
+                    error_rate = node.measure_error(y,__y_pred_strong)
+                    if prev_pruning_error_rate > error_rate:
+                        pruning_index = n 
+                        prev_pruning_error_rate = error_rate 
+                    else:
+                        break
                 else:
                     node.partial_fit([X], residual)
 
-        elif self.under_drift_latch:
-            if self.incubationMode == "DEFAULT":
-                for node in self.chain[:-1]:
-                    __y_pred = node.predict(X) * (1.0 if n == 0 else self.learning_rate) 
-                    __y_pred_strong += __y_pred
-                    residual = y - __y_pred_strong
+            if pruning_index is not None:
+                self.chain = self.chain[:pruning_index+1]
 
-                hatchedNode = self.incubate(X,residual)
-                if hatchedNode:
-                    self.chain[self.length - 1] = hatchedNode
-                    self.under_drift_latch = False
+            hatchedNode = self.incubate(X,residual)
+            if hatchedNode and len(self.chain) < self.length:
+                self.chain.append(hatchedNode)
 
-            elif self.incubationMode == "BREAK":
-                hatchedNode = self.incubate(X,y)
-                if hatchedNode:
-                    self.chain[0] = hatchedNode
-
-                    for node in self.chain[:-1]:
-                        __y_pred = node.predict(X) * (1.0 if n == 0 else self.learning_rate) 
-                        __y_pred_strong += __y_pred
-                        residual = y - __y_pred_strong
-                        self.under_drift_latch = False
-
-            elif self.incubationMode == "SHIFT_LEFT":
-                # Generate residual without first tree (which will go out of the scope after adding new tree)
-                for node in self.chain[1:]: 
-                    __y_pred = node.predict(X) * (1.0 if n == 0 else self.learning_rate) 
-                    __y_pred_strong += __y_pred
-                    residual = y - __y_pred_strong
-                        
-                hatchedNode = self.incubate(X,residual)
-                if hatchedNode:
+        elif self.incubationMode == "SHIFT_LEFT":
+            # Generate residual without first tree (which will go out of the scope after adding new tree)
+            for node in self.chain[1:]: 
+                __y_pred = node.predict(X) * (1.0 if n == 0 else self.learning_rate) 
+                __y_pred_strong += __y_pred
+                residual = y - __y_pred_strong
+                    
+            hatchedNode = self.incubate(X,residual)
+            if hatchedNode:
+                if (self.under_drift_latch or len(self.chain) >= self.length):
                     self.chain = self.chain[:-1]
-                    self.chain.append(hatchedNode)
-                    self.under_drift_latch = False
+                self.chain.append(hatchedNode)
+                self.under_drift_latch = False
 
-            elif self.incubationMode == "SHIFT_RIGHT":
+        elif self.incubationMode == "SHIFT_RIGHT":
 
-                hatchedNode = self.incubate(X,y)
-                if hatchedNode:
+            hatchedNode = self.incubate(X,y)
+            if hatchedNode:
+                if (self.under_drift_latch or len(self.chain) >= self.length):
                     self.chain = self.chain[1:]
-                    self.chain.insert(0,hatchedNode)
-                    self.under_drift_latch = False
+                self.chain.insert(0,hatchedNode)
+                self.under_drift_latch = False
 
 
     def incubate(self, X, residual):
@@ -165,20 +156,12 @@ class IncubationBoost:
 if __name__=="__main__":
     split_confidence_hf = 0.01
     n_trees = 5
-    depth = 15
+    depth = 50
     grace_period = 1
     max_feature = 1.0
     eagerness = 1000
-    learning_rate = 0.1
+    learning_rate = 1.0
     grace_period_depth = -1
-    incubationBreak = IncubationBoost(
-        FastODT,
-        n_trees,
-        learning_rate = learning_rate,
-        incubationMode = "BREAK",
-        verbose=True,
-        baseLearnerOptions = (depth, grace_period, split_confidence_hf, "hf", max_feature, eagerness, grace_period_depth)
-    )
     incubationDefault = IncubationBoost(
         FastODT,
         n_trees,
@@ -224,7 +207,6 @@ if __name__=="__main__":
     print(len(X),len(Y))
     # depth = 20
 
-    incubationBreak.partial_fit(X, Y)
     incubationDefault.partial_fit(X, Y)
     incubationShiftLeft.partial_fit(X, Y)
     incubationShiftRight.partial_fit(X, Y)
@@ -236,7 +218,6 @@ if __name__=="__main__":
     
     for x,y in zip(X,Y):
         Y_pred_def.append(incubationDefault.predict(x))
-        Y_pred_break.append(incubationBreak.predict(x))
         Y_pred_shift_left.append(incubationShiftLeft.predict(x))
         Y_pred_shift_right.append(incubationShiftRight.predict(x))
     Y_pred_def = np.array(Y_pred_def)
@@ -247,7 +228,6 @@ if __name__=="__main__":
     plt.figure(figsize=(12, 6))
     plt.plot(Y[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Actual Y", linewidth=2)
     plt.plot(Y_pred_def[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Predicted DEFAULT Y", linewidth=5)
-    plt.plot(Y_pred_break[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Predicted BREAK Y", linewidth=4)
     plt.plot(Y_pred_shift_left[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Predicted SHIFT LEFT Y", linewidth=3)
     plt.plot(Y_pred_shift_right[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Predicted SHIFT RIGHT Y", linewidth=2)
 
