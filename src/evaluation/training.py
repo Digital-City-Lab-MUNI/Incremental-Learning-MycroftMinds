@@ -52,7 +52,8 @@ def seq_fit_predict_batch_model(model: BaseEstimator,
                               y_valid: pd.Series,
                               update_freq: str = "14 days",
                               predict_train: bool = True,
-                              index_cols=2) -> Tuple[Optional[pd.Series], pd.Series]:
+                              index_cols=2,
+                              verbose=False) -> Tuple[Optional[pd.Series], pd.Series]:
     """
     Perform sequential predictions for time series data using regular batch-learning models by updating 
     the training data with each new point. You may also specify the time-frequency at which to update the model.
@@ -66,6 +67,7 @@ def seq_fit_predict_batch_model(model: BaseEstimator,
         update_freq (str, optional): Frequency at which to update the model (e.g., "28 days", "14 days", "1 hour"). Default is "14 days".
         predict_train (bool, optional): Whether to predict on the initial training set. Default is True.
         index_cols (int, optional): Number of columns in `X_train` and `X_valid` that are not features (e.g., timestamps, device IDs). Default is 2.
+        verbose (bool, optional): If True, print progress and memory usage. Default is False.
 
     Returns:
         Tuple(Optional[pd.Series], pd.Series): A tuple containing
@@ -92,24 +94,29 @@ def seq_fit_predict_batch_model(model: BaseEstimator,
         chunk_end = np.searchsorted(X_valid[:, 0], chunk_end_time, side='right')
 
         # Retrain the model with the updated training set
-        start = time.time()
-        print(f"\nRetraining model on data from {X_train_seq[0, 0]} to {X_train_seq[-1, 0]}")
-        model.fit(X_train_seq[:, index_cols:], y_train_seq)
-        print(f"\nTime: {time.time() - start:.2f} seconds")
-        # Print memory usage after retraining
-        memory_usage = calculate_memory_usage(model)
-        print(f"Memory usage after retraining: {memory_usage:.4f} MB")
+        if verbose:
+            start = time.time()
+            print(f"\nRetraining model on data from {X_train_seq[0, 0]} to {X_train_seq[-1, 0]}")
+            model.fit(X_train_seq[:, index_cols:], y_train_seq)
+            print(f"\nTime: {time.time() - start:.2f} seconds")
+        else:
+            model.fit(X_train_seq[:, index_cols:], y_train_seq)
+        if verbose:
+            # Print memory usage after retraining
+            memory_usage = calculate_memory_usage(model)
+            print(f"Memory usage after retraining: {memory_usage:.4f} MB")
 
         # Predict for the initial training set if required
         if predict_train and y_train.shape[0] == y_train_seq.shape[0]:
             y_pred_train = model.predict(X_train_seq[:, index_cols:])
             y_pred_train = pd.Series(y_pred_train, index=y_train.index)
-            print("Got predictions on training set")
+            print("Got predictions on training set") if verbose else None
 
         # Predict for the current chunk
-        print(f"Predicting for chunk from {X_valid[current_chunk_start, 0]} to {X_valid[chunk_end-1, 0]}")
-        print()
-        print("-" * 25)
+        if verbose:
+            print(f"Predicting for chunk from {X_valid[current_chunk_start, 0]} to {X_valid[chunk_end-1, 0]}")
+            print()
+            print("-" * 25)
         y_pred_valid_chunk = model.predict(X_valid[current_chunk_start:chunk_end, index_cols:])
         y_pred_valid.extend(y_pred_valid_chunk)
 
@@ -132,9 +139,9 @@ def seq_fit_predict_incremental_model(model: BaseEstimator,
                                     X_valid: np.array, 
                                     y_valid: pd.Series,
                                     update_freq: str = "5 min",
-                                    predict_train: bool = True, 
-                                    verbose = True,
-                                    index_cols=2) -> Tuple[Optional[pd.Series], pd.Series]:
+                                    predict_train: bool = True,
+                                    index_cols=2,
+                                    verbose = True) -> Tuple[Optional[pd.Series], pd.Series]:
     """
     Perform sequential predictions for time series data using incremental learning models by updating 
     the model with each new point. You may also specify the time-frequency at which to update the model.
@@ -257,9 +264,9 @@ def all_valid_splits_seq_fit_predict(model: BaseEstimator,
             X_valid, y_valid = get_device_data(valid[split], device_id=device_id)
 
             if incremental:
-                y_pred_train, y_pred_valid = seq_fit_predict_incremental_model(model, X_train, y_train, X_valid, y_valid, update_freq, predict_train, verbose, index_cols)
+                y_pred_train, y_pred_valid = seq_fit_predict_incremental_model(model, X_train, y_train, X_valid, y_valid, update_freq, predict_train, index_cols, verbose)
             else:
-                y_pred_train, y_pred_valid = seq_fit_predict_batch_model(model, X_train, y_train, X_valid, y_valid, update_freq, predict_train, index_cols)
+                y_pred_train, y_pred_valid = seq_fit_predict_batch_model(model, X_train, y_train, X_valid, y_valid, update_freq, predict_train, index_cols, verbose)
 
             train_period = f"{X_train[0, 0]} - {X_train[-1, 0]}"
             valid_period = f"{X_valid[0, 0]} - {X_valid[-1, 0]}"
