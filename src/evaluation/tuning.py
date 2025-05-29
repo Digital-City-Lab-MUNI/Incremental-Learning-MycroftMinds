@@ -208,14 +208,7 @@ def grid_search_tuning(param_grid: dict,
     log_and_print(log_file, f"Parameter grid: {param_grid}")
     log_and_print(log_file, f"Log directory: {log_dir}")
     log_and_print(log_file, "")
-    
-    print(f"Starting Grid Search with {total_combinations} parameter combinations...")
-    print(f"Model: {model_name}")
-    print(f"File prefix: {file_prefix or 'None'}")
-    print(f"Aggregation: {aggregation} | Data Frequency: {data_freq} | Update Frequency: {update_freq}")
-    print(f"Results will be logged to: {log_file}")
-    print(f"Log directory: {log_dir}")
-    
+        
     for iteration, combination in enumerate(tqdm(param_combinations, desc="Grid Search Progress"), 1):
         params = dict(zip(keys, combination))
         results = train_and_evaluate(model, 
