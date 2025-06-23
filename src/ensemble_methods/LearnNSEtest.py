@@ -1,8 +1,9 @@
-import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
-from LearnNSE import LearnNSE   # your LearnNSE class with pruning_type
-import tqdm 
+import numpy as np
+import tqdm
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+
+from LearnNSE import LearnNSE  # your LearnNSE class with pruning_type
 
 # --- 1) Concept‐drift generators ---
 

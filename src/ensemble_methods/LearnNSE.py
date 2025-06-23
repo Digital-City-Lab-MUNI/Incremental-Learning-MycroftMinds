@@ -1,6 +1,8 @@
-import numpy as np
 import copy
+
+import numpy as np
 from sklearn.tree import DecisionTreeClassifier
+
 
 class LearnNSE:
     """

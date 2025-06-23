@@ -1,5 +1,7 @@
-from sklearn.metrics import mean_absolute_error  # Default error metric if none provided
 import numpy as np
+from sklearn.metrics import \
+    mean_absolute_error  # Default error metric if none provided
+
 
 class HybridElasticGBDT:
     """

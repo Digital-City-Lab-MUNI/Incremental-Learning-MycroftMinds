@@ -1,6 +1,7 @@
 import numpy as np
 from sklearn.metrics import root_mean_squared_error  # Default error metric
 
+
 class AccuracyUpdatedGBDT:
     """
     Accuracy Updated Gradient Boosting Decision Tree (eGBDT).
