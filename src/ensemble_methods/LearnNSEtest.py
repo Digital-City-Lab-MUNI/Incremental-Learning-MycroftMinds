@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from LearnNSE import LearnNSE   # your LearnNSE class with pruning_type
+import tqdm 
 
 # --- 1) Concept‐drift generators ---
 
@@ -89,7 +90,7 @@ acc_age, acc_error = [], []
 acc_rf,  acc_gb    = [], []
 size_age, size_error = [], []
 
-for t in range(n_batches):
+for t in tqdm.tqdm(range(n_batches)):
     X_train, y_train = drift_fn(t)
     nse_age.fit(X_train, y_train)
     nse_error.fit(X_train, y_train)
