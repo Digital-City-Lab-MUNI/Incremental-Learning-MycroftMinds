@@ -116,56 +116,6 @@ class ElasticGBDT:
             print(f"[Contribution-Based] Now {len(self.trees)} trees remain.")
         return self
 
-    def update_contribution_ema(self, X, y, fixed_multiplier, moving_avg_window, ema_smoothing, baseline=0, max_change_factor=0.1):
-        """
-        EMA Strategy Update:
-          - Computes a smoothed baseline error using a history (length = moving_avg_window) of errors.
-          - The smoothed baseline is computed as:
-                baseline_error = ema_smoothing * final_error + (1 - ema_smoothing) * mean(history)
-          - Determines how many trees to remove proportional to (final_error - baseline_error).
-          - Prunes the trees with the smallest error improvements.
-        """
-        initial_pred = np.full(y.shape, self.initial_pred)
-        partial_pred = initial_pred.copy()
-        contributions = []
-        error_before = self.error_metric(y, initial_pred)
-        for i, tree in enumerate(self.trees):
-            tree_pred = tree.predict(X)
-            new_pred = partial_pred + self.alpha * tree_pred
-            new_error = self.error_metric(y, new_pred)
-            improvement = error_before - new_error
-            contributions.append((improvement, i))
-            partial_pred = new_pred
-            error_before = new_error
-        final_error = error_before
-
-        if moving_avg_window > 1:
-            # Initialize and update the history of errors.
-            if not hasattr(self, 'ema_error_history'):
-                self.ema_error_history = []
-            self.ema_error_history.append(final_error)
-            if len(self.ema_error_history) > moving_avg_window:
-                self.ema_error_history.pop(0)
-            avg_history = np.mean(self.ema_error_history)
-            baseline_error = ema_smoothing * final_error + (1 - ema_smoothing) * avg_history
-        else:
-            baseline_error = self.error_metric(y, initial_pred)
-
-        if final_error <= baseline_error:
-            removal_count = 0
-        else:
-            removal_count = round(fixed_multiplier * (final_error - baseline_error)) + baseline
-        removal_count = max(removal_count, 0)
-        removal_count = min(removal_count, len(self.trees))
-        
-        print(f"[EMA Strategy] final_error={final_error:.3f}, baseline_error={baseline_error:.3f}, removal_count={removal_count}")
-        
-        contributions.sort(key=lambda x: x[0])
-        to_remove = [idx for _, idx in contributions[:removal_count]]
-        for idx in sorted(to_remove, reverse=True):
-            self.trees.pop(idx)
-        return self
-
     def update_ratio_based(self, X_new, y_new, fixed_multiplier=1.0):
         """
         Ratio-Based Update:
