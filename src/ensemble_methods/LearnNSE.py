@@ -1,7 +1,7 @@
 import copy
 
 import numpy as np
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
 
 class LearnNSE:
@@ -12,7 +12,7 @@ class LearnNSE:
     def __init__(self, base_classifier=None, alpha=0.5, beta=10.0, ensemble_size=None, pruning_type='age'):
         # Base learner (single tree by default)
         if base_classifier is None:
-            self.base_classifier = DecisionTreeClassifier(random_state=0)
+            self.base_classifier = DecisionTreeRegressor(random_state=0)
         else:
             self.base_classifier = base_classifier
         self.alpha = alpha           # time-decay slope

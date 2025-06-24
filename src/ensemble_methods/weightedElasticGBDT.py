@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.metrics import root_mean_squared_error  # Default error metric
 
 
-class AccuracyUpdatedGBDT:
+class AccuracyUpdatedGBDT: # Learn++.NSE
     """
     Accuracy Updated Gradient Boosting Decision Tree (eGBDT).
 
@@ -11,7 +11,7 @@ class AccuracyUpdatedGBDT:
     Trees with low weight are pruned and replaced.
     """
     
-    def __init__(self, y_train, alpha=0.01, max_depth=5, random_state=42,
+    def __init__(self, alpha=0.01, max_depth=5, random_state=42,
                 error_metric=None, eps=1e-8,
                 buffer_size=30, error_damping=1, 
                 reg_coef = 1,
@@ -25,13 +25,16 @@ class AccuracyUpdatedGBDT:
         self.error_metric = error_metric if error_metric is not None else root_mean_squared_error
         self.error_damping = error_damping
         self.reg_coef = reg_coef
-        self.initial_pred = np.mean(y_train)
+        self.initial_pred = None
         self.trees = []
         self.weights = np.array([])
         self.buffer_size = buffer_size
         self.data_buffer = [] 
     
-    def train(self, X, y, num_trees=40):
+    def fit(self, X, y, num_trees=40):
+        if self.initial_pred is None:
+            self.initial_pred = np.mean(y)
+
         from sklearn.ensemble import GradientBoostingRegressor
         print("Training triggered.")
         self.initial_pred = np.mean(y)
@@ -44,8 +47,6 @@ class AccuracyUpdatedGBDT:
         new_gbdt.fit(X, y)
         self.trees = [estimator for estimator in new_gbdt.estimators_[:,0]]
         self.weights = np.ones(len(self.trees))
-        print(f"Trained with {len(self.trees)} trees.")
-        return self
 
     def predict(self, X):
         predictions = np.full(X.shape[0], self.initial_pred)
