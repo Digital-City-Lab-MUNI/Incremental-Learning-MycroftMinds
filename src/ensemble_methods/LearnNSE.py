@@ -10,7 +10,7 @@ class LearnNSE:
     """
     def __init__(self,
                  base_classifier=None,
-                 alpha=0.5,
+                 alpha=0.5, # alpha and beta are hyperparameters for time-based weighting
                  beta=10.0,
                  ensemble_size=None,
                  pruning_type='age',
@@ -23,7 +23,7 @@ class LearnNSE:
 
         self.alpha = alpha
         self.beta = beta
-        self.ensemble_size = ensemble_size
+        self.ensemble_size = ensemble_size # s in the paper
         self.pruning_type = pruning_type
         self.regression_task_error_metric = regression_task_error_metric
 
@@ -65,7 +65,7 @@ class LearnNSE:
         if t == 1:
             D = self._init_weights(n)
         else:
-            D_prev = self.instance_weights
+            D_prev = self.instance_weights # must not be historically inherited, for each batch new weights
             preds = self.predict(X)
             eps = 1e-10
 
@@ -87,17 +87,19 @@ class LearnNSE:
             D = w / np.sum(w)
 
         # Step 3: bootstrap sample and train h_t
-        idx = np.random.choice(n, size=n, replace=True, p=D)
+        idx = np.random.choice(n, size=n, replace=True, p=D) # maybe
         clf = self._clone_with_params()
         clf.fit(X[idx], y[idx])
         self.models.append(clf)
 
-        # Step 4: compute errors E_k
+        # Step 4: compute errors E_k 
+        # for new clf the clf will be retrained if its error is above 0.5
         errors = []
         for m in self.models:
-            pred_k = m.predict(X)
+            pred_k = m.predict(X[idx]) # this needs be the bootstrapped sample hence [idx]
             if hasattr(self.base_classifier, 'predict_proba') or isinstance(self.base_classifier, DecisionTreeClassifier):
-                ek = np.sum(D * (pred_k != y))
+                ek = np.sum(D * (pred_k != y[idx]))
+                Beta = (errors) / (1- errors)
             else:
                 raw_err = self.regression_task_error_metric(y, pred_k)
                 per_err_k = raw_err if not np.isscalar(raw_err) else np.abs(y - pred_k)
@@ -108,7 +110,11 @@ class LearnNSE:
         # Step 5: time-based weights (unused later)
         t_weights = np.array([1/(1+np.exp(-self.alpha*(t-k-self.beta)))
                                for k in range(1, len(self.models)+1)])
-        t_weights /= t_weights.sum()
+        t_weights /= t_weights.sum() 
+        # t_weights rename to voting_weights
+
+        # Beta is missing equation 8 in the paper
+        Beta = t_weights * Beta
 
         # Step 6: pruning if ensemble_size exceeded
         if self.ensemble_size and len(self.models) > self.ensemble_size:
@@ -124,33 +130,36 @@ class LearnNSE:
 
         # Step 7: voting weights
         eps = 1e-10
-        ws = (1 - errors) / (errors + eps)
-        self.voting_weights = np.log(ws)
+        
+        self.voting_weights = np.log(1/Beta)
 
         # save D_t
         self.instance_weights = D
 
-    def predict(self, X):
-        X = np.asarray(X)
-        if not self.models:
-            raise ValueError("No models: call fit() first.")
+        def predict(self, X):
+            """
+            Step 8: Final hypothesis H_t(x) = arg max_y sum_k W_k * I{h_k(x)=y}
+            """
+            X = np.asarray(X)
+            if not self.models:
+                raise ValueError("No models: call fit() first.")
+            # simplify voting with weights
+            # add regression equivalent
 
-        # classification
-        if hasattr(self.models[0], 'classes_'):
-            classes = np.unique(np.concatenate([m.classes_ for m in self.models]))
+            # gather predictions from each model: shape (t, n_samples)
+            preds = np.array([m.predict(X) for m in self.models])
+            # find all unique classes across ensemble
+            classes = np.unique(preds)
+            # map class labels to column indices
             idx_map = {c: i for i, c in enumerate(classes)}
-            votes = np.zeros((len(X), len(classes)))
-            for W, m in zip(self.voting_weights, self.models):
-                preds = m.predict(X)
-                for i, p in enumerate(preds):
+            # accumulate weighted votes for each sample and class
+            votes = np.zeros((X.shape[0], classes.size))
+            for k, W in enumerate(self.voting_weights):
+                for i, p in enumerate(preds[k]):
                     votes[i, idx_map[p]] += W
-            return classes[votes.argmax(axis=1)]
-
-        # regression
-        preds = np.vstack([m.predict(X) for m in self.models])
-        weighted = (self.voting_weights[:, None] * preds)
-        return weighted.sum(axis=0) / self.voting_weights.sum()
-
+            # select class with highest vote sum
+            winner_idx = votes.argmax(axis=1)
+            return classes[winner_idx]
     def score(self, X, y):
         preds = self.predict(X)
         if hasattr(self.models[0], 'classes_'):
