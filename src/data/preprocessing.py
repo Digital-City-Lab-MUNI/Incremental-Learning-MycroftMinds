@@ -5,6 +5,57 @@ import traceback
 from pandas.tseries.frequencies import to_offset
 from typing import List, Optional, Optional, Dict, Tuple
 
+def read_second_batch(extract_path, location='industrial', site_ids=None):
+    """
+    Reads data from the 'second_batch' folder for specified sites.
+
+    Args:
+        extract_path (str): Base path containing the 'second_batch' folder.
+        site_ids (list or None): List of site identifiers like ['site1', 'site2'].
+                                 If None, reads all site files.
+        location (str): industrial or commercial.
+
+    Returns:
+        List of DataFrames, one per site.
+    """
+    if location=='industrial':
+        second_batch_path = os.path.join(extract_path, 'second_batch/industrial')
+    else:
+        second_batch_path = os.path.join(extract_path, 'second_batch/commercial')
+    if not os.path.isdir(second_batch_path):
+        raise ValueError(f"Directory not found: {second_batch_path}")
+    
+    all_site_data = []
+    
+    for filename in os.listdir(second_batch_path):
+        if not filename.endswith('.csv'):
+            continue
+        site_name = os.path.splitext(filename)[0]  # 'site1.csv' -> 'site1'
+
+        if site_ids is not None and site_name not in site_ids:
+            continue
+        
+        file_path = os.path.join(second_batch_path, filename)
+        try:
+            df = pd.read_csv(file_path)
+            df['device_id'] = site_name
+            df['serial_number'] = site_name
+            if location=='industrial':
+                df.drop(columns={'Q+ total', 'min', 'max'}, errors='ignore', inplace=True)
+            elif location=='commercial':
+                df.drop(columns={'seriesId'}, inplace=True)
+                df['consumption'] = df['consumption'].diff()
+                df = df.iloc[1:]
+            all_site_data.append(df)
+        except pd.errors.EmptyDataError:
+            print(f"Warning: File {filename} is empty. Skipping.")
+        except pd.errors.ParserError:
+            print(f"Warning: Could not parse file {filename}. Skipping.")
+        except Exception as e:
+            print(f"Error reading {filename}: {e}")
+
+    return all_site_data
+
 def read_new_meter_data(extract_path, meter_names=None, aggregation=None):
     """
     Reads data from specified meter files into pandas DataFrames.
