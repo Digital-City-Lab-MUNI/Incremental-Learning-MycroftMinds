@@ -1,0 +1,1 @@
+This folder is created to store hyperparameter tuning results. When performing the hyperparameter search, results are then organized by the model types (batch or incremetal) and inside by the model name, dataset, and date (all specified in the name of the .txt or .pkl file).
