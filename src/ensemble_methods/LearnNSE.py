@@ -63,7 +63,7 @@ class LearnNSE:
 
         # Steps 1 & 2: initialize or update D_t
         if t == 1:
-            D = self._init_weights(n)
+            D = np.full(n, 1.0 / n)
         else:
             D_prev = self.instance_weights # must not be historically inherited, for each batch new weights
             preds = self.predict(X)
@@ -71,10 +71,17 @@ class LearnNSE:
 
             # classification branch
             if hasattr(self.base_classifier, 'predict_proba') or isinstance(self.base_classifier, DecisionTreeClassifier):
-                mistakes = (preds != y)
-                E_t = np.sum(D_prev * mistakes)
-                E_t = max(E_t, eps)
-                w = np.where(mistakes, 1.0, E_t)
+                # Step 1: Compute ensemble error uniformly (no previous weights!)
+                mistakes = (preds != y).astype(float)
+                E_t = np.sum(mistakes) / n  # uniform averaging
+
+                # E_t = np.clip(E_t, eps, 1 - eps)        # stability
+
+                # Step 2: Update weights based on correctness
+                w = np.where(mistakes == 1, 1.0 / n, (E_t + eps) / n )
+
+                # Step 3: Normalize weights
+                D = w / np.sum(w)
             else:
                 # regression branch
                 per_err = self.regression_task_error_metric(y, preds)
