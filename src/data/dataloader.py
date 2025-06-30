@@ -10,7 +10,7 @@ from sklearn.model_selection import TimeSeriesSplit
 # Import modules from the new structure
 from src.data.io import save_dataset, load_dataset
 from src.utils.memory import calculate_memory_usage, optimize_memory_usage
-from src.data.preprocessing import preprocess_df, concat_dataframes_by_time, get_complete_time_series, clean_data, aggregate_and_validate_lags, read_new_meter_data
+from src.data.preprocessing import preprocess_df, concat_dataframes_by_time, get_complete_time_series, clean_data, aggregate_and_validate_lags, read_new_meter_data, read_second_batch
 from src.data.feature_engineering import add_lag_features, add_cyclical_time_features
 
 warnings.filterwarnings("ignore")
@@ -30,10 +30,11 @@ def get_train_test_sets(data_dir: str,
                         step: int = 1,
                         add_cyclical_features: bool = False,
                         optimize_memory: bool = True,
-                        save: bool = True,
+                        save_intermediate: bool = True,
                         time_agg: Optional[str] = None,
                         intermediate_prefix: str = '5_min_wfv', 
-                        new_data=True, 
+                        new_data='second_batch',
+                        location=None,
                         fill_missing=True) -> Tuple[
                                                 Any, 
                                                 Any, 
@@ -58,15 +59,25 @@ def get_train_test_sets(data_dir: str,
         step (int): Step size for the sliding window. Defaults to 1.
         add_cyclical_features (bool): Whether to use sine/cosine transformations for time features. Defaults to False.
         optimize_memory (bool): Whether to optimize memory usage by using efficient dtypes. Defaults to True.
-        save (bool): Whether to save the results to disk. Defaults to True.
+        save_intermediate (bool): Whether to save intermediate results to disk. Defaults to True.
         intermediate_prefix (str): Prefix for intermediate files. Defaults to 'processed'.
-        new_data (bool): whether to use new or old provided meter data (defaults True)
+        new_data (str): 'first_batch' or 'second_batch' (defaults 'second_batch')
+        location (str): to be used with second batch. specify 'industrial' or 'commercial' (only valid for second batch data)
         fill_missing (bool): whether to fill the missing values (defaults True), method: weekly, hourly mean
         
     Returns:
         tuple: A tuple containing training, validation, and test sets. Each set is a tuple of (X, y), 
                where X is the feature matrix and y is the target vector.
     """
+    # Check if processed data already exists
+    if save_intermediate:
+        try:
+            train, valid, test = load_dataset(data_dir, prefix=intermediate_prefix, use_numpy=True)
+            if train is not None and valid is not None and test is not None:
+                print(f"Loaded processed data from {data_dir} with prefix {intermediate_prefix}")
+                return train, valid, test
+        except Exception as e:
+            print(f"[WARNING] Could not load processed data: {e}")
     
     # Continue with standard processing if processed data doesn't exist
     if not os.path.exists(data_dir):
@@ -74,8 +85,10 @@ def get_train_test_sets(data_dir: str,
         return (None, None), (None, None), (None, None)
 
     try:
-        if new_data:
+        if new_data=='first_batch':
             dataframes = read_new_meter_data(data_dir, device_list, aggregation=time_agg)
+        elif new_data=='second_batch':
+            dataframes = read_second_batch(data_dir, location=location, site_ids=device_list)
         else:
             csv_files = glob.glob(os.path.join(data_dir, "smart_meter_data_*.csv"))
             if not csv_files:
@@ -189,6 +202,8 @@ def get_train_test_sets(data_dir: str,
             X_train_all = np.vstack([x for x, _ in train_sets])
             y_train_all = np.hstack([y for _, y in train_sets])
 
+            X_train_all = X_train_all[X_train_all[:, 0].argsort()]
+
             sorted_indices = np.argsort(X_train_all[:, 0])
 
             # Apply the sorting to both X and Y
@@ -215,89 +230,86 @@ def get_train_test_sets(data_dir: str,
             print()
 
             print("(Train + Valid) data range: ", X_train_all[:, 0].min(), X_train_all[:, 0].max())
-            total_timestamps = pd.date_range(start=X_train_all[:, 0].min(), end=X_train_all[:, 0].max(), periods=X_train_all.shape[0])#periods=X_train_all.shape[0]
-            # print(total_timestamps)
-            
 
-            num_days = (X_train_all[:, 0].max() - X_train_all[:, 0].min()).days
+            # Convert timestamp column to Series for easier handling
+            timestamps = pd.Series(X_train_all[:, 0])
+            unique_days = sorted(timestamps.dt.date.unique())#sorted(pd.to_datetime(timestamps.dt.date).unique())  # Actual calendar days
+
+            num_days = len(unique_days)
             train_valid = train_days + valid_days
+
             if train_valid > num_days:
-                print("[ERROR] data timeline too small for provided train+test splits")
+                print("[ERROR] data timeline too small for provided train+valid splits")
                 return (None, None), (None, None), (None, None)
 
-            series_start = X_train_all[:, 0].min()
-            series_end = X_train_all[:, 0].max()
-
-            current_train_end = series_start + pd.Timedelta(days=train_days - 1)
-            current_valid_end = current_train_end + pd.Timedelta(days=valid_days)
+            all_train_sets = []
+            all_valid_sets = []
 
             i = 0
-            while current_valid_end <= series_end:
-                #print(i)
-                train_mask = (total_timestamps >= series_start) & (total_timestamps <= current_train_end)
-                # print('train mask', train_mask)
-                valid_mask = (total_timestamps > current_train_end) & (total_timestamps <= current_valid_end)
+            start_idx = 0
 
-                X_train_split = X_train_all[train_mask]
-                #print('X_train_split', X_train_split)
-                y_train_split = y_train_all[train_mask]
+            # --- Main walk-forward loop ---
+            while start_idx + train_valid <= num_days:
+                train_day_range = unique_days[0: start_idx + train_days]
+                valid_day_range = unique_days[start_idx + train_days : start_idx + train_days + valid_days]
 
-                X_valid_split = X_train_all[valid_mask]
-                y_valid_split = y_train_all[valid_mask]
+                train_mask = timestamps.dt.date.isin(train_day_range)
+                valid_mask = timestamps.dt.date.isin(valid_day_range)
+                #print(train_mask.sum())
+
+                X_train_split = X_train_all[train_mask.values]
+                y_train_split = y_train_all[train_mask.values]
+
+                X_valid_split = X_train_all[valid_mask.values]
+                y_valid_split = y_train_all[valid_mask.values]
 
                 if len(X_valid_split) == 0:
-                    break  # Stop if there's no validation data left
+                    break  # No validation data left
 
                 all_train_sets.append((X_train_split, y_train_split))
                 all_valid_sets.append((X_valid_split, y_valid_split))
 
-                #  Use actual timestamps from total_timestamps for better print accuracy
-                train_indices = np.where(train_mask)[0]
-                valid_indices = np.where(valid_mask)[0]
-
-                train_start_time = X_train_split[:, 0].min()#total_timestamps[train_indices[0]]
-                train_end_time = X_train_split[:, 0].max()#total_timestamps[train_indices[-1]]
-
-                valid_start_time = X_valid_split[:, 0].min()#total_timestamps[valid_indices[0]]
-                valid_end_time = X_valid_split[:, 0].max()#total_timestamps[valid_indices[-1]]
+                train_start_time = X_train_split[:, 0].min()
+                train_end_time = X_train_split[:, 0].max()
+                valid_start_time = X_valid_split[:, 0].min()
+                valid_end_time = X_valid_split[:, 0].max()
 
                 print(f"Split {i + 1}:")
                 print(f"  Train window: {train_start_time} to {train_end_time}")
                 print(f"  Valid window: {valid_start_time} to {valid_end_time}")
                 print()
 
-                # Update for next iteration
-                current_train_end += pd.Timedelta(days=valid_days)
-                current_valid_end = current_train_end + pd.Timedelta(days=valid_days)
+                # Slide forward by 1 day for next split (walk-forward)
+                start_idx += train_days
                 i += 1
 
-            # Final split — check if leftover days remain for validation
-            if current_train_end < series_end:
-                train_mask = (total_timestamps >= series_start) & (total_timestamps <= current_train_end)
-                valid_mask = (total_timestamps > current_train_end) & (total_timestamps <= series_end)
+            # Final split for any remaining data ---
+            if start_idx + train_days < num_days:
+                train_day_range = unique_days[0 : start_idx + train_days]
+                valid_day_range = unique_days[start_idx + train_days :]
 
-                X_train_split = X_train_all[train_mask]
-                y_train_split = y_train_all[train_mask]
+                train_mask = timestamps.dt.date.isin(train_day_range)
+                valid_mask = timestamps.dt.date.isin(valid_day_range)
 
-                X_valid_split = X_train_all[valid_mask]
-                y_valid_split = y_train_all[valid_mask]
+                X_train_split = X_train_all[train_mask.values]
+                y_train_split = y_train_all[train_mask.values]
+
+                X_valid_split = X_train_all[valid_mask.values]
+                y_valid_split = y_train_all[valid_mask.values]
 
                 if len(X_valid_split) > 0:
                     all_train_sets.append((X_train_split, y_train_split))
                     all_valid_sets.append((X_valid_split, y_valid_split))
 
-                    train_indices = np.where(train_mask)[0]
-                    valid_indices = np.where(valid_mask)[0]
-
-                    train_start_time = X_train_split[:, 0].min()#total_timestamps[train_indices[0]]
-                    train_end_time = X_train_split[:, 0].max()#total_timestamps[train_indices[-1]]
-
-                    valid_start_time = X_valid_split[:, 0].min()#total_timestamps[valid_indices[0]]
-                    valid_end_time = X_valid_split[:, 0].max()#total_timestamps[valid_indices[-1]]
+                    train_start_time = X_train_split[:, 0].min()
+                    train_end_time = X_train_split[:, 0].max()
+                    valid_start_time = X_valid_split[:, 0].min()
+                    valid_end_time = X_valid_split[:, 0].max()
 
                     print(f"Split {i + 1}:")
                     print(f"  Train window: {train_start_time} to {train_end_time}")
                     print(f"  Valid window: {valid_start_time} to {valid_end_time}")
+    
         else:
             X_train_all = np.vstack([x for x, _ in train_sets])
             y_train_all = np.hstack([y for _, y in train_sets])
@@ -333,7 +345,7 @@ def get_train_test_sets(data_dir: str,
                 print(f"Memory usage after optimization: Train={train_mem:.2f}MB, Valid={valid_mem:.2f}MB, Test={test_mem:.2f}MB")
 
                 # Save the processed data if requested
-                if save:
+                if save_intermediate:
                     save_dataset(all_train_sets, all_valid_sets, final_test, 
                                 data_dir=data_dir, prefix=intermediate_prefix, use_numpy=True)
 
@@ -353,7 +365,7 @@ def get_train_test_sets(data_dir: str,
                 print(f"Memory usage after optimization: Train={train_mem:.2f}MB, Valid={valid_mem:.2f}MB, Test={test_mem:.2f}MB")
 
                 # Save the processed data if requested
-                if save:
+                if save_intermediate:
                     save_dataset(train_opt, valid_opt, test_opt, 
                                 data_dir=data_dir, prefix=intermediate_prefix, use_numpy=True)
 
