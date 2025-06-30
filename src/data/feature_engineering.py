@@ -105,3 +105,44 @@ def add_cyclical_time_features(df: pd.DataFrame) -> pd.DataFrame:
         print(f"[ERROR] Failed to add cyclical time features: {e}")
         traceback.print_exc()
         return df
+
+def filter_features_for_forecast_horizon(feature_names: List[str], forecast_horizon: str) -> List[str]:
+    """
+    Filter out features with lag periods shorter than the forecast horizon.
+    
+    Args:
+        feature_names (List[str]): List of feature column names
+        forecast_horizon (str): Forecast horizon as string (e.g., "24h", "7d")
+        
+    Returns:
+        List[str]: Filtered list of feature names valid for the forecast horizon
+    """
+    forecast_td = pd.Timedelta(forecast_horizon)
+    valid_features = []
+    excluded_features = []
+    
+    for feature in feature_names:
+        # Check if this is a lag feature
+        if "_lag_" in feature:
+            # Parse the lag period, e.g., "L1_act_power_lag_1h" -> "1h"
+            lag_parts = feature.split("_lag_")
+            if len(lag_parts) > 1:
+                lag_period = lag_parts[1]
+                try:
+                    lag_td = pd.Timedelta(lag_period)
+                    
+                    # Only keep features with lag >= forecast horizon
+                    if lag_td >= forecast_td:
+                        valid_features.append(feature)
+                    else:
+                        excluded_features.append(feature)
+                except:
+                    # If we can't parse the lag period, include the feature
+                    valid_features.append(feature)
+            else:
+                valid_features.append(feature)
+        else:
+            # Non-lag features are always valid
+            valid_features.append(feature)
+    
+    return valid_features, excluded_features

@@ -9,6 +9,7 @@ import time
 from src.evaluation.metrics import calculate_metrics
 from src.utils.memory import calculate_memory_usage
 from src.utils.utils import get_device_data
+from src.data.feature_engineering import filter_features_for_forecast_horizon
 
 def _partial_fit_model(model: BaseEstimator,
                       X: np.array,
@@ -50,7 +51,9 @@ def seq_fit_predict_batch_model(model: BaseEstimator,
                               y_train: pd.Series, 
                               X_valid: np.array, 
                               y_valid: pd.Series,
+                              forecast_horizon: str,
                               update_freq: str = "14 days",
+                              features=None,
                               predict_train: bool = True,
                               index_cols=2,
                               verbose=False) -> Tuple[Optional[pd.Series], pd.Series]:
@@ -64,7 +67,9 @@ def seq_fit_predict_batch_model(model: BaseEstimator,
         y_train (pd.Series): Training labels.
         X_valid (np.ndarray): Validation features, where the first `index_cols` columns are not features.
         y_valid (pd.Series): Validation labels.
+        forecast_horizon (str): How far ahead to forecast. Used to filter features that would not be available in real forecasting.
         update_freq (str, optional): Frequency at which to update the model (e.g., "28 days", "14 days", "1 hour"). Default is "14 days".
+        features (List[str], optional): List of feature names. If provided, features that aren't available for the forecast horizon will be filtered.
         predict_train (bool, optional): Whether to predict on the initial training set. Default is True.
         index_cols (int, optional): Number of columns in `X_train` and `X_valid` that are not features (e.g., timestamps, device IDs). Default is 2.
         verbose (bool, optional): If True, print progress and memory usage. Default is False.
@@ -78,12 +83,29 @@ def seq_fit_predict_batch_model(model: BaseEstimator,
     y_pred_train = [] if predict_train else None
     y_pred_valid = []
 
+    # Filter features if features list and forecast_horizon are provided
+    valid_indices = None
+    if features and forecast_horizon:
+        valid_features, excluded_features = filter_features_for_forecast_horizon(features[index_cols:], forecast_horizon)
+        
+        # Map feature names to column indices
+        valid_indices = [index_cols + i for i, feat in enumerate(features[index_cols:]) 
+                          if feat in valid_features]
+        
+        if verbose:
+            print(f"Filtering features for forecast horizon {forecast_horizon}")
+            print(f"Original feature count: {len(features) - index_cols}")
+            print(f"Filtered feature count: {len(valid_indices)}")
+            print(f"Excluded lag features: {', '.join(excluded_features) if excluded_features else 'None'}")
+    
+    # Use filtered indices if available, otherwise use all features
+    feature_indices = valid_indices if valid_indices else slice(index_cols, None)
+
     # Copy training data to avoid modifying the original
     X_train_seq = X_train.copy()
     y_train_seq = y_train.copy()
     
-    index_cols = index_cols  
-    update_freq = pd.Timedelta(update_freq) 
+    update_freq = pd.Timedelta(update_freq)
 
     # Iterate through the validation set in chunks based on update frequency
     current_chunk_start = 0
@@ -97,10 +119,10 @@ def seq_fit_predict_batch_model(model: BaseEstimator,
         if verbose:
             start = time.time()
             print(f"\nRetraining model on data from {X_train_seq[0, 0]} to {X_train_seq[-1, 0]}")
-            model.fit(X_train_seq[:, index_cols:], y_train_seq)
+            model.fit(X_train_seq[:, feature_indices], y_train_seq)
             print(f"\nTime: {time.time() - start:.2f} seconds")
         else:
-            model.fit(X_train_seq[:, index_cols:], y_train_seq)
+            model.fit(X_train_seq[:, feature_indices], y_train_seq)
         if verbose:
             # Print memory usage after retraining
             memory_usage = calculate_memory_usage(model)
@@ -108,7 +130,7 @@ def seq_fit_predict_batch_model(model: BaseEstimator,
 
         # Predict for the initial training set if required
         if predict_train and y_train.shape[0] == y_train_seq.shape[0]:
-            y_pred_train = model.predict(X_train_seq[:, index_cols:])
+            y_pred_train = model.predict(X_train_seq[:, feature_indices])
             y_pred_train = pd.Series(y_pred_train, index=y_train.index)
             print("Got predictions on training set") if verbose else None
 
@@ -117,7 +139,7 @@ def seq_fit_predict_batch_model(model: BaseEstimator,
             print(f"Predicting for chunk from {X_valid[current_chunk_start, 0]} to {X_valid[chunk_end-1, 0]}")
             print()
             print("-" * 25)
-        y_pred_valid_chunk = model.predict(X_valid[current_chunk_start:chunk_end, index_cols:])
+        y_pred_valid_chunk = model.predict(X_valid[current_chunk_start:chunk_end, feature_indices])
         y_pred_valid.extend(y_pred_valid_chunk)
 
         # Add the current chunk of validation data to the training set
@@ -138,13 +160,14 @@ def seq_fit_predict_incremental_model(model: BaseEstimator,
                                     y_train: pd.Series, 
                                     X_valid: np.array, 
                                     y_valid: pd.Series,
-                                    update_freq: str = "5 min",
+                                    forecast_horizon: str,
+                                    features=None,
                                     predict_train: bool = True,
                                     index_cols=2,
                                     verbose = True) -> Tuple[Optional[pd.Series], pd.Series]:
     """
     Perform sequential predictions for time series data using incremental learning models by updating 
-    the model with each new point. You may also specify the time-frequency at which to update the model.
+    the model with each new point after the forecast horizon has passed.
 
     Args:
         model (sklearn.BaseEstimator): The incremental learning model to use for predictions. Must have `.partial_fit` and `.predict` methods.
@@ -152,9 +175,11 @@ def seq_fit_predict_incremental_model(model: BaseEstimator,
         y_train (pd.Series): Training labels.
         X_valid (np.ndarray): Validation features, where the first `index_cols` columns are not features.
         y_valid (pd.Series): Validation labels.
-        update_freq (str, optional): Frequency at which to update the model (e.g., "28 days", "14 days", "1 hour"). Default is "5 min".
-        predict_train (bool, optional): Whether to predict on the training set. Default is False.
+        forecast_horizon (str): How far ahead to forecast before updating the model with actual values.
+        features (List[str], optional): List of feature names. If provided, features that aren't available for the forecast horizon will be filtered.
+        predict_train (bool, optional): Whether to predict on the training set. Default is True.
         index_cols (int, optional): Number of columns in `X_train` and `X_valid` that are not features (e.g., timestamps, device IDs). Default is 2.
+        verbose (bool, optional): Whether to print progress messages. Default is True.
 
     Returns:
         Tuple(Optional[pd.Series], pd.Series): A tuple containing
@@ -165,39 +190,64 @@ def seq_fit_predict_incremental_model(model: BaseEstimator,
     y_pred_train = [] if predict_train else None
     y_pred_valid = []
 
+    # Filter features if features list and forecast_horizon are provided
+    valid_indices = None
+    if features and forecast_horizon:
+        valid_features, excluded_features = filter_features_for_forecast_horizon(features[index_cols:], forecast_horizon)
+        
+        # Map feature names to column indices
+        valid_indices = [index_cols + i for i, feat in enumerate(features[index_cols:]) 
+                          if feat in valid_features]
+        
+        if verbose:
+            print(f"Filtering features for forecast horizon {forecast_horizon}")
+            print(f"Original feature count: {len(features) - index_cols}")
+            print(f"Filtered feature count: {len(valid_indices)}")
+            print(f"Excluded lag features: {', '.join(excluded_features) if excluded_features else 'None'}")
+    
+    # Use filtered indices if available, otherwise use all features
+    feature_indices = valid_indices if valid_indices else slice(index_cols, None)
+
     # Copy training data to avoid modifying the original
     X_train_seq = X_train.copy()
     y_train_seq = y_train.copy()
     
-    update_freq = pd.Timedelta(update_freq) 
+    forecast_horizon_td = pd.Timedelta(forecast_horizon) 
 
     # Fit the model on the initial training data
     if verbose:
         print(f"Initial training on data from {X_train_seq[0, 0]} to {X_train_seq[-1, 0]}")
     
-    _partial_fit_model(model, X_train_seq[:, index_cols:], y_train_seq)
+    _partial_fit_model(model, X_train_seq[:, feature_indices], y_train_seq)
 
     # Predict on the training set if required
     if predict_train:
-        y_pred_train = _predict_model(model, X_train_seq[:, index_cols:])
+        y_pred_train = _predict_model(model, X_train_seq[:, feature_indices])
         y_pred_train = pd.Series(y_pred_train, index=y_train.index)
 
         if verbose:
             print("Train predictions completed.")
 
+    # Initialize last_update_time with the last timestamp from training data
+    last_update_time = pd.Timestamp(X_train_seq[-1, 0])
+    if verbose:
+        print(f"Last update time initialized to last training timestamp: {last_update_time}")
+
     # Iterate through the validation set
     for i in range(len(X_valid)):
         # Predict the current validation point
-        y_pred = _predict_model(model, X_valid[i:i+1, index_cols:])
+        y_pred = _predict_model(model, X_valid[i:i+1, feature_indices])
         y_pred_valid.extend(y_pred)
 
-        # Update the model with the current validation point
-        if i + 1 < len(X_valid):  # Ensure we don't go out of bounds
-            current_time = X_valid[i, 0]  # Assuming the first column in X_valid is the timestamp
-            next_time = X_valid[i + 1, 0]
-            if pd.Timestamp(next_time) - pd.Timestamp(current_time) >= update_freq:
-                #print(f"Updating model with data up to {next_time}")
-                _partial_fit_model(model, X_valid[i:i+1, index_cols:], y_valid.iloc[i:i+1])
+        # Update the model with the current validation point only after forecast_horizon has passed
+        current_time = pd.Timestamp(X_valid[i, 0])
+        
+        # Check if enough time has passed since the last update
+        if current_time - last_update_time >= forecast_horizon_td:
+            if verbose:
+                print(f"Updating model at {current_time} (forecast horizon: {forecast_horizon})")
+            _partial_fit_model(model, X_valid[i:i+1, feature_indices], y_valid.iloc[i:i+1])
+            last_update_time = current_time
 
     # Convert predictions list to pandas Series
     y_pred_valid = pd.Series(y_pred_valid, index=y_valid.index)
@@ -212,6 +262,8 @@ def all_valid_splits_seq_fit_predict(model: BaseEstimator,
                              valid: List[Tuple[np.ndarray, np.ndarray]], 
                              incremental: bool,
                              data_freq: str,
+                             forecast_horizon: str,
+                             features=None,  # Added features parameter
                              update_freq="14D",
                              spike_prominence=10.,
                              normalize_robust=True,
@@ -222,7 +274,7 @@ def all_valid_splits_seq_fit_predict(model: BaseEstimator,
                              verbose: bool = True
                              ) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
     """
-    Fit and predict for each device in the training and validation splits. The model is updated every update_freq days.
+    Fit and predict for each device in the training and validation splits.
 
     Args:
         model (sklearn.BaseEstimator): The model to be used for fitting and predicting.
@@ -230,23 +282,23 @@ def all_valid_splits_seq_fit_predict(model: BaseEstimator,
         valid (List[Tuple[np.ndarray, np.ndarray]]): The validation data splits.
         incremental (bool): If True, use incremental learning; otherwise, use batch learning.
         data_freq (str): The frequency of the data (e.g., "1s", "5min", "H", etc.).
-        update_freq (str): The frequency at which the model is updated. Must be a valid pandas offset string (e.g., "14D" for 14 days, "5m" for 5 minutes, etc.).
-        spike_prominence (float): The prominence parameter for spike detection metrics. The data is normalized before calculating the spikes, so the prominence now means distance in std or MAD units (1.5 => 1.5*std from mean).
-        normalize_robust (bool): If True, use robust (median&MAD) normalization, else use regular z-score (mean&std)normalization.
-        start_split (int): The starting split for processing the splits.
-        end_split (Optional[int]): The ending split for processing the splits. If None, it will process all splits.
+        forecast_horizon (str): How far ahead to forecast before updating with actual values.
+        features (List[str], optional): List of feature names. If provided, features that aren't available 
+                                       for the forecast horizon will be filtered.
+        update_freq (str): For batch models - frequency at which the model is retrained.
+        spike_prominence (float): The prominence parameter for spike detection metrics.
+        normalize_robust (bool): If True, use robust normalization, else use regular z-score normalization.
+        start_split (int): The starting split for processing.
+        end_split (Optional[int]): The ending split for processing.
         predict_train (bool): If True, predict on the training set.
-        index_cols (int): Number of columns in `X_train` and `X_valid` that are not features (e.g., timestamps, device IDs). Default is 2.
-        verbose (bool): If True, print validation metrics for each device and split (period).
+        index_cols (int): Number of columns that are not features.
+        verbose (bool): If True, print validation metrics for each device.
 
     Returns:
         Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
-            device_train_period_predictions (Dict[str, Any]): Predictions for the training period for each device.
-            device_valid_period_predictions (Dict[str, Any]): Predictions for the validation period for each device.
-            device_train_period_metrics (Dict[str, Any]): Metrics for the training period for each device.
-            device_valid_period_metrics (Dict[str, Any]): Metrics for the validation period for each device.
+            device_train_period_predictions, device_valid_period_predictions, 
+            device_train_period_metrics, device_valid_period_metrics
     """
-
     device_train_period_metrics = {}
     device_train_period_predictions = {}
     device_valid_period_metrics = {}
@@ -264,9 +316,15 @@ def all_valid_splits_seq_fit_predict(model: BaseEstimator,
             X_valid, y_valid = get_device_data(valid[split], device_id=device_id)
 
             if incremental:
-                y_pred_train, y_pred_valid = seq_fit_predict_incremental_model(model, X_train, y_train, X_valid, y_valid, update_freq, predict_train, index_cols, verbose)
+                y_pred_train, y_pred_valid = seq_fit_predict_incremental_model(
+                    model, X_train, y_train, X_valid, y_valid, 
+                    forecast_horizon, features, predict_train, index_cols, verbose
+                )
             else:
-                y_pred_train, y_pred_valid = seq_fit_predict_batch_model(model, X_train, y_train, X_valid, y_valid, update_freq, predict_train, index_cols, verbose)
+                y_pred_train, y_pred_valid = seq_fit_predict_batch_model(
+                    model, X_train, y_train, X_valid, y_valid, 
+                    forecast_horizon, update_freq, features, predict_train, index_cols, verbose
+                )
 
             train_period = f"{X_train[0, 0]} - {X_train[-1, 0]}"
             valid_period = f"{X_valid[0, 0]} - {X_valid[-1, 0]}"
@@ -351,6 +409,8 @@ def test_set_seq_fit_predict(model: BaseEstimator,
                             test: List[Tuple[np.ndarray, np.ndarray]],
                             incremental: bool,
                             data_freq: str,
+                            forecast_horizon: str,
+                            features=None,  # Added features parameter
                             update_freq="14D",
                             spike_prominence=10.,
                             normalize_robust=True,
@@ -368,19 +428,20 @@ def test_set_seq_fit_predict(model: BaseEstimator,
         test (List[Tuple[np.ndarray, np.ndarray]]): The test data split.
         incremental (bool): If True, use incremental learning; otherwise, use batch learning.
         data_freq (str): The frequency of the data (e.g., "1s", "5min", "H", etc.).
-        update_freq (str): The frequency at which the model is updated.
-        spike_prominence (float): The prominence parameter for spike detection metrics. The data is normalized before calculating the spikes, so the prominence now means distance in std or MAD units (1.5 => 1.5*std from mean).
-        normalize_robust (bool): If True, use robust (median&MAD) normalization, else use regular z-score (mean&std)normalization.
+        forecast_horizon (str): How far ahead to forecast before updating with actual values.
+        features (List[str], optional): List of feature names. If provided, features that aren't available 
+                                       for the forecast horizon will be filtered.
+        update_freq (str): For batch models - frequency at which the model is retrained.
+        spike_prominence (float): The prominence parameter for spike detection metrics.
+        normalize_robust (bool): If True, use robust normalization, else use regular z-score normalization.
         predict_train (bool): If True, predict on the training set.
-        index_cols (int): Number of columns in `X_train` and `X_valid` that are not features (e.g., timestamps, device IDs). Default is 2.
+        index_cols (int): Number of columns that are not features.
         verbose (bool): If True, print test metrics for each device.
 
     Returns:
         Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
-            device_train_period_predictions (Dict[str, Any]): Predictions for the training period for each device.
-            device_test_period_predictions (Dict[str, Any]): Predictions for the test period for each device.
-            device_train_period_metrics (Dict[str, Any]): Metrics for the training period for each device.
-            device_test_period_metrics (Dict[str, Any]): Metrics for the test period for each device.
+            device_train_period_predictions, device_test_period_predictions, 
+            device_train_period_metrics, device_test_period_metrics
     """
     device_train_period_metrics = {}
     device_train_period_predictions = {}
@@ -411,10 +472,16 @@ def test_set_seq_fit_predict(model: BaseEstimator,
             
         # Train model and predict on test data
         if incremental:
-            y_pred_train, y_pred_test = seq_fit_predict_incremental_model(model, X_combined, y_combined, X_test, y_test, update_freq, predict_train, index_cols)
+            y_pred_train, y_pred_test = seq_fit_predict_incremental_model(
+                model, X_combined, y_combined, X_test, y_test, 
+                forecast_horizon, features, predict_train, index_cols, verbose
+            )
         else:
-            y_pred_train, y_pred_test = seq_fit_predict_batch_model(model, X_combined, y_combined, X_test, y_test, update_freq, predict_train, index_cols)
-
+            y_pred_train, y_pred_test = seq_fit_predict_batch_model(
+                model, X_combined, y_combined, X_test, y_test, 
+                forecast_horizon, update_freq, features, predict_train, index_cols, verbose
+            )
+        
         # Store periods info
         train_period = f"{X_combined[0, 0]} - {X_combined[-1, 0]}"
         test_period = f"{X_test[0, 0]} - {X_test[-1, 0]}"
