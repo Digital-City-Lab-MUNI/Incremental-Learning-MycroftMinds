@@ -18,28 +18,37 @@ def add_lag_features(df: pd.DataFrame, columns: List[str], lag_freqs: Dict[str, 
     try:
         df = df.copy()
         df['time'] = pd.to_datetime(df['time'], errors='coerce')
-        df.sort_values('time', inplace=True)
 
+        df['time'] = df['time'].dt.tz_localize("Europe/Prague", ambiguous='NaT', nonexistent='shift_forward')
+
+        # Add UTC time for lag alignment
+        df['time_utc'] = df['time'].dt.tz_convert('UTC')
+        # Drop rows with NaT in UTC time (to avoid merge_asof errors)
+        df = df[df['time_utc'].notna()].copy()
+        df.sort_values('time_utc', inplace=True)
+
+        # Add lag features using UTC
         for suffix, lag_str in lag_freqs.items():
             lag_delta = pd.Timedelta(lag_str)
-            df[f'time_shift_{suffix}'] = df['time'] - lag_delta
-            temp = df[['time'] + columns].copy()
+            df[f'time_utc_shift_{suffix}'] = df['time_utc'] - lag_delta
+
+            temp = df[['time_utc'] + columns].copy()
             rename_dict = {col: f'{col}_{suffix}' for col in columns}
             temp.rename(columns=rename_dict, inplace=True)
 
             merged = pd.merge_asof(
-                df.sort_values(f'time_shift_{suffix}'),
-                temp.sort_values('time'),
-                left_on=f'time_shift_{suffix}',
-                right_on='time',
+                df.sort_values(f'time_utc_shift_{suffix}'),
+                temp.sort_values('time_utc'),
+                left_on=f'time_utc_shift_{suffix}',
+                right_on='time_utc',
                 direction='backward',
-                tolerance=pd.Timedelta(lag_str)
+                tolerance=lag_delta
             )
 
             for col in columns:
                 df[f'{col}_{suffix}'] = merged[f'{col}_{suffix}'].values
 
-            df.drop(columns=[f'time_shift_{suffix}'], inplace=True)
+            df.drop(columns=[f'time_utc_shift_{suffix}'], inplace=True)
 
         return df
 
