@@ -30,7 +30,7 @@ def get_train_test_sets(data_dir: str,
                         step: int = 1,
                         add_cyclical_features: bool = False,
                         optimize_memory: bool = True,
-                        save_intermediate: bool = True,
+                        save: bool = True,
                         time_agg: Optional[str] = None,
                         intermediate_prefix: str = '5_min_wfv', 
                         new_data='second_batch',
@@ -59,7 +59,7 @@ def get_train_test_sets(data_dir: str,
         step (int): Step size for the sliding window. Defaults to 1.
         add_cyclical_features (bool): Whether to use sine/cosine transformations for time features. Defaults to False.
         optimize_memory (bool): Whether to optimize memory usage by using efficient dtypes. Defaults to True.
-        save_intermediate (bool): Whether to save intermediate results to disk. Defaults to True.
+        save (bool): Whether to save the results to disk. Defaults to True.
         intermediate_prefix (str): Prefix for intermediate files. Defaults to 'processed'.
         new_data (str): 'first_batch' or 'second_batch' (defaults 'second_batch')
         location (str): to be used with second batch. specify 'industrial' or 'commercial' (only valid for second batch data)
@@ -70,16 +70,6 @@ def get_train_test_sets(data_dir: str,
                where X is the feature matrix and y is the target vector.
     """
     # Check if processed data already exists
-    if save_intermediate:
-        try:
-            train, valid, test = load_dataset(data_dir, prefix=intermediate_prefix, use_numpy=True)
-            if train is not None and valid is not None and test is not None:
-                print(f"Loaded processed data from {data_dir} with prefix {intermediate_prefix}")
-                return train, valid, test
-        except Exception as e:
-            print(f"[WARNING] Could not load processed data: {e}")
-    
-    # Continue with standard processing if processed data doesn't exist
     if not os.path.exists(data_dir):
         print(f"[ERROR] The directory {data_dir} does not exist.")
         return (None, None), (None, None), (None, None)
@@ -345,7 +335,7 @@ def get_train_test_sets(data_dir: str,
                 print(f"Memory usage after optimization: Train={train_mem:.2f}MB, Valid={valid_mem:.2f}MB, Test={test_mem:.2f}MB")
 
                 # Save the processed data if requested
-                if save_intermediate:
+                if save:
                     save_dataset(all_train_sets, all_valid_sets, final_test, 
                                 data_dir=data_dir, prefix=intermediate_prefix, use_numpy=True)
 
@@ -365,7 +355,7 @@ def get_train_test_sets(data_dir: str,
                 print(f"Memory usage after optimization: Train={train_mem:.2f}MB, Valid={valid_mem:.2f}MB, Test={test_mem:.2f}MB")
 
                 # Save the processed data if requested
-                if save_intermediate:
+                if save:
                     save_dataset(train_opt, valid_opt, test_opt, 
                                 data_dir=data_dir, prefix=intermediate_prefix, use_numpy=True)
 
