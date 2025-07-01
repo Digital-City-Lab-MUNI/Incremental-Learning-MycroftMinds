@@ -3,6 +3,10 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import mean_squared_error
 from sklearn.base import BaseEstimator
 
+def mse_per_instance(y_true, y_pred):
+    return (y_true - y_pred)**2
+
+
 class LearnNSE:
     """
     Learn++.NSE: incremental ensemble for non-stationary data, supporting classification and regression.
@@ -25,8 +29,7 @@ class LearnNSE:
         self.beta = beta
         self.ensemble_size = ensemble_size # s in the paper
         self.pruning_type = pruning_type
-        self.regression_task_error_metric = regression_task_error_metric
-
+        self.regression_task_error_metric = lambda y_true, y_pred: mse_per_instance(y_true, y_pred)
         # ensemble state
         self.models = []
         self.voting_weights = []
@@ -54,13 +57,16 @@ class LearnNSE:
     def _init_weights(self, n_samples):
         return np.ones(n_samples) / n_samples
 
-    def fit(self, X, y, classification_base_error = 0.5):
+    def fit(self, X, y, classification_base_error = 0.5, regression_base_error = None):
 
         X = np.asarray(X)
         y = np.asarray(y)
         n = len(y)
         t = len(self.models) + 1
 
+        mean_y = np.mean(y) # up for a debate: could be np.median(y) or other robust measure
+        base_err = self.regression_task_error_metric(y, np.full_like(y, mean_y))
+        D = np.full(n, 1.0 / n)
 
         # Steps 1 & 2: initialize or update D_t
         if t == 1:
@@ -83,19 +89,19 @@ class LearnNSE:
 
             else:
                 # regression branch using mean(y) as base error
-                mean_y = np.mean(y)
-                base_err = self.regression_task_error_metric(y, np.full_like(y, mean_y))
+                print(y.shape, "y shape")
+                print(preds.shape, "preds shape")
                 per_err = self.regression_task_error_metric(y, preds)
-                if np.isscalar(per_err):
-                    per_err = np.abs(y - preds)
+                print("per_err:", per_err, "per_err shape:", per_err.shape)
                 ensemble_error_on_original_batch = np.mean(per_err) 
                 ensemble_error_on_original_batch = max(ensemble_error_on_original_batch, eps)
                 w = np.where(per_err > base_err, 1.0, ensemble_error_on_original_batch)
+                print("w shape:", w.shape, "w:", w)
 
             D = w / np.sum(w)
 
         # Step 3: bootstrap sample and train h_t
-        
+        print(D)
         idx = np.random.choice(n, size=n, replace=True, p=D) 
         base_learner = self._clone_with_params()
         base_learner.fit(X[idx], y[idx])
@@ -113,13 +119,20 @@ class LearnNSE:
                     base_learner.fit(X[idx], y[idx])
                     idx = np.random.choice(n, size=n, replace=True, p=D) 
                     counter += 1
+                self.models.append(base_learner)
         else:
-            if self.regression_task_error_metric (base_learner.predict(X[idx]), y[idx]) < self.regression_task_error_metric(mean_y, y[idx]):
+
+            regression_base_error = np.mean(self.regression_task_error_metric(np.full_like(y, mean_y), y[idx]))
+            if np.mean(self.regression_task_error_metric (base_learner.predict(X[idx]), y[idx])) < regression_base_error:
                 self.models.append(base_learner)
             else:
-                while (self.regression_task_error_metric (base_learner.predict(X[idx]), y[idx]) < self.regression_task_error_metric(mean_y, y[idx])):
+                while (np.mean(self.regression_task_error_metric (base_learner.predict(X[idx]), y[idx])) < regression_base_error and counter < 10):
+                    idx = np.random.choice(n, size=n, replace=True, p=D) 
                     base_learner = self._clone_with_params()
                     base_learner.fit(X[idx], y[idx])
+                    idx = np.random.choice(n, size=n, replace=True, p=D) 
+                    counter += 1
+                self.models.append(base_learner)
 
         # add the new model to the ensemble
         # Step 4: compute errors E_k 
@@ -128,18 +141,20 @@ class LearnNSE:
             pred_k = m.predict(X[idx]) # this needs be the bootstrapped sample hence [idx]
             if hasattr(self.base_classifier, 'predict_proba') or isinstance(self.base_classifier, DecisionTreeClassifier):
                 ek = np.sum(D * (pred_k != y[idx])) # maybe D multiplication is unnecessary here
-
+                if ek < classification_base_error:
+                    beta_k = (ek) / (1- ek)    
+                else:
+                    beta_k = (classification_base_error) / (1 - classification_base_error)
             else:
                 raw_err = self.regression_task_error_metric(y, pred_k)
-                per_err_k = raw_err if not np.isscalar(raw_err) else np.abs(y - pred_k)
-                ek = np.sum(D * per_err_k)
-                mean_regressor_error = self.regression_task_error_metric(y, mean_y)
-                mean_regressor_error = np.sum(D * mean_regressor_error)
+                ek = np.sum(D * raw_err)
+                mean_regressor_error = np.mean(self.regression_task_error_metric(y, np.full_like(y, mean_y)))
+                # mean_regressor_error = np.sum(D * mean_regressor_error) maybe unnecessary 
 
-            if ek < classification_base_error:
-                beta_k = (ek) / (1- ek)    
-            else:
-                beta_k = (classification_base_error) / (1 - classification_base_error)
+                if ek < mean_regressor_error:
+                    beta_k = (ek) / (1- ek)    
+                else:
+                    beta_k = (mean_regressor_error) / (1 - mean_regressor_error)
 
             betas.append(beta_k)
 
@@ -169,6 +184,7 @@ class LearnNSE:
         self.voting_weights = np.log(1/betas)
 
         # save D_t
+
         self.instance_weights = D
 
     def predict(self, X):
