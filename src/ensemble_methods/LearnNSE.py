@@ -13,12 +13,18 @@ class LearnNSE:
     Steps 1–8 of the pseudocode, with optional 'age'/'error' pruning.
     """
     def __init__(self,
-                 base_classifier=None,
-                 alpha=0.5, # alpha and beta are hyperparameters for time-based weighting
-                 beta=10.0,
-                 ensemble_size=None,
-                 pruning_type='age',
-                 regression_task_error_metric=mean_squared_error):
+                base_classifier=None,
+                alpha=0.5, # alpha and beta are hyperparameters for time-based weighting
+                beta=10.0,
+                ensemble_size=None,
+                pruning_type='age',
+                alpha_multiplier= 0.8,
+                beta_multiplier= 0.55,
+                gamma_multiplier= 0.3,
+                fixed_multiplier=1.2,
+                baseline=1.0,
+                removal_count_calculation=True,
+                regression_task_error_metric=mean_squared_error):
         # Base learner default
         if base_classifier is None:
             self.base_classifier = DecisionTreeClassifier(random_state=0)
@@ -34,6 +40,13 @@ class LearnNSE:
         self.models = []
         self.voting_weights = []
         self.instance_weights = None
+        self.alpha_multiplier = alpha_multiplier
+        self.beta_multiplier = beta_multiplier
+        self.gamma_multiplier = gamma_multiplier
+        self.fixed_multiplier = fixed_multiplier
+        self.baseline = baseline
+        self.removal_count_calculation = removal_count_calculation
+
 
     def _clone_with_params(self):
         """
@@ -89,19 +102,14 @@ class LearnNSE:
 
             else:
                 # regression branch using mean(y) as base error
-                print(y.shape, "y shape")
-                print(preds.shape, "preds shape")
                 per_err = self.regression_task_error_metric(y, preds)
-                print("per_err:", per_err, "per_err shape:", per_err.shape)
                 ensemble_error_on_original_batch = np.mean(per_err) 
                 ensemble_error_on_original_batch = max(ensemble_error_on_original_batch, eps)
                 w = np.where(per_err > base_err, 1.0, ensemble_error_on_original_batch)
-                print("w shape:", w.shape, "w:", w)
 
             D = w / np.sum(w)
 
         # Step 3: bootstrap sample and train h_t
-        print(D)
         idx = np.random.choice(n, size=n, replace=True, p=D) 
         base_learner = self._clone_with_params()
         base_learner.fit(X[idx], y[idx])
@@ -166,17 +174,43 @@ class LearnNSE:
         # eqation 8 in the paper uses summation of t_weigthts in the next step, but it has little sense
         betas = t_weights * betas
 
+        final_error = np.mean(self.regression_task_error_metric(y, self.predict(X)))
         # Step 6: pruning if ensemble_size exceeded
         if self.ensemble_size and len(self.models) > self.ensemble_size:
-            if self.pruning_type == 'age':
-                self.models.pop(0)
-                betas = betas[1:]
-                t_weights = t_weights[1:]
-            else:
-                worst = np.argmax(betas)
-                self.models.pop(worst)
-                betas = np.delete(betas, worst)
-                t_weights = np.delete(t_weights, worst)
+            # default removal count is excess models
+            removal_count = len(self.models) - self.ensemble_size
+            if self.removal_count_calculation:
+                # record current error
+                if not hasattr(self, 'error_history'):
+                    self.error_history = []
+                self.error_history.append(final_error)
+                if len(self.error_history) >= 4:
+                    e4, e3, e2, e1 = self.error_history[-4:]
+                    r1 = e3 / e4 if e4 != 0 else 1.0
+                    r2 = e2 / e3 if e3 != 0 else 1.0
+                    r3 = e1 / e2 if e2 != 0 else 1.0
+                    weighted = (self.gamma_multiplier * r1
+                              + self.beta_multiplier  * r2
+                              + self.alpha_multiplier * r3)
+                    dynamic_count = max(0, round(self.fixed_multiplier * weighted - self.baseline))
+                    print(f"[BatchErrorHistory] dynamic removal_count={dynamic_count}")
+                    # ensure at least the default removal
+                    removal_count = max(removal_count, dynamic_count)
+                else:
+                    print(f"[BatchErrorHistory] insufficient history ({len(self.error_history)}), skipping dynamic prune.")
+            # remove models one at a time
+            for _ in range(removal_count):
+                if self.pruning_type == 'age':
+                    # remove the oldest model
+                    self.models.pop(0)
+                    betas = betas[1:]
+                    t_weights = t_weights[1:]
+                else:
+                    # error-based: remove model with largest beta
+                    worst = np.argmax(betas)
+                    self.models.pop(worst)
+                    betas = np.delete(betas, worst)
+                    t_weights = np.delete(t_weights, worst)
 
         # Step 7: voting weights
         eps = 1e-10
