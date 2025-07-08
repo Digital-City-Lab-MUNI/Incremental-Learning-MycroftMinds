@@ -163,7 +163,7 @@ def aggregate_and_validate_lags(
             data_concat = pd.concat([data_concat, missing_df], ignore_index=True)
             data_concat = data_concat.sort_values(['device_id', 'serial_number', 'time']).reset_index(drop=True)
 
-            fill_values = data_concat.groupby([data_concat['time'].dt.dayofweek, data_concat['time'].dt.hour])[agg_cols].transform('mean')
+            fill_values = data_concat.groupby([data_concat['device_id'], data_concat['time'].dt.dayofweek, data_concat['time'].dt.hour])[agg_cols].transform('mean')
             for col in agg_cols:
                 data_concat[col] = data_concat[col].fillna(fill_values[col])
     
@@ -189,6 +189,7 @@ def aggregate_and_validate_lags(
     except Exception as e:
         print(f"[ERROR] Lag validation failed: {e}")
         raise
+
 
 def preprocess_df(dataframes: List[pd.DataFrame],
                  device_list: Optional[List[str]] = None,
