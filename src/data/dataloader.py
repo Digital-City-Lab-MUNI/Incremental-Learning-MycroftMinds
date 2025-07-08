@@ -347,6 +347,7 @@ def get_train_test_sets(data_dir: str,
 
         # Apply memory optimization if requested
         if optimize_memory:
+            # Process walk_forward_sets
             if walk_forward_sets and isinstance(all_train_sets, list):
                 for i in range(len(all_train_sets)):
                     all_train_sets[i] = optimize_memory_usage(all_train_sets[i])
@@ -356,30 +357,35 @@ def get_train_test_sets(data_dir: str,
 
                 final_test = optimize_memory_usage((X_test_all, y_test_all))
 
+                # Save memory usage info
                 train_mem = sum(calculate_memory_usage(ts) for ts in all_train_sets)
                 valid_mem = sum(calculate_memory_usage(ts) for ts in all_valid_sets)
                 test_mem = calculate_memory_usage(final_test)
 
                 print(f"Memory usage after optimization: Train={train_mem:.2f}MB, Valid={valid_mem:.2f}MB, Test={test_mem:.2f}MB")
 
-                if save_intermediate:
+                # Save the processed data if requested
+                if save:
                     save_dataset(all_train_sets, all_valid_sets, final_test, 
                                 data_dir=data_dir, prefix=intermediate_prefix, use_numpy=True)
 
                 return all_train_sets, all_valid_sets, final_test
 
             else:
+                # Non-walk-forward case
                 train_opt = optimize_memory_usage((X_train_all, y_train_all))
                 valid_opt = optimize_memory_usage((X_valid_all, y_valid_all)) 
                 test_opt = optimize_memory_usage((X_test_all, y_test_all))
 
+                # Save memory usage info
                 train_mem = calculate_memory_usage(train_opt)
                 valid_mem = calculate_memory_usage(valid_opt)
                 test_mem = calculate_memory_usage(test_opt)
 
                 print(f"Memory usage after optimization: Train={train_mem:.2f}MB, Valid={valid_mem:.2f}MB, Test={test_mem:.2f}MB")
 
-                if save_intermediate:
+                # Save the processed data if requested
+                if save:
                     save_dataset(train_opt, valid_opt, test_opt, 
                                 data_dir=data_dir, prefix=intermediate_prefix, use_numpy=True)
 
@@ -393,5 +399,4 @@ def get_train_test_sets(data_dir: str,
         
     except Exception as e:
         print(f"[ERROR] Failed to stack all sets: {e}")
-        traceback.print_exc()
         return None, None, None
