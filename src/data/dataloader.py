@@ -246,8 +246,11 @@ def get_train_test_sets(data_dir: str,
             y_test_all = y_test_all[mask]
 
             print("Overall data time range: ", X_train_all[:, 0].min(), X_test_all[:, 0].max())
+            print()
             print("Test data time range: ", X_test_all[:, 0].min(), X_test_all[:, 0].max())
+            print()
             print("(Train + Valid) data range: ", X_train_all[:, 0].min(), X_train_all[:, 0].max())
+            print()
 
             # Convert timestamp column to Series for easier handling
             timestamps = pd.Series(X_train_all[:, 0])
@@ -297,6 +300,7 @@ def get_train_test_sets(data_dir: str,
                 print(f"  Train window: {train_start_time} to {train_end_time}")
                 print(f"  Valid window: {valid_start_time} to {valid_end_time}")
                 print(f"  Train samples: {len(X_train_split)}, Valid samples: {len(X_valid_split)}")
+                print()
 
                 # Slide forward by train_hours for next split
                 start_idx += train_hours
