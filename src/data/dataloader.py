@@ -149,18 +149,8 @@ def get_train_test_sets(data_dir: str,
         try:
             ts['time'] = pd.to_datetime(ts['time'])
             
-            # Get site identifier (assuming it's stored in one of the columns)
-            # You may need to adjust this based on your actual data structure
-            site_id = None
-            if 'device_id' in ts.columns:
-                site_id = ts['device_id'].iloc[0]
-            elif 'site_id' in ts.columns:
-                site_id = ts['site_id'].iloc[0]
-            elif 'serial_number' in ts.columns:
-                site_id = ts['serial_number'].iloc[0]
-            else:
-                site_id = f"site_{idx}"  # fallback
-            
+            # Get site identifier
+            site_id = ts['device_id'].iloc[0]
             print(f"Processing site: {site_id}")
             
             train_end_idx = int(len(ts) * train_ratio)
