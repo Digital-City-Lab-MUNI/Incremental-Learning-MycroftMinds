@@ -263,7 +263,7 @@ def get_train_test_sets(data_dir: str,
 
             # Walk-forward loop
             while start_idx + train_valid <= num_hours:
-                train_range = unique_hours[start_idx : start_idx + train_hours]
+                train_range = unique_hours[0 : start_idx + train_hours]
                 valid_range = unique_hours[start_idx + train_hours : start_idx + train_hours + valid_hours]
 
                 train_mask = timestamps.dt.floor('H').isin(train_range)
@@ -298,7 +298,7 @@ def get_train_test_sets(data_dir: str,
 
             # Handle remaining data
             if start_idx + train_hours < num_hours:
-                train_range = unique_hours[start_idx : start_idx + train_hours]
+                train_range = unique_hours[0 : start_idx + train_hours]
                 valid_range = unique_hours[start_idx + train_hours :]
 
                 train_mask = timestamps.dt.floor('H').isin(train_range)
