@@ -37,15 +37,16 @@ def read_second_batch(extract_path, location='industrial', site_ids=None):
         
         file_path = os.path.join(second_batch_path, filename)
         try:
-            df = pd.read_csv(file_path)
+            df = pd.read_csv(file_path, parse_dates=['time'])
             df['device_id'] = site_name
             df['serial_number'] = site_name
+            df = df.sort_values(by=['time'])
             if location=='industrial':
                 df.drop(columns={'Q+ total', 'min', 'max'}, errors='ignore', inplace=True)
             elif location=='commercial':
                 df.drop(columns={'seriesId'}, inplace=True)
                 df['consumption'] = df['consumption'].diff()
-                df = df.iloc[1:]
+                # df = df.iloc[1:]
             all_site_data.append(df)
         except pd.errors.EmptyDataError:
             print(f"Warning: File {filename} is empty. Skipping.")
@@ -162,7 +163,7 @@ def aggregate_and_validate_lags(
             data_concat = pd.concat([data_concat, missing_df], ignore_index=True)
             data_concat = data_concat.sort_values(['device_id', 'serial_number', 'time']).reset_index(drop=True)
 
-            fill_values = data_concat.groupby([data_concat['time'].dt.dayofweek, data_concat['time'].dt.hour])[agg_cols].transform('mean')
+            fill_values = data_concat.groupby([data_concat['device_id'], data_concat['time'].dt.dayofweek, data_concat['time'].dt.hour])[agg_cols].transform('mean')
             for col in agg_cols:
                 data_concat[col] = data_concat[col].fillna(fill_values[col])
     
@@ -188,6 +189,7 @@ def aggregate_and_validate_lags(
     except Exception as e:
         print(f"[ERROR] Lag validation failed: {e}")
         raise
+
 
 def preprocess_df(dataframes: List[pd.DataFrame],
                  device_list: Optional[List[str]] = None,

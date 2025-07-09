@@ -142,64 +142,85 @@ def get_train_test_sets(data_dir: str,
     train_ratio = 0.6
     valid_ratio = 0.2
 
-    train_sets, valid_sets, test_sets = [], [], []
-
+    # NEW: Process each site separately to maintain site-specific timelines
+    site_processed_data = {}
+    
     for idx, ts in enumerate(complete_time_series[:]):
         try:
             ts['time'] = pd.to_datetime(ts['time'])
-            # ts_start = ts['time'].min()
-            # ts_end = ts['time'].max()
-
+            
+            # Get site identifier
+            site_id = ts['device_id'].iloc[0]
+            print(f"Processing site: {site_id}")
+            
             train_end_idx = int(len(ts) * train_ratio)
             valid_end_idx = int(len(ts) * (train_ratio+valid_ratio))
 
             ts_lagged = add_lag_features(ts, columns_to_add_lag, lag_freqs)
-
-            ts_test = ts_lagged.iloc[valid_end_idx:]
-            ts_test_start = ts_test['time'].min()
-            ts_test_end = ts_test['time'].max()
-
-            X_test, y_test = clean_data([ts_test], input_features, target_feature, window_size, step)
-            test_sets.append((np.vstack(X_test), np.hstack(y_test)))
             
-            if not walk_forward_sets:
-                ts_train = ts_lagged.iloc[:train_end_idx]
-                # series_start = ts_train['time'].min()
-                # series_end = ts_train['time'].max()
-                #print(series_start, series_end)
-
-                X_train, y_train = clean_data([ts_train], input_features, target_feature, window_size, step)
-                train_sets.append((np.vstack(X_train), np.hstack(y_train)))
-
-                ts_valid = ts_lagged[train_end_idx:valid_end_idx]
-                X_valid, y_valid = clean_data([ts_valid], input_features, target_feature, window_size, step)
-                valid_sets.append((np.vstack(X_valid), np.hstack(y_valid)))
-            else:
-                ts_train = ts_lagged.iloc[:valid_end_idx]
-                X_train, y_train = clean_data([ts_train], input_features, target_feature, window_size, step)
-                train_sets.append((np.vstack(X_train), np.hstack(y_train)))
-
+            # Store site-specific data
+            site_processed_data[site_id] = {
+                'data': ts_lagged,
+                'train_end_idx': train_end_idx,
+                'valid_end_idx': valid_end_idx
+            }
+            
         except Exception as e:
             print(f"[WARNING] Skipped one time series (index {idx}) due to error:")
             traceback.print_exc()
             continue
-    #print(len(train_sets))
+
+    # Now process train/valid/test splits while keeping sites separate
+    train_sets, valid_sets, test_sets = [], [], []
+    
+    for site_id, site_data in site_processed_data.items():
+        ts_lagged = site_data['data']
+        train_end_idx = site_data['train_end_idx']
+        valid_end_idx = site_data['valid_end_idx']
+        
+        # Test set
+        ts_test = ts_lagged.iloc[valid_end_idx:]
+        if len(ts_test) > 0:
+            X_test, y_test = clean_data([ts_test], input_features, target_feature, window_size, step)
+            if len(X_test) > 0:
+                test_sets.append((np.vstack(X_test), np.hstack(y_test)))
+        
+        if not walk_forward_sets:
+            # Non-walk-forward case
+            ts_train = ts_lagged.iloc[:train_end_idx]
+            if len(ts_train) > 0:
+                X_train, y_train = clean_data([ts_train], input_features, target_feature, window_size, step)
+                if len(X_train) > 0:
+                    train_sets.append((np.vstack(X_train), np.hstack(y_train)))
+
+            ts_valid = ts_lagged.iloc[train_end_idx:valid_end_idx]
+            if len(ts_valid) > 0:
+                X_valid, y_valid = clean_data([ts_valid], input_features, target_feature, window_size, step)
+                if len(X_valid) > 0:
+                    valid_sets.append((np.vstack(X_valid), np.hstack(y_valid)))
+        else:
+            # Walk-forward case - process site data for training
+            ts_train = ts_lagged.iloc[:valid_end_idx]
+            if len(ts_train) > 0:
+                X_train, y_train = clean_data([ts_train], input_features, target_feature, window_size, step)
+                if len(X_train) > 0:
+                    train_sets.append((np.vstack(X_train), np.hstack(y_train)))
+
     # Stack all sets
     try:
         if walk_forward_sets:
             all_train_sets, all_valid_sets = [], []
 
+            # Combine all sites' training data
             X_train_all = np.vstack([x for x, _ in train_sets])
             y_train_all = np.hstack([y for _, y in train_sets])
 
-            X_train_all = X_train_all[X_train_all[:, 0].argsort()]
-
+            # Sort by timestamp to maintain chronological order
             sorted_indices = np.argsort(X_train_all[:, 0])
-
-            # Apply the sorting to both X and Y
             X_train_all = X_train_all[sorted_indices]
             y_train_all = y_train_all[sorted_indices]
 
+            # Combine all sites' test data
             X_test_all = np.vstack([x for x, _ in test_sets])
             y_test_all = np.hstack([y for _, y in test_sets])
             sorted_indices = np.argsort(X_test_all[:, 0])
@@ -218,17 +239,19 @@ def get_train_test_sets(data_dir: str,
             print()
             print("Test data time range: ", X_test_all[:, 0].min(), X_test_all[:, 0].max())
             print()
-
             print("(Train + Valid) data range: ", X_train_all[:, 0].min(), X_train_all[:, 0].max())
+            print()
 
             # Convert timestamp column to Series for easier handling
             timestamps = pd.Series(X_train_all[:, 0])
-            unique_days = sorted(timestamps.dt.date.unique())#sorted(pd.to_datetime(timestamps.dt.date).unique())  # Actual calendar days
+            unique_hours = sorted(timestamps.dt.floor('H').unique())
+            num_hours = len(unique_hours)
 
-            num_days = len(unique_days)
-            train_valid = train_days + valid_days
+            train_hours = train_days * 24
+            valid_hours = valid_days * 24
+            train_valid = train_hours + valid_hours
 
-            if train_valid > num_days:
+            if train_valid > num_hours:
                 print("[ERROR] data timeline too small for provided train+valid splits")
                 return (None, None), (None, None), (None, None)
 
@@ -238,14 +261,13 @@ def get_train_test_sets(data_dir: str,
             i = 0
             start_idx = 0
 
-            # --- Main walk-forward loop ---
-            while start_idx + train_valid <= num_days:
-                train_day_range = unique_days[0: start_idx + train_days]
-                valid_day_range = unique_days[start_idx + train_days : start_idx + train_days + valid_days]
+            # Walk-forward loop
+            while start_idx + train_valid <= num_hours:
+                train_range = unique_hours[0 : start_idx + train_hours]
+                valid_range = unique_hours[start_idx + train_hours : start_idx + train_hours + valid_hours]
 
-                train_mask = timestamps.dt.date.isin(train_day_range)
-                valid_mask = timestamps.dt.date.isin(valid_day_range)
-                #print(train_mask.sum())
+                train_mask = timestamps.dt.floor('H').isin(train_range)
+                valid_mask = timestamps.dt.floor('H').isin(valid_range)
 
                 X_train_split = X_train_all[train_mask.values]
                 y_train_split = y_train_all[train_mask.values]
@@ -254,7 +276,7 @@ def get_train_test_sets(data_dir: str,
                 y_valid_split = y_train_all[valid_mask.values]
 
                 if len(X_valid_split) == 0:
-                    break  # No validation data left
+                    break
 
                 all_train_sets.append((X_train_split, y_train_split))
                 all_valid_sets.append((X_valid_split, y_valid_split))
@@ -267,19 +289,20 @@ def get_train_test_sets(data_dir: str,
                 print(f"Split {i + 1}:")
                 print(f"  Train window: {train_start_time} to {train_end_time}")
                 print(f"  Valid window: {valid_start_time} to {valid_end_time}")
+                print(f"  Train samples: {len(X_train_split)}, Valid samples: {len(X_valid_split)}")
                 print()
 
-                # Slide forward by 1 day for next split (walk-forward)
-                start_idx += train_days
+                # Slide forward by train_hours for next split
+                start_idx += train_hours
                 i += 1
 
-            # Final split for any remaining data ---
-            if start_idx + train_days < num_days:
-                train_day_range = unique_days[0 : start_idx + train_days]
-                valid_day_range = unique_days[start_idx + train_days :]
+            # Handle remaining data
+            if start_idx + train_hours < num_hours:
+                train_range = unique_hours[0 : start_idx + train_hours]
+                valid_range = unique_hours[start_idx + train_hours :]
 
-                train_mask = timestamps.dt.date.isin(train_day_range)
-                valid_mask = timestamps.dt.date.isin(valid_day_range)
+                train_mask = timestamps.dt.floor('H').isin(train_range)
+                valid_mask = timestamps.dt.floor('H').isin(valid_range)
 
                 X_train_split = X_train_all[train_mask.values]
                 y_train_split = y_train_all[train_mask.values]
@@ -299,8 +322,10 @@ def get_train_test_sets(data_dir: str,
                     print(f"Split {i + 1}:")
                     print(f"  Train window: {train_start_time} to {train_end_time}")
                     print(f"  Valid window: {valid_start_time} to {valid_end_time}")
+                    print(f"  Train samples: {len(X_train_split)}, Valid samples: {len(X_valid_split)}")
     
         else:
+            # Non-walk-forward case
             X_train_all = np.vstack([x for x, _ in train_sets])
             y_train_all = np.hstack([y for _, y in train_sets])
 
@@ -309,7 +334,6 @@ def get_train_test_sets(data_dir: str,
 
             X_test_all = np.vstack([x for x, _ in test_sets])
             y_test_all = np.hstack([y for _, y in test_sets])
-
 
             print(f"Total Training samples: {X_train_all.shape[0]}")
             print(f"Total Validation samples: {X_valid_all.shape[0]}")
