@@ -96,7 +96,7 @@ class FastODT(BaseTree):
         return np.mean(self.error_rates)
 
     def partial_fit(self, X: np.ndarray, y: np.ndarray, verbose: bool = False):
-        X = ensure_2d_array(X)
+        X = ensure_2d_array(X) # 10.1 -> [10.1] -> (1,1)
         y = np.asarray(y)
         if y.ndim == 0:
             y = np.array([y])
@@ -155,12 +155,11 @@ class FastODT(BaseTree):
     def _attempt_split(self, node, x, y, depth):
         if self.option == "hf":
             self._attempt_split_HF(node, x, y, depth)
-        else:
-            self._attempt_split_confidence(node, x, y, depth)
+        # else:
+        #     self._attempt_split_confidence(node, x, y, depth)
 
     def _attempt_split_HF(self, node, x, y, depth):
-        tmp = node.find_best_split()
-        best_split, _ = tmp
+        best_split, _ = node.find_best_split() # here happens hf bound calculation
         if self.splits[depth] is not None:
             node.split(self.splits[depth],self.split_confidence)
             node.left.update_from_parent_node(node)
@@ -173,19 +172,19 @@ class FastODT(BaseTree):
             node.right.update_from_parent_node(node)
 
 
-    def _attempt_split_confidence(self, node, x, y, depth):
-        best_split, best_reduction = node.find_best_split()
+    # def _attempt_split_confidence(self, node, x, y, depth):
+    #     best_split, best_reduction = node.find_best_split()
 
-        if self.splits[depth] is not None:
-            node.split(self.splits[depth])
-            node.left.update_from_parent_node(node)
-            node.right.update_from_parent_node(node)
+    #     if self.splits[depth] is not None:
+    #         node.split(self.splits[depth])
+    #         node.left.update_from_parent_node(node)
+    #         node.right.update_from_parent_node(node)
         
-        elif best_split and best_reduction > self.split_confidence:
-            self.splits[depth] = best_split 
-            node.split(best_split)
-            node.left.update_from_parent_node(node)
-            node.right.update_from_parent_node(node)
+    #     elif best_split and best_reduction > self.split_confidence:
+    #         self.splits[depth] = best_split 
+    #         node.split(best_split)
+    #         node.left.update_from_parent_node(node)
+    #         node.right.update_from_parent_node(node)
 
 
 if __name__ == "__main__":
