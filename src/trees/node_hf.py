@@ -17,7 +17,7 @@ def hoeffding_bound(R,n, delta):
     #     harmonic_mean_n = 1/((1/n_left)+(1/n_right))
     # return math.sqrt(1/(2*harmonic_mean_n) / delta)
 
-class NodeHoeffdingBound:
+class NodeHoeffdingBound: # one leaf of the FastODT
 
     __SUM_X = 0 
     __COUNT = 1 
@@ -28,7 +28,10 @@ class NodeHoeffdingBound:
     __RIGHT_Y = 6 
     __RIGHT_Y_SQUARED = 7 
     __RIGHT_N = 8
-    
+
+    # TODO:
+    # reduction of memory footprint
+
     def __init__(self,split_confidence, tie_threshold = 0.05, max_feature=1.0, eagerness=0.0, grace_period = 0):
         self.tie_threshold = tie_threshold
         self.delta = split_confidence
@@ -120,6 +123,10 @@ class NodeHoeffdingBound:
             if count < 2:
                 continue
             avg_x = sum_x / count
+            # TODO:
+            # make variance_reduction a parameter 
+            # to pass to the constructor or function
+            # to allow for tuning
             reduction = self._variance_reduction(
                 left_y, left_y_squared, left_n, 
                 right_y, right_y_squared, right_n
@@ -132,6 +139,10 @@ class NodeHoeffdingBound:
                 __best_split_2nd = (feature, avg_x, reduction)
 
             R = len(self.attribute_stats)
+            # TODO:
+            # parametrize eagerness factor -> 
+            # maybe it should not be linear
+
             e = hoeffding_bound(R,count,self.delta)/self.eager_splitting_counter
             if R > 1:
                 if __best_split_1st[2] - __best_split_2nd[2] > e:

@@ -2,6 +2,7 @@ import numpy as np
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import mean_squared_error
 from sklearn.base import BaseEstimator
+from time import time
 
 def mse_per_instance(y_true, y_pred):
     return (y_true - y_pred)**2
@@ -71,7 +72,8 @@ class LearnNSE:
         return np.ones(n_samples) / n_samples
 
     def fit(self, X, y, classification_base_error = 0.5, regression_base_error = None):
-
+        start_time = time()
+        print(f"prefit: {start_time}")
         X = np.asarray(X)
         y = np.asarray(y)
         n = len(y)
@@ -145,7 +147,8 @@ class LearnNSE:
         # add the new model to the ensemble
         # Step 4: compute errors E_k 
         betas = []
-        for m in self.models:
+        for n, m in enumerate(self.models):
+            print(f"model {n}")
             pred_k = m.predict(X[idx]) # this needs be the bootstrapped sample hence [idx]
             if hasattr(self.base_classifier, 'predict_proba') or isinstance(self.base_classifier, DecisionTreeClassifier):
                 ek = np.sum(D * (pred_k != y[idx])) # maybe D multiplication is unnecessary here
@@ -164,6 +167,7 @@ class LearnNSE:
                 else:
                     beta_k = (mean_regressor_error) / (1 - mean_regressor_error)
 
+            print(f"betas: {betas}")
             betas.append(beta_k)
 
         # Step 5: time-based weights (unused later)
@@ -196,10 +200,17 @@ class LearnNSE:
                     print(f"[BatchErrorHistory] dynamic removal_count={dynamic_count}")
                     # ensure at least the default removal
                     removal_count = max(removal_count, dynamic_count)
+
+                    # TOOD:
+                    # You need to have models whenever you call predict
+                    # Double check if you have models
+                    if removal_count >= len(self.models):
+                        removal_count = len(self.models) - 1
                 else:
                     print(f"[BatchErrorHistory] insufficient history ({len(self.error_history)}), skipping dynamic prune.")
             # remove models one at a time
             for _ in range(removal_count):
+                print(f"removal_count: {removal_count}, betas lenght: {len(betas)}")
                 if self.pruning_type == 'age':
                     # remove the oldest model
                     self.models.pop(0)
@@ -207,10 +218,14 @@ class LearnNSE:
                     t_weights = t_weights[1:]
                 else:
                     # error-based: remove model with largest beta
-                    worst = np.argmax(betas)
-                    self.models.pop(worst)
-                    betas = np.delete(betas, worst)
-                    t_weights = np.delete(t_weights, worst)
+                    try:
+                        worst = np.argmax(betas)
+                        self.models.pop(worst)
+                        betas = np.delete(betas, worst)
+                        t_weights = np.delete(t_weights, worst)
+                    except Exception as e:
+                        print(f"Caught: {e}. Betas: {betas}")
+
 
         # Step 7: voting weights
         eps = 1e-10
@@ -222,29 +237,40 @@ class LearnNSE:
         self.instance_weights = D
 
     def predict(self, X):
-            """
-            Step 8: Final hypothesis H_t(x) = arg max_y sum_k W_k * I{h_k(x)=y}
-            """
-            X = np.asarray(X)
-            if not self.models:
-                raise ValueError("No models: call fit() first.")
-            # simplify voting with weights
-            # add regression equivalent
+        """
+        Step 8: Final hypothesis H_t(x) = arg max_y sum_k W_k * I{h_k(x)=y}
+        """
+        X = np.asarray(X)
 
-            # gather predictions from each model: shape (t, n_samples)
-            preds = np.array([m.predict(X) for m in self.models])
-            # find all unique classes across ensemble
-            classes = np.unique(preds)
-            # map class labels to column indices
-            idx_map = {c: i for i, c in enumerate(classes)}
-            # accumulate weighted votes for each sample and class
-            votes = np.zeros((X.shape[0], classes.size))
-            for k, W in enumerate(self.voting_weights):
-                for i, p in enumerate(preds[k]):
+        if not self.models:
+            raise ValueError("No models: call fit() first.")
+        # simplify voting with weights
+        # add regression equivalent
+
+        # gather predictions from each model: shape (t, n_samples)
+        preds = np.array([m.predict(X) for m in self.models])
+
+        # find all unique classes across ensemble
+        classes = np.unique(preds)
+
+        # map class labels to column indices
+        idx_map = {c: i for i, c in enumerate(classes)}
+
+        # accumulate weighted votes for each sample and class
+        votes = np.zeros((X.shape[0], classes.size))
+
+        for k, W in enumerate(self.voting_weights):
+            for i, p in enumerate(preds[k]):
+                try:
                     votes[i, idx_map[p]] += W
-            # select class with highest vote sum
-            winner_idx = votes.argmax(axis=1)
-            return classes[winner_idx]
+                except Exception as e:
+                    print(f"Caught error {e}. i: {i}, p{p}")
+                    print(f"len(idx_map): {len(idx_map)} and votes; {votes.shape}")
+                    print(f"idx_map[p]: {idx_map[p]}")
+        # select class with highest vote sum
+        winner_idx = votes.argmax(axis=1)
+        return classes[winner_idx]
+
     def score(self, X, y):
         preds = self.predict(X)
         if hasattr(self.models[0], 'classes_'):
