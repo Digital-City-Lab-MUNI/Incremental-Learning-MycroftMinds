@@ -19,9 +19,9 @@ def read_second_batch(extract_path, location='industrial', site_ids=None):
         List of DataFrames, one per site.
     """
     if location=='industrial':
-        second_batch_path = os.path.join(extract_path, 'second_batch/industrial')
+        second_batch_path = os.path.join(extract_path, 'industrial')
     else:
-        second_batch_path = os.path.join(extract_path, 'second_batch/commercial')
+        second_batch_path = os.path.join(extract_path, 'commercial')
     if not os.path.isdir(second_batch_path):
         raise ValueError(f"Directory not found: {second_batch_path}")
     
@@ -57,7 +57,7 @@ def read_second_batch(extract_path, location='industrial', site_ids=None):
 
     return all_site_data
 
-def read_new_meter_data(extract_path, meter_names=None, aggregation=None):
+def read_first_batch(extract_path, meter_names=None, aggregation=None):
     """
     Reads data from specified meter files into pandas DataFrames.
 
