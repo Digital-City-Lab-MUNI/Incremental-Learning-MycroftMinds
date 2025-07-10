@@ -140,33 +140,48 @@ def aggregate_and_validate_lags(
         data_concat = data_concat.reset_index()
         
         if fill_missing:
-            # Identify missing timestamps per (device_id, serial_number) pair
             missing_entries = []
 
+            # Ensure 'time' is datetime with tz info preserved
+            data_concat['time'] = pd.to_datetime(data_concat['time'])
+
             for (device_id, serial_number), group in data_concat.groupby(['device_id', 'serial_number']):
-                full_range = pd.date_range(start=group['time'].min(), end=group['time'].max(), freq='1H')
+                group = group.sort_values('time')
+                full_range = pd.date_range(start=group['time'].min(), end=group['time'].max(), freq=time_agg)
+                
                 existing_times = set(group['time'])
                 missing_times = [t for t in full_range if t not in existing_times]
-                
+
                 for t in missing_times:
                     missing_entries.append({
                         'time': t,
                         'device_id': device_id,
                         'serial_number': serial_number,
-                        **{col: pd.NA for col in agg_cols}  # Fill numeric cols with NaNs
+                        **{col: pd.NA for col in agg_cols}
                     })
 
-            # Convert to DataFrame and concatenate with original
-            missing_df = pd.DataFrame(missing_entries)
+            if missing_entries:
+                missing_df = pd.DataFrame(missing_entries)
+                data_concat = pd.concat([data_concat, missing_df], ignore_index=True)
 
-            # Append and sort
-            data_concat = pd.concat([data_concat, missing_df], ignore_index=True)
+            # Sort and optionally fill missing values
             data_concat = data_concat.sort_values(['device_id', 'serial_number', 'time']).reset_index(drop=True)
 
-            fill_values = data_concat.groupby([data_concat['device_id'], data_concat['time'].dt.dayofweek, data_concat['time'].dt.hour])[agg_cols].transform('mean')
-            for col in agg_cols:
-                data_concat[col] = data_concat[col].fillna(fill_values[col])
-    
+            # Filling strategy: average by weekday/hour
+            if not data_concat.empty:
+                data_concat['weekday'] = data_concat['time'].dt.dayofweek
+                data_concat['hour'] = data_concat['time'].dt.hour
+
+                fill_values = (
+                    data_concat.groupby(['device_id', 'weekday', 'hour'])[agg_cols]
+                    .transform('mean')
+                )
+
+                for col in agg_cols:
+                    data_concat[col] = data_concat[col].fillna(fill_values[col])
+
+                data_concat = data_concat.drop(columns=['weekday', 'hour'])
+            
     except Exception as e:
         print(f"[ERROR] Aggregation failed: {e}")
         raise
@@ -189,7 +204,6 @@ def aggregate_and_validate_lags(
     except Exception as e:
         print(f"[ERROR] Lag validation failed: {e}")
         raise
-
 
 def preprocess_df(dataframes: List[pd.DataFrame],
                  device_list: Optional[List[str]] = None,
