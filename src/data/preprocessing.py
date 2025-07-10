@@ -186,7 +186,7 @@ def aggregate_and_validate_lags(
                     data_concat[col] = data_concat[col].fillna(fill_values[col])
 
                 # Drop helper columns
-                data_concat = data_concat.drop(columns=['weekday', 'rounded_slot'])
+                data_concat = data_concat.drop(columns=['rounded_slot'])
 
             
     except Exception as e:
