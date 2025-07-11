@@ -10,7 +10,7 @@ from sklearn.model_selection import TimeSeriesSplit
 # Import modules from the new structure
 from src.data.io import save_dataset, load_dataset
 from src.utils.memory import calculate_memory_usage, optimize_memory_usage
-from src.data.preprocessing import preprocess_df, concat_dataframes_by_time, get_complete_time_series, clean_data, aggregate_and_validate_lags, read_new_meter_data, read_second_batch
+from src.data.preprocessing import preprocess_df, concat_dataframes_by_time, get_complete_time_series, clean_data, aggregate_and_validate_lags, read_first_batch, read_second_batch
 from src.data.feature_engineering import add_lag_features, add_cyclical_time_features
 
 warnings.filterwarnings("ignore")
@@ -76,9 +76,11 @@ def get_train_test_sets(data_dir: str,
 
     try:
         if new_data=='first_batch':
-            dataframes = read_new_meter_data(data_dir, device_list, aggregation=time_agg)
+            extract_path = os.path.join(data_dir, new_data)
+            dataframes = read_first_batch(extract_path, device_list, aggregation=time_agg)
         elif new_data=='second_batch':
-            dataframes = read_second_batch(data_dir, location=location, site_ids=device_list)
+            extract_path = os.path.join(data_dir, new_data)
+            dataframes = read_second_batch(extract_path, location=location, site_ids=device_list)
         else:
             csv_files = glob.glob(os.path.join(data_dir, "smart_meter_data_*.csv"))
             if not csv_files:
@@ -359,9 +361,15 @@ def get_train_test_sets(data_dir: str,
                 print(f"Memory usage after optimization: Train={train_mem:.2f}MB, Valid={valid_mem:.2f}MB, Test={test_mem:.2f}MB")
 
                 # Save the processed data if requested
+                if new_data == 'second_batch':
+                    save_location = os.path.join(data_dir, new_data, location)
+                elif new_data == 'first_batch':
+                    save_location = os.path.join(data_dir, new_data)
+                else:
+                    save_location = data_dir
                 if save:
                     save_dataset(all_train_sets, all_valid_sets, final_test, 
-                                data_dir=data_dir, prefix=intermediate_prefix, use_numpy=True)
+                                data_dir=save_location, prefix=intermediate_prefix, use_numpy=True)
 
                 return all_train_sets, all_valid_sets, final_test
 
@@ -379,9 +387,15 @@ def get_train_test_sets(data_dir: str,
                 print(f"Memory usage after optimization: Train={train_mem:.2f}MB, Valid={valid_mem:.2f}MB, Test={test_mem:.2f}MB")
 
                 # Save the processed data if requested
+                if new_data == 'second_batch':
+                    save_location = os.path.join(data_dir, new_data, location)
+                elif new_data == 'first_batch':
+                    save_location = os.path.join(data_dir, new_data)
+                else:
+                    save_location = data_dir
                 if save:
                     save_dataset(train_opt, valid_opt, test_opt, 
-                                data_dir=data_dir, prefix=intermediate_prefix, use_numpy=True)
+                                data_dir=save_location, prefix=intermediate_prefix, use_numpy=True)
 
                 return train_opt, valid_opt, test_opt
 

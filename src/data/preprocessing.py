@@ -19,9 +19,9 @@ def read_second_batch(extract_path, location='industrial', site_ids=None):
         List of DataFrames, one per site.
     """
     if location=='industrial':
-        second_batch_path = os.path.join(extract_path, 'second_batch/industrial')
+        second_batch_path = os.path.join(extract_path, 'industrial')
     else:
-        second_batch_path = os.path.join(extract_path, 'second_batch/commercial')
+        second_batch_path = os.path.join(extract_path, 'commercial')
     if not os.path.isdir(second_batch_path):
         raise ValueError(f"Directory not found: {second_batch_path}")
     
@@ -57,7 +57,7 @@ def read_second_batch(extract_path, location='industrial', site_ids=None):
 
     return all_site_data
 
-def read_new_meter_data(extract_path, meter_names=None, aggregation=None):
+def read_first_batch(extract_path, meter_names=None, aggregation=None):
     """
     Reads data from specified meter files into pandas DataFrames.
 
@@ -140,33 +140,55 @@ def aggregate_and_validate_lags(
         data_concat = data_concat.reset_index()
         
         if fill_missing:
-            # Identify missing timestamps per (device_id, serial_number) pair
             missing_entries = []
 
+            # Ensure 'time' is datetime with tz info preserved
+            data_concat['time'] = pd.to_datetime(data_concat['time'])
+
             for (device_id, serial_number), group in data_concat.groupby(['device_id', 'serial_number']):
-                full_range = pd.date_range(start=group['time'].min(), end=group['time'].max(), freq='1H')
+                group = group.sort_values('time')
+                full_range = pd.date_range(start=group['time'].min(), end=group['time'].max(), freq=time_agg)
+                
                 existing_times = set(group['time'])
                 missing_times = [t for t in full_range if t not in existing_times]
-                
+
                 for t in missing_times:
                     missing_entries.append({
                         'time': t,
                         'device_id': device_id,
                         'serial_number': serial_number,
-                        **{col: pd.NA for col in agg_cols}  # Fill numeric cols with NaNs
+                        **{col: pd.NA for col in agg_cols}
                     })
 
-            # Convert to DataFrame and concatenate with original
-            missing_df = pd.DataFrame(missing_entries)
+            if missing_entries:
+                missing_df = pd.DataFrame(missing_entries)
+                data_concat = pd.concat([data_concat, missing_df], ignore_index=True)
 
-            # Append and sort
-            data_concat = pd.concat([data_concat, missing_df], ignore_index=True)
+            # Sort
             data_concat = data_concat.sort_values(['device_id', 'serial_number', 'time']).reset_index(drop=True)
 
-            fill_values = data_concat.groupby([data_concat['device_id'], data_concat['time'].dt.dayofweek, data_concat['time'].dt.hour])[agg_cols].transform('mean')
-            for col in agg_cols:
-                data_concat[col] = data_concat[col].fillna(fill_values[col])
-    
+            # Filling strategy: average by weekday and exact time slot (as per aggregation level)
+            if not data_concat.empty:
+                from pandas.tseries.frequencies import to_offset
+                agg_offset = to_offset(time_agg)
+
+                data_concat['weekday'] = data_concat['time'].dt.dayofweek
+                data_concat['rounded_slot'] = (data_concat['time'].dt.floor(time_agg)).dt.time
+
+                group_cols = ['device_id', 'weekday', 'rounded_slot']
+
+                fill_values = (
+                    data_concat.groupby(group_cols)[agg_cols]
+                    .transform('mean')
+                )
+
+                for col in agg_cols:
+                    data_concat[col] = data_concat[col].fillna(fill_values[col])
+
+                # Drop helper columns
+                data_concat = data_concat.drop(columns=['rounded_slot'])
+
+            
     except Exception as e:
         print(f"[ERROR] Aggregation failed: {e}")
         raise
@@ -189,7 +211,6 @@ def aggregate_and_validate_lags(
     except Exception as e:
         print(f"[ERROR] Lag validation failed: {e}")
         raise
-
 
 def preprocess_df(dataframes: List[pd.DataFrame],
                  device_list: Optional[List[str]] = None,
