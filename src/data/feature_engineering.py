@@ -19,42 +19,63 @@ def add_lag_features(df: pd.DataFrame, columns: List[str], lag_freqs: Dict[str, 
         df = df.copy()
         df['time'] = pd.to_datetime(df['time'], errors='coerce')
 
-        df['time'] = df['time'].dt.tz_localize("Europe/Prague", ambiguous='NaT', nonexistent='shift_forward')
+        # Handle timezone localization more carefully
+        if df['time'].dt.tz is None:
+            # If no timezone, localize to Prague timezone with DST handling
+            df['time'] = df['time'].dt.tz_localize("Europe/Prague", ambiguous='NaT', nonexistent='shift_forward')
+        elif df['time'].dt.tz.zone != "Europe/Prague":
+            # If different timezone, convert to Prague
+            df['time'] = df['time'].dt.tz_convert("Europe/Prague")
 
-        # Add UTC time for lag alignment
+        # Add UTC time for lag alignment (this avoids DST issues in calculations)
         df['time_utc'] = df['time'].dt.tz_convert('UTC')
-        # Drop rows with NaT in UTC time (to avoid merge_asof errors)
-        df = df[df['time_utc'].notna()].copy()
+        
+        # Drop rows with NaT in either time column
+        initial_count = len(df)
+        df = df[df['time'].notna() & df['time_utc'].notna()].copy()
+        dropped_count = initial_count - len(df)
+        
+        if dropped_count > 0:
+            print(f"[INFO] Dropped {dropped_count} rows due to DST ambiguity/invalid timestamps")
+        
         df.sort_values('time_utc', inplace=True)
+        df.reset_index(drop=True, inplace=True)
 
-        # Add lag features using UTC
+        # Add lag features using UTC time for calculations
         for suffix, lag_str in lag_freqs.items():
-            lag_delta = pd.Timedelta(lag_str)
-            df[f'time_utc_shift_{suffix}'] = df['time_utc'] - lag_delta
+            try:
+                lag_delta = pd.Timedelta(lag_str)
+                df[f'time_utc_shift_{suffix}'] = df['time_utc'] - lag_delta
 
-            temp = df[['time_utc'] + columns].copy()
-            rename_dict = {col: f'{col}_{suffix}' for col in columns}
-            temp.rename(columns=rename_dict, inplace=True)
+                # Create temp dataframe with UTC time and columns to lag
+                temp = df[['time_utc'] + columns].copy()
+                rename_dict = {col: f'{col}_{suffix}' for col in columns}
+                temp.rename(columns=rename_dict, inplace=True)
 
-            merged = pd.merge_asof(
-                df.sort_values(f'time_utc_shift_{suffix}'),
-                temp.sort_values('time_utc'),
-                left_on=f'time_utc_shift_{suffix}',
-                right_on='time_utc',
-                direction='backward',
-                tolerance=lag_delta
-            )
+                # Perform merge_asof using UTC times
+                merged = pd.merge_asof(
+                    df.sort_values(f'time_utc_shift_{suffix}'),
+                    temp.sort_values('time_utc'),
+                    left_on=f'time_utc_shift_{suffix}',
+                    right_on='time_utc',
+                    direction='backward',
+                    tolerance=lag_delta
+                )
 
-            for col in columns:
-                df[f'{col}_{suffix}'] = merged[f'{col}_{suffix}'].values
+                # Add lagged columns to original dataframe
+                for col in columns:
+                    df[f'{col}_{suffix}'] = merged[f'{col}_{suffix}'].values
 
-            df.drop(columns=[f'time_utc_shift_{suffix}'], inplace=True)
+                # Clean up temporary column
+                df.drop(columns=[f'time_utc_shift_{suffix}'], inplace=True)
+                
+            except Exception as e:
+                print(f"[WARNING] Failed to add lag features for {suffix} ({lag_str}): {e}")
+                continue
 
-        return df
+        # Clean up UTC time column
+        df.drop(columns=['time_utc'], inplace=True)
 
-    except Exception as e:
-        print(f"[ERROR] Failed to add lag features: {e}")
-        traceback.print_exc()
         return df
 
 def add_cyclical_time_features(df: pd.DataFrame) -> pd.DataFrame:
