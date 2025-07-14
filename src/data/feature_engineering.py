@@ -78,6 +78,12 @@ def add_lag_features(df: pd.DataFrame, columns: List[str], lag_freqs: Dict[str, 
 
         return df
 
+    except Exception as e:
+        print(f"[ERROR] Failed to add lag features: {e}")
+        traceback.print_exc()
+        return df
+    
+
 def add_cyclical_time_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     Add cyclical time features using sine and cosine transformations.
