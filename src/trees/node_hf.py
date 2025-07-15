@@ -2,6 +2,12 @@ import math
 import numpy as np
 from collections import defaultdict
 from src.utils.utils import get_unique_random_numbers
+from split_criteria import (
+    variance_reduction,
+    friedman_mse,
+    poisson_deviance,
+    mean_absolute_error
+)
 
 def hoeffding_bound(R,n, delta):
     """Computes Hoeffding bound given number of samples and confidence level."""
@@ -17,19 +23,45 @@ def hoeffding_bound(R,n, delta):
     #     harmonic_mean_n = 1/((1/n_left)+(1/n_right))
     # return math.sqrt(1/(2*harmonic_mean_n) / delta)
 
-class NodeHoeffdingBound:
+CRITERIA = {
+    "mse": variance_reduction,
+    "friedman": friedman_mse,
+    "poisson": poisson_deviance,
+    "mae": mean_absolute_error,
+}
 
-    __SUM_X = 0 
-    __COUNT = 1 
-    __VAL = 2 
-    __LEFT_Y = 3 
-    __LEFT_Y_SQUARED = 4 
-    __LEFT_N = 5 
-    __RIGHT_Y = 6 
-    __RIGHT_Y_SQUARED = 7 
-    __RIGHT_N = 8
-    
-    def __init__(self,split_confidence, tie_threshold = 0.05, max_feature=1.0, eagerness=0.0, grace_period = 0):
+class NodeHoeffdingBound:
+    __SUM_X           = 0
+    __COUNT           = 1
+    __VAL             = 2
+    __LEFT_Y          = 3
+    __LEFT_Y_SQUARED  = 4
+    __LEFT_N          = 5
+    __RIGHT_Y         = 6
+    __RIGHT_Y_SQUARED = 7
+    __RIGHT_N         = 8
+    __LEFT_Y_LOG      = 9    # Σ y·log(y) for left
+    __RIGHT_Y_LOG     = 10   # Σ y·log(y) for right
+    __LEFT_Y_LIST     = 11   # raw y-list for MAE on left
+    __RIGHT_Y_LIST    = 12   # raw y-list for MAE on right
+        
+    def __init__(self,split_confidence, tie_threshold = 0.05, max_feature=1.0,
+                  eagerness=0.0, grace_period = 0, 
+                  import_criterion: str = "mse", chosen_criterion_fn=None):
+        
+        # assigning chosen splitting function
+        if callable(chosen_criterion_fn):
+            self.chosen_criterion = chosen_criterion_fn
+        else:
+            self.chosen_criterion = CRITERIA.get(
+                import_criterion,
+                default = variance_reduction
+            )
+
+        # this seems necessary for MAE computation
+        self.child_raw_y = defaultdict(lambda: {"left": [], "right": []})
+
+
         self.tie_threshold = tie_threshold
         self.delta = split_confidence
         self.samples_seen = 0
@@ -48,12 +80,13 @@ class NodeHoeffdingBound:
         self.split_ideal_period = 10
         self.grace_period = grace_period
         self.grace_period_offset = 0
-        self.prev_splitting_period = self.split_ideal_period
+        self.prev_splitting_period = self.split_ideal_period,
+        
 
         self.max_feature = max_feature
-        self.feature_indecies = None
+        self.feature_indices = None
 
-        self.attribute_stats = defaultdict(lambda: [0, 0, 0, 0, 0, 0, 0, 0, 0])  # Attribute sum and count
+        self.attribute_stats = defaultdict(lambda: [0]*11 + [[], []])  # Attribute sum and count
         self.data_from_before_split = []
 
     def check_grace_period(self):
@@ -65,19 +98,19 @@ class NodeHoeffdingBound:
         # there is no line so far updating the self.data_from_before_split list
         # perhaps instead val from self.attribute_stats should be used?
 
-        if self.feature_indecies is None:
+        if self.feature_indices is None:
             max_feature_length = int(x.shape[0] * self.max_feature)
-            self.feature_indecies = np.sort(get_unique_random_numbers(max_feature_length,x.shape[0]))
+            self.feature_indices = np.sort(get_unique_random_numbers(max_feature_length,x.shape[0]))
 
         # x_shortlisted = x
-        x_shortlisted = x[self.feature_indecies]
+        x_shortlisted = x[self.feature_indices]
 
         self.samples_seen += 1
         self.sum_y += y
         self.sum_y_squared += y**2
         self.value = self.sum_y/self.samples_seen
 
-        for feature, val in zip(self.feature_indecies,x_shortlisted):
+        for feature, val in zip(self.feature_indices,x_shortlisted):
             self.attribute_stats[feature][self.__SUM_X] += val
             self.attribute_stats[feature][self.__COUNT] += 1
             self.attribute_stats[feature][self.__VAL] = val
@@ -89,10 +122,14 @@ class NodeHoeffdingBound:
                 self.attribute_stats[feature][self.__LEFT_Y] += y
                 self.attribute_stats[feature][self.__LEFT_Y_SQUARED] += y**2
                 self.attribute_stats[feature][self.__LEFT_N] += 1
+                self.attribute_stats[feature][self.__LEFT_Y_LOG]  += y * math.log(y) if y>0 else 0.0
+                self.attribute_stats[feature][self.__LEFT_Y_LIST].append(y)
             else:
                 self.attribute_stats[feature][self.__RIGHT_Y] += y
                 self.attribute_stats[feature][self.__RIGHT_Y_SQUARED] += y**2
                 self.attribute_stats[feature][self.__RIGHT_N] += 1
+                self.attribute_stats[feature][self.__RIGHT_Y_LOG]  += y * math.log(y) if y>0 else 0.0
+                self.attribute_stats[feature][self.__RIGHT_Y_LIST].append(y)
 
     def update_from_parent_node(self, parent):
         self.samples_seen = parent.samples_seen
@@ -110,26 +147,58 @@ class NodeHoeffdingBound:
         __best_split_1st = (None, None, 0)
         __best_split_2nd = (None, None, 0)
         for feature, stats in self.attribute_stats.items():
-            (
-                sum_x,
-                count, 
-                val, 
-                left_y, 
-                left_y_squared, 
-                left_n, 
-                right_y, 
-                right_y_squared, 
-                right_n
-            ) = stats
+            (sum_x, count, val,
+            left_y, left_y2, left_n,
+            right_y, right_y2, right_n,
+            left_vals, right_vals,
+            left_y_log, right_y_log) = stats
 
             if count < 2:
                 continue
             avg_x = sum_x / count
-            reduction = self._variance_reduction(
-                left_y, left_y_squared, left_n, 
-                right_y, right_y_squared, right_n
-            )
 
+            if self.chosen_criterion is mean_absolute_error:
+                reduction = mean_absolute_error(
+                    self.data_from_before_split,
+                    left_vals,
+                    right_vals
+                )
+
+            elif self.chosen_criterion is poisson_deviance:
+                reduction = poisson_deviance(
+                    self.sum_y,
+                    self.sum_y_log,
+                    self.samples_seen,
+                    left_y,
+                    left_y_log,
+                    left_n,
+                    right_y,
+                    right_y_log,
+                    right_n
+                )
+
+            elif self.chosen_criterion is friedman_mse:
+                reduction = friedman_mse(
+                    self.sum_y,
+                    self.samples_seen,
+                    left_y,
+                    left_n,
+                    right_y,
+                    right_n
+                )
+
+            else:  # default to MSE
+                reduction = variance_reduction(
+                    self.sum_y,
+                    self.sum_y_squared,
+                    self.samples_seen,
+                    left_y,
+                    left_y2,
+                    left_n,
+                    right_y,
+                    right_y2,
+                    right_n
+                )
             if reduction > __best_split_1st[2]:
                 __best_split_2nd = __best_split_1st
                 __best_split_1st = (feature, avg_x, reduction)
@@ -152,85 +221,6 @@ class NodeHoeffdingBound:
                     return (__best_split_1st[0],__best_split_1st[1]), __best_split_1st[2]
 
         return (None, None), 0
-
-    def _variance_reduction(self, left_y, left_y_squared, left_n, right_y, right_y_squared, right_n):
-        # Also known as MSE gain
-        if left_n == 0 or right_n == 0:
-            return 0
-        # Parent variance
-        var_parent = (self.sum_y_squared / self.samples_seen) - (self.sum_y / self.samples_seen) ** 2
-        # Left and right variances
-        var_left = (left_y_squared / left_n) - (left_y / left_n) ** 2
-        var_right = (right_y_squared / right_n) - (right_y / right_n) ** 2
-        # Weighted variance after split
-        var_children = (left_n / self.samples_seen) * var_left + (right_n / self.samples_seen) * var_right
-
-        return var_parent - var_children  # variance reduction
-    
-    def _friedman_mse(self, left_y, left_n,
-                      right_y, right_n):
-        
-        if left_n == 0 or right_n == 0:
-            return 0
-        
-        mean_left = left_y / left_n
-        mean_right = right_y / right_n
-        diff_squared = (mean_left - mean_right) **2
-
-        return ((left_n * right_n) / (left_n + right_n)) * diff_squared
-    
-    def _poisson_deviance(self,
-                          left_y, left_y_log, left_n,
-                          right_y, right_y_log, right_n):
-        # Poisson deviance reduction
-        # Requires: all y > 0, and self.sum_y_log = sum(y * log(y)) over the parent
-        if left_n == 0 or right_n == 0:
-            return 0.0
-
-        # parent mean
-        mu = self.sum_y / self.samples_seen
-        # parent deviance
-        D_parent = 2 * (self.sum_y_log - self.sum_y * np.log(mu))
-
-        # left deviance
-        mu_L = left_y / left_n
-        D_left = 2 * (left_y_log - left_y * np.log(mu_L))
-
-        # right deviance
-        mu_R = right_y / right_n
-        D_right = 2 * (right_y_log - right_y * np.log(mu_R))
-
-        # weighted children deviance
-        D_children = (left_n  / self.samples_seen) * D_left \
-                   + (right_n / self.samples_seen) * D_right
-
-        return D_parent - D_children
-
-
-    def _mean_absolute_error(self, left_values, right_values):
-        # MAE gain (reduction in absolute deviation around median)
-        if len(left_values) == 0 or len(right_values) == 0:
-            return 0.0
-
-        # parent median & total absolute deviation
-        parent = np.array(self.data_from_before_split) # is this correct variable to use? perhaps val would be better
-        med_p = np.median(parent)
-        mae_p = np.sum(np.abs(parent - med_p))
-
-        # left median & deviation
-        L = np.array(left_values)
-        med_L = np.median(L)
-        mae_L = np.sum(np.abs(L - med_L))
-
-        # right median & deviation
-        R = np.array(right_values)
-        med_R = np.median(R)
-        mae_R = np.sum(np.abs(R - med_R))
-
-        # reduction in total absolute deviation
-        return mae_p - (mae_L + mae_R)
-
-
 
     def split(self, split_info, split_confidence):
         self.feature, self.threshold = split_info
