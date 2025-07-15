@@ -250,8 +250,8 @@ def get_train_test_sets(data_dir: str,
             y_train_all = np.hstack([y for _, y in train_sets])
 
             # Handle timestamp column for DST issues
-            timestamps_train = pd.to_datetime(X_train_all[:, 0], unit='ns')
-            timestamps_train = handle_dst_transitions(timestamps_train)
+            timestamps_train = handle_dst_transitions(X_train_all[:, 0])
+            timestamps_train = pd.Series(timestamps_train)
             
             # Sort by timestamp to maintain chronological order
             sorted_indices = np.argsort(timestamps_train)
@@ -269,31 +269,24 @@ def get_train_test_sets(data_dir: str,
             sorted_indices = np.argsort(timestamps_test)
             X_test_all = X_test_all[sorted_indices]
             y_test_all = y_test_all[sorted_indices]
-            
-            # Get the max timestamp in training set
-            train_max_time = timestamps_train.max()
-
-            # Filter test set to only include rows with time > max train time
-            mask = timestamps_test > train_max_time
-            X_test_all = X_test_all[mask]
-            y_test_all = y_test_all[mask]
+          
 
             print("Overall data time range: ", timestamps_train.min(), timestamps_test.max())
             print()
-            print("Test data time range: ", timestamps_test[mask].min(), timestamps_test[mask].max())
+            print("Test data time range: ", timestamps_test.min(), timestamps_test.max())
             print()
             print("(Train + Valid) data range: ", timestamps_train.min(), timestamps_train.max())
             print()
 
             # Convert timestamp column to Series for easier handling
-            timestamps = pd.Series(timestamps_train)
+            timestamps = pd.Series(timestamps_train).sort_values()
             
             # Use timezone-naive timestamps for floor operation to avoid DST issues
             if timestamps.dt.tz is not None:
                 timestamps_naive = timestamps.dt.tz_convert('UTC').dt.tz_localize(None)
             else:
                 timestamps_naive = timestamps
-                
+
             unique_hours = sorted(timestamps_naive.dt.floor('H').unique())
             num_hours = len(unique_hours)
 
