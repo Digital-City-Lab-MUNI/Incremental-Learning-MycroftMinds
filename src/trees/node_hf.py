@@ -46,22 +46,16 @@ class NodeHoeffdingBound:
     __RIGHT_Y_LIST    = 12   # raw y-list for MAE on right
         
     def __init__(self,split_confidence, tie_threshold = 0.05, max_feature=1.0,
-                  eagerness=0.0, grace_period = 0, 
-                  import_criterion: str = "mse", chosen_criterion_fn=None):
+                  eagerness=0.0, grace_period = 0,  chosen_criterion_fn=None):
         
         # assigning chosen splitting function
         if callable(chosen_criterion_fn):
             self.chosen_criterion = chosen_criterion_fn
         else:
             self.chosen_criterion = CRITERIA.get(
-                import_criterion,
+                "mse",
                 default = variance_reduction
             )
-
-        # this seems necessary for MAE computation
-        self.child_raw_y = defaultdict(lambda: {"left": [], "right": []})
-
-
         self.tie_threshold = tie_threshold
         self.delta = split_confidence
         self.samples_seen = 0
