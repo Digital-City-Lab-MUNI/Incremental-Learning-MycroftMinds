@@ -11,7 +11,8 @@ import time
 import os
 
 class FastODT(BaseTree):
-    def __init__(self, depth = 5, grace_period=10, split_confidence=1.0, option = "HF", max_feature=1.0, eagerness = 0.0, grace_period_depth=-1):
+    def __init__(self, depth = 5, grace_period=10, split_confidence=1.0,
+                  option = "HF", max_feature=1.0, eagerness = 0.0, grace_period_depth=-1, chosen_criterion_fn='mse'):
         """
         Initialize the FastODT tree model with parameters.
 
@@ -82,6 +83,7 @@ class FastODT(BaseTree):
                 max_feature=self.max_feature,
                 eagerness = eagerness,
                 grace_period=grace_period,
+                chosen_criterion_fn=chosen_criterion_fn
             )
         elif self.option == "cb":
             # self.split_confidence = np.log(1/self.split_confidence)
