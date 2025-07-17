@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from typing import Tuple, Optional, List, Dict, Any
+from typing import Tuple, Optional, List, Dict, Any, Type
 from tqdm.notebook import tqdm
 from sklearn.base import BaseEstimator
 import time
@@ -10,6 +10,25 @@ from src.evaluation.metrics import calculate_metrics
 from src.utils.memory import calculate_memory_usage
 from src.utils.utils import get_device_data
 from src.data.feature_engineering import filter_features_for_forecast_horizon
+
+def _init_model_with_params(model_class: Type[BaseEstimator], model_params: Dict[str, Any]) -> BaseEstimator:
+    """
+    Initialize a model with the given class and parameters.
+    
+    Args:
+        model_class (Type[BaseEstimator]): The class of the model to be initialized.
+        model_params (Dict[str, Any]): Parameters to initialize the model with.
+    
+    Returns:
+        BaseEstimator: An instance of the model initialized with the provided parameters.
+    """
+    try:
+        # Attempt to initialize the model with the provided parameters
+        return model_class(**model_params)
+    
+    except Exception as e:
+        print(f"[ERROR] Failed to initialize model '{model_class.__name__}' with parameters {model_params}.")
+        raise
 
 def _partial_fit_model(model: BaseEstimator,
                       X: np.array,
@@ -24,8 +43,8 @@ def _partial_fit_model(model: BaseEstimator,
     if hasattr(model, 'partial_fit'):
         model.partial_fit(X, Y)
     else:
-        # Adaptation for River or other models with learn_one method
-        X = pd.DataFrame(X).to_dict(orient='records')
+        # Adaptation for River or other models with learn_one method (convert each row to a dict)
+        X: dict = pd.DataFrame(X).to_dict(orient='records')
         for x, y in zip(X, Y):
             model.learn_one(x, y)
 
@@ -42,7 +61,8 @@ def _predict_model(model: BaseEstimator,
     if hasattr(model, 'predict'):
         return model.predict(X)
     else:
-        # Adaptation for River or other models with predict_one method
+        # Adaptation for River or other models with predict_one method (convert each row to a dict)
+        X: dict = pd.DataFrame(X).to_dict(orient='records')
         return np.array([model.predict_one(x) for x in X])
 
 
@@ -56,7 +76,7 @@ def seq_fit_predict_batch_model(model: BaseEstimator,
                               features=None,
                               predict_train: bool = True,
                               index_cols=2,
-                              verbose=False) -> Tuple[Optional[pd.Series], pd.Series]:
+                              verbose=0) -> Tuple[Optional[pd.Series], pd.Series]:
     """
     Perform sequential predictions for time series data using regular batch-learning models by updating 
     the training data with each new point. You may also specify the time-frequency at which to update the model.
@@ -72,7 +92,10 @@ def seq_fit_predict_batch_model(model: BaseEstimator,
         features (List[str], optional): List of feature names. If provided, features that aren't available for the forecast horizon will be filtered.
         predict_train (bool, optional): Whether to predict on the initial training set. Default is True.
         index_cols (int, optional): Number of columns in `X_train` and `X_valid` that are not features (e.g., timestamps, device IDs). Default is 2.
-        verbose (bool, optional): If True, print progress and memory usage. Default is False.
+        verbose (int, optional): an integer indicating the verbosity level:
+            - 0: No messages.
+            - 1: Print progress messages and memory usage.
+            - 2: Print progress messages, memory usage, and detailed steps.
 
     Returns:
         Tuple(Optional[pd.Series], pd.Series): A tuple containing
@@ -92,7 +115,7 @@ def seq_fit_predict_batch_model(model: BaseEstimator,
         valid_indices = [index_cols + i for i, feat in enumerate(features[index_cols:]) 
                           if feat in valid_features]
         
-        if verbose:
+        if verbose >= 2:
             print(f"Filtering features for forecast horizon {forecast_horizon}")
             print(f"Original feature count: {len(features) - index_cols}")
             print(f"Filtered feature count: {len(valid_indices)}")
@@ -116,26 +139,23 @@ def seq_fit_predict_batch_model(model: BaseEstimator,
         chunk_end = np.searchsorted(X_valid[:, 0], chunk_end_time, side='right')
 
         # Retrain the model with the updated training set
-        if verbose:
+        if verbose >= 1:
             start = time.time()
             print(f"\nRetraining model on data from {X_train_seq[0, 0]} to {X_train_seq[-1, 0]}")
             model.fit(X_train_seq[:, feature_indices], y_train_seq)
             print(f"\nTime: {time.time() - start:.2f} seconds")
         else:
             model.fit(X_train_seq[:, feature_indices], y_train_seq)
-        if verbose:
-            # Print memory usage after retraining
-            memory_usage = calculate_memory_usage(model)
-            print(f"Memory usage after retraining: {memory_usage:.4f} MB")
 
         # Predict for the initial training set if required
         if predict_train and y_train.shape[0] == y_train_seq.shape[0]:
             y_pred_train = model.predict(X_train_seq[:, feature_indices])
             y_pred_train = pd.Series(y_pred_train, index=y_train.index)
-            print("Got predictions on training set") if verbose else None
+            if verbose == 2:
+                print("Got predictions on training set") 
 
         # Predict for the current chunk
-        if verbose:
+        if verbose >= 1:
             print(f"Predicting for chunk from {X_valid[current_chunk_start, 0]} to {X_valid[chunk_end-1, 0]}")
             print()
             print("-" * 25)
@@ -149,11 +169,20 @@ def seq_fit_predict_batch_model(model: BaseEstimator,
 
         # Move to the next chunk
         current_chunk_start = chunk_end
+    
+    if verbose == 2:
+        print("Validation predictions completed.")
+
+    # Print memory usage after retraining
+    if verbose >= 1:    
+            memory_usage = calculate_memory_usage(model)
+            print(f"Model's memory usage: {memory_usage:.6f} MB")
 
     # Convert predictions list to pandas Series
     y_pred_valid = pd.Series(y_pred_valid, index=y_valid.index)
 
     return y_pred_train, y_pred_valid
+
 
 def seq_fit_predict_incremental_model(model: BaseEstimator, 
                                     X_train: np.array, 
@@ -164,7 +193,7 @@ def seq_fit_predict_incremental_model(model: BaseEstimator,
                                     features=None,
                                     predict_train: bool = True,
                                     index_cols=2,
-                                    verbose = True) -> Tuple[Optional[pd.Series], pd.Series]:
+                                    verbose = 0) -> Tuple[Optional[pd.Series], pd.Series]:
     """
     Perform sequential predictions for time series data using incremental learning models by updating 
     the model with each new point after the forecast horizon has passed.
@@ -179,7 +208,10 @@ def seq_fit_predict_incremental_model(model: BaseEstimator,
         features (List[str], optional): List of feature names. If provided, features that aren't available for the forecast horizon will be filtered.
         predict_train (bool, optional): Whether to predict on the training set. Default is True.
         index_cols (int, optional): Number of columns in `X_train` and `X_valid` that are not features (e.g., timestamps, device IDs). Default is 2.
-        verbose (bool, optional): Whether to print progress messages. Default is True.
+        verbose (int, optional): an integer indicating the verbosity level:
+            - 0: No messages.
+            - 1: Print progress messages and memory usage.
+            - 2: Print progress messages, memory usage, and detailed steps.
 
     Returns:
         Tuple(Optional[pd.Series], pd.Series): A tuple containing
@@ -199,7 +231,7 @@ def seq_fit_predict_incremental_model(model: BaseEstimator,
         valid_indices = [index_cols + i for i, feat in enumerate(features[index_cols:]) 
                           if feat in valid_features]
         
-        if verbose:
+        if verbose >= 1:
             print(f"Filtering features for forecast horizon {forecast_horizon}")
             print(f"Original feature count: {len(features) - index_cols}")
             print(f"Filtered feature count: {len(valid_indices)}")
@@ -215,7 +247,7 @@ def seq_fit_predict_incremental_model(model: BaseEstimator,
     forecast_horizon_td = pd.Timedelta(forecast_horizon) 
 
     # Fit the model on the initial training data
-    if verbose:
+    if verbose >= 1:
         print(f"Initial training on data from {X_train_seq[0, 0]} to {X_train_seq[-1, 0]}")
     
     _partial_fit_model(model, X_train_seq[:, feature_indices], y_train_seq)
@@ -225,13 +257,11 @@ def seq_fit_predict_incremental_model(model: BaseEstimator,
         y_pred_train = _predict_model(model, X_train_seq[:, feature_indices])
         y_pred_train = pd.Series(y_pred_train, index=y_train.index)
 
-        if verbose:
+        if verbose >= 2:
             print("Train predictions completed.")
 
     # Initialize last_update_time with the last timestamp from training data
     last_update_time = pd.Timestamp(X_train_seq[-1, 0])
-    if verbose:
-        print(f"Last update time initialized to last training timestamp: {last_update_time}")
 
     # Iterate through the validation set
     for i in range(len(X_valid)):
@@ -244,35 +274,42 @@ def seq_fit_predict_incremental_model(model: BaseEstimator,
         
         # Check if enough time has passed since the last update
         if current_time - last_update_time >= forecast_horizon_td:
-            if verbose:
+            if verbose == 2:
                 print(f"Updating model at {current_time} (forecast horizon: {forecast_horizon})")
             _partial_fit_model(model, X_valid[i:i+1, feature_indices], y_valid.iloc[i:i+1])
             last_update_time = current_time
+    
+    if verbose == 2:
+        print("Validation predictions completed.")
+
+    # Print memory usage after retraining
+    if verbose >= 1:
+            memory_usage = calculate_memory_usage(model)
+            print(f"Model's memory usage: {memory_usage:.6f} MB")
 
     # Convert predictions list to pandas Series
     y_pred_valid = pd.Series(y_pred_valid, index=y_valid.index)
-    if verbose:
-        print("Validation predictions completed.")
+    
 
     return y_pred_train, y_pred_valid
 
-
-def all_valid_splits_seq_fit_predict(model: BaseEstimator,
-                             train: List[Tuple[np.ndarray, np.ndarray]], 
-                             valid: List[Tuple[np.ndarray, np.ndarray]], 
-                             incremental: bool,
-                             data_freq: str,
-                             forecast_horizon: str,
-                             features=None,  # Added features parameter
-                             update_freq="14D",
-                             spike_prominence=10.,
-                             normalize_robust=True,
-                             start_split: int = 0, 
-                             end_split: Optional[int] = None,
-                             predict_train: bool = True,
-                             index_cols=2,
-                             verbose: bool = True
-                             ) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
+def all_valid_splits_seq_fit_predict(model_class: Type[BaseEstimator],
+                                     model_params: Dict[str, Any],
+                                     train: List[Tuple[np.ndarray, np.ndarray]], 
+                                     valid: List[Tuple[np.ndarray, np.ndarray]], 
+                                     incremental: bool,
+                                     data_freq: str,
+                                     forecast_horizon: str,
+                                     features=None,  # Added features parameter
+                                     update_freq="14D",
+                                     spike_prominence=10.,
+                                     normalize_robust=True,
+                                     start_split: int = 0, 
+                                     end_split: Optional[int] = None,
+                                     predict_train: bool = True,
+                                     index_cols=2,
+                                     verbose: int = 1
+                                     ) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
     """
     Fit and predict for each device in the training and validation splits.
 
@@ -292,7 +329,10 @@ def all_valid_splits_seq_fit_predict(model: BaseEstimator,
         end_split (Optional[int]): The ending split for processing.
         predict_train (bool): If True, predict on the training set.
         index_cols (int): Number of columns that are not features.
-        verbose (bool): If True, print validation metrics for each device.
+        verbose (int, optional): an integer indicating the verbosity level:
+            - 0: No messages.
+            - 1: Print progress messages and memory usage.
+            - 2: Print progress messages, memory usage, and detailed steps.
 
     Returns:
         Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
@@ -315,6 +355,12 @@ def all_valid_splits_seq_fit_predict(model: BaseEstimator,
             X_train, y_train = get_device_data(train[split], device_id=device_id)
             X_valid, y_valid = get_device_data(valid[split], device_id=device_id)
 
+            if X_valid.shape[0] == 0:
+                print(f"[! WARNING !] No validation data for device {device_id} in split {split}. Skipping.")
+                continue
+            
+            model = _init_model_with_params(model_class, model_params)
+            
             if incremental:
                 y_pred_train, y_pred_valid = seq_fit_predict_incremental_model(
                     model, X_train, y_train, X_valid, y_valid, 
@@ -403,21 +449,22 @@ def all_valid_splits_seq_fit_predict(model: BaseEstimator,
             device_train_period_metrics, 
             device_valid_period_metrics)
 
-def test_set_seq_fit_predict(model: BaseEstimator,
-                            train: List[Tuple[np.ndarray, np.ndarray]], 
-                            valid: List[Tuple[np.ndarray, np.ndarray]],
-                            test: List[Tuple[np.ndarray, np.ndarray]],
-                            incremental: bool,
-                            data_freq: str,
-                            forecast_horizon: str,
-                            features=None,  # Added features parameter
-                            update_freq="14D",
-                            spike_prominence=10.,
-                            normalize_robust=True,
-                            predict_train: bool = False,
-                            index_cols=2,
-                            verbose: bool = True
-                            ) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
+def test_set_seq_fit_predict(model_class: Type[BaseEstimator],
+                             model_params: Dict[str, Any],
+                             train: List[Tuple[np.ndarray, np.ndarray]], 
+                             valid: List[Tuple[np.ndarray, np.ndarray]],
+                             test: List[Tuple[np.ndarray, np.ndarray]],
+                             incremental: bool,
+                             data_freq: str,
+                             forecast_horizon: str,
+                             features=None,  # Added features parameter
+                             update_freq="14D",
+                             spike_prominence=10.,
+                             normalize_robust=True,
+                             predict_train: bool = False,
+                             index_cols=2,
+                             verbose: int = 1
+                             ) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
     """
     Fit the model on combined data from the last training and validation splits, then predict on the test set.
     
@@ -436,7 +483,10 @@ def test_set_seq_fit_predict(model: BaseEstimator,
         normalize_robust (bool): If True, use robust normalization, else use regular z-score normalization.
         predict_train (bool): If True, predict on the training set.
         index_cols (int): Number of columns that are not features.
-        verbose (bool): If True, print test metrics for each device.
+        verbose (int, optional): an integer indicating the verbosity level:
+            - 0: No messages.
+            - 1: Print progress messages and memory usage.
+            - 2: Print progress messages, memory usage, and detailed steps.
 
     Returns:
         Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
@@ -469,7 +519,9 @@ def test_set_seq_fit_predict(model: BaseEstimator,
         # Skip if device is not in test set
         if len(X_test) == 0:
             continue
-            
+        
+        model = _init_model_with_params(model_class, model_params)
+
         # Train model and predict on test data
         if incremental:
             y_pred_train, y_pred_test = seq_fit_predict_incremental_model(

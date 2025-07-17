@@ -47,14 +47,13 @@ def train_and_evaluate(model: BaseEstimator,
             incremental = False
     elif model.__class__.__name__ in ['RandomForestRegressor', 'GradientBoostingRegressor']:
         incremental = False
-
-    model = model(**params)
     
     model_all_train_preds, model_all_valid_preds, \
     model_all_train_metrics, model_all_valid_metrics = all_valid_splits_seq_fit_predict(
-        model=model, 
+        model_class=model, 
+        model_params=params,
         train=train, 
-        valid=valid, 
+        valid=valid,
         incremental=incremental,
         data_freq=data_freq,
         update_freq=update_freq, 
