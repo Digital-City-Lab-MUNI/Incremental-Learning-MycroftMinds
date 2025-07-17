@@ -359,8 +359,8 @@ def plot_hourly_predictions(y_true: pd.Series, y_pred: pd.Series, data_freq: str
         normalize_robust (bool): If True, use robust (median&MAD) normalization, else use regular z-score (mean&std)normalization.
     """
     # Aggregate hourly
-    y_true_hourly, y_pred_hourly = aggregate_values(y_true, y_pred, 'H')
-    
+    y_true_hourly, y_pred_hourly = aggregate_values(y_true, y_pred, 'H', 'mean')  # We're working with electricity data, so if we get lower granularities (e.g., 15-min) in kW, we can use 'mean' aggregation to get the consumption in kWh.
+
     # Calculate percent difference to identify outliers
     pct_diff = abs(y_true_hourly - y_pred_hourly) / (y_true_hourly + 1e-8)  # Add small epsilon to avoid division by zero
     outliers = pct_diff > outlier_threshold

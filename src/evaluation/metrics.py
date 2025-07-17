@@ -179,8 +179,25 @@ def calculate_metrics(y_true: pd.Series, y_pred: pd.Series, device_id: str, peri
     # Function to calculate metrics for aggregated data
     def aggregate_metrics(y_true: pd.Series, y_pred: pd.Series, freq: str) -> dict:
         """Helper function to calculate metrics for aggregated data."""
-        y_true_agg, y_pred_agg = aggregate_values(y_true, y_pred, freq)
-        
+
+        freq_td = pd.Timedelta(freq)
+
+        # If the frequency is higher than 1 hour, first aggregate to hourly (mean), then to the target freq (sum)
+        # This is done to get the correct kWh (energy) values from kW (power) data
+        if freq_td > pd.Timedelta("1H"):
+            # First aggregate to hourly by mean
+            y_true_hourly, y_pred_hourly = aggregate_values(y_true, y_pred, "H", 'mean')
+            # Then aggregate to the target frequency by sum
+            y_true_agg, y_pred_agg = aggregate_values(y_true_hourly, y_pred_hourly, freq, 'sum')
+        elif freq_td == pd.Timedelta("1H"):
+            # Convert from kW to kWh by aggregating to hourly (mean)
+            y_true_agg, y_pred_agg = aggregate_values(y_true, y_pred, freq, 'mean')
+        else:
+            # For lower frequencies (e.g., 15-min, 5-min), aggregate by mean
+            print(f"[! WARNING !]: For frequencies lower than 1 hour, the aggregation is done by mean, which may not\
+                   represent the actual `energy` consumption in kWh, but rather the average `power` (kW) consumption over the period.")
+            y_true_agg, y_pred_agg = aggregate_values(y_true, y_pred, freq, 'mean')
+
         # Create basic result dictionary with accuracy metrics
         result = {
             'rmse': np.sqrt(mean_squared_error(y_true_agg, y_pred_agg)),
@@ -189,7 +206,7 @@ def calculate_metrics(y_true: pd.Series, y_pred: pd.Series, device_id: str, peri
         }
         
         # Only add directional and spike metrics for sub-weekly aggregations
-        if freq not in ['28D', 'W', '4W', 'M']:
+        if freq_td < pd.Timedelta("7D"):
             da, corr = directional_accuracy(y_true_agg, y_pred_agg)
             
             # Calculate spike and drop metrics with delta=0 (immediate detection)
@@ -264,11 +281,11 @@ def calculate_metrics(y_true: pd.Series, y_pred: pd.Series, device_id: str, peri
         metrics[data_freq] = original_metrics
         
     # Add hourly metrics (either from original data if data_freq is 'H' or by aggregation)
-    metrics['hourly'] = original_metrics if data_freq == 'H' else aggregate_metrics(y_true, y_pred, 'H')
+    metrics['hourly'] = original_metrics if data_freq == 'H' else aggregate_metrics(y_true, y_pred, '1H')
     
     # Add other aggregation metrics
-    metrics['daily'] = aggregate_metrics(y_true, y_pred, 'D')
-    metrics['weekly'] = aggregate_metrics(y_true, y_pred, 'W')
+    metrics['daily'] = aggregate_metrics(y_true, y_pred, '1D')
+    metrics['weekly'] = aggregate_metrics(y_true, y_pred, '1W')
     metrics['28_days'] = aggregate_metrics(y_true, y_pred, '28D')
     
     if verbose:
