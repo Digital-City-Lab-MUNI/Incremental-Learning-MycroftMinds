@@ -17,13 +17,14 @@ def ensure_2d_array(X: np.ndarray) -> np.ndarray:
         X = X.reshape(1, -1)
     return X
 
-def aggregate_values(x1: pd.Series, x2: pd.Series, freq: str) -> Tuple[pd.Series, pd.Series]:
+def aggregate_values(x1: pd.Series, x2: pd.Series, freq: str, aggregation: str = 'mean') -> Tuple[pd.Series, pd.Series]:
     """
     Aggregate values of two series based on a given frequency.
     Args:
         x1 (pd.Series): First series to aggregate.
         x2 (pd.Series): Second series to aggregate.
         freq (str): Frequency string for resampling (e.g., '5T' for 5 minutes).
+        aggregation (str): Name of the aggregation function to apply. Must be supported by `pandas` (e.g., 'mean', 'sum'). Default is 'mean'.
     Returns:
         Tuple[pd.Series, pd.Series]: Aggregated series.
     """
@@ -32,9 +33,10 @@ def aggregate_values(x1: pd.Series, x2: pd.Series, freq: str) -> Tuple[pd.Series
         x1.index = pd.to_datetime(x1.index)
     if not isinstance(x2.index, pd.DatetimeIndex):
         x2.index = pd.to_datetime(x2.index)
-    # Resample and aggregate the series
     
-    return x1.resample(freq).sum(), x2.resample(freq).sum()
+    # Resample and aggregate the series
+    return x1.resample(freq).agg(aggregation), x2.resample(freq).agg(aggregation)
+
 
 def get_device_data(data_split: Tuple[np.ndarray, np.ndarray],
                     device_id) -> Tuple[np.ndarray, np.ndarray] | Tuple[None, None]:
