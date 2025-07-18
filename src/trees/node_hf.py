@@ -159,19 +159,6 @@ class NodeHoeffdingBound: # one leaf of the FastODT
 
         return (None, None), 0
 
-    def _variance_reduction(self, left_y, left_y_squared, left_n, right_y, right_y_squared, right_n):
-        if left_n == 0 or right_n == 0:
-            return 0
-        # Parent variance
-        var_total = (self.sum_y_squared / self.samples_seen) - (self.sum_y / self.samples_seen) ** 2
-        # Left and right variances
-        var_left = (left_y_squared / left_n) - (left_y / left_n) ** 2
-        var_right = (right_y_squared / right_n) - (right_y / right_n) ** 2
-        # Weighted variance after split
-        var_children = (left_n / self.samples_seen) * var_left + (right_n / self.samples_seen) * var_right
-
-        return var_total - var_children  # variance reduction
-        
     def split(self, split_info, split_confidence):
         self.feature, self.threshold = split_info
         self.left = NodeHoeffdingBound(
