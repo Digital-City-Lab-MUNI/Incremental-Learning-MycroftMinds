@@ -4,6 +4,8 @@ from src.trees.tree import BaseTree, Node
 from src.trees.node_hf import NodeHoeffdingBound
 from src.trees.node_cb import NodeConfidenceBound
 from src.utils.utils import ensure_2d_array
+from src.trees.split_criteria import get_split_criterion
+from src.trees.histogram import get_histogram_type
 import numpy as np
 import pandas as pd
 import tqdm
@@ -11,7 +13,7 @@ import time
 import os
 
 class FastODT(BaseTree):
-    def __init__(self, depth = 5, grace_period=10, split_confidence=1.0, option = "HF", max_feature=1.0, eagerness = 0.0, grace_period_depth=-1):
+    def __init__(self, depth = 5, grace_period=10, split_confidence=1.0, option = "hf", max_feature=1.0, eagerness = 0.0, grace_period_depth=-1, bin_type='adaptive', max_bins=32, inherit_bins=False, split_criterion='variance'):
         """
         Initialize the FastODT tree model with parameters.
 
@@ -44,6 +46,18 @@ class FastODT(BaseTree):
             If set to 100, first 100 nodes will use grace period,
             If set to -1, this feature is disabled (set to over 999999999999999 internally).
 
+        bin_type : str or class, optional (default='adaptive')
+            String name of histogram type (e.g., 'adaptive', 'equiwidth') or a histogram class. If None or 'adaptive', uses AdaptiveHistogram.
+
+        max_bins : int, optional (default=32)
+            Maximum number of bins per feature per node.
+
+        inherit_bins : bool, optional (default=False)
+            If True, pass histograms from parent to children on split. If False, children start with empty histograms.
+
+        split_criterion : str or callable, optional (default=None)
+            String name of split criterion (e.g., 'variance') or a callable. If None, uses default for node type.
+
         Attributes:
         ----------
         root : Node
@@ -64,11 +78,9 @@ class FastODT(BaseTree):
         self.error_rates = np.zeros(20).tolist() 
 
         self.max_feature = max_feature
-        
         self.grace_period_depth = grace_period_depth
         if self.grace_period_depth == -1:
             self.grace_period_depth = 999999999999999
-
 
         self.option = option
         nodes_option_list = ["hf","cb"]
@@ -76,12 +88,22 @@ class FastODT(BaseTree):
             self.option = "hf"
             print(f"Wrong option in option: {option}, available options: {nodes_option_list}. Falling back to default: 'hf'.")
 
+        if isinstance(bin_type, str) or bin_type is None:
+            bin_type = get_histogram_type(bin_type)
+
+        if isinstance(split_criterion, str):
+            split_criterion = get_split_criterion(split_criterion)
+
         if self.option == "hf":
             self.root = NodeHoeffdingBound(
                 self.split_confidence,
                 max_feature=self.max_feature,
                 eagerness = eagerness,
                 grace_period=grace_period,
+                bin_type=bin_type,
+                max_bins=max_bins,
+                inherit_bins=inherit_bins,
+                split_criterion=split_criterion
             )
         elif self.option == "cb":
             # self.split_confidence = np.log(1/self.split_confidence)
@@ -127,6 +149,7 @@ class FastODT(BaseTree):
     def predict_one(self, x):
         """
         Predict the output for a single sample x.
+        x must be a 1D array-like structure that can be converted to a numpy array (or dict).
         """
         if isinstance(x, dict):
             x = np.asarray(list(x.values()))
@@ -136,7 +159,7 @@ class FastODT(BaseTree):
             x = x[0]
         return self.predict(x)
 
-    def _update_tree(self, node , x, y, depth = 0):
+    def _update_tree(self, node, x: np.ndarray, y: float, depth=0):
 
         if depth >= self.depth:
             return
@@ -147,12 +170,12 @@ class FastODT(BaseTree):
                 self._attempt_split(node, x, y, depth)
         elif node.feature is not None:
             if x[node.feature] <= node.threshold:
-                self._update_tree(node.left,x,y,depth + 1)
+                self._update_tree(node.left, x, y, depth + 1)
 
             elif x[node.feature] > node.threshold:
-                self._update_tree(node.right,x,y,depth + 1)
+                self._update_tree(node.right, x, y, depth + 1)
 
-    def _attempt_split(self, node, x, y, depth):
+    def _attempt_split(self, node, x: np.ndarray, y: float, depth: int):
         if self.option == "hf":
             self._attempt_split_HF(node, x, y, depth)
         # else:
