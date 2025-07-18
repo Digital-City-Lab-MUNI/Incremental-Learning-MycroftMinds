@@ -255,3 +255,92 @@ class NodeHoeffdingBound: # one leaf of the FastODT
         print(f"{prefix}feature: {self.feature}")
         print(f"{prefix}threshold: {self.threshold}")
         print(f"{prefix}value: {self.value}")
+
+
+if __name__ == "__main__":
+    import numpy as np
+    from src.trees.histogram import AdaptiveHistogram, EquiWidthHistogram
+
+    print("Testing NodeHoeffdingBound with AdaptiveHistogram...")
+    np.random.seed(42)
+    X = np.random.uniform(0, 10, (100, 2))
+    y = X[:, 0] * 2 + np.random.normal(0, 1, 100)
+
+    node = NodeHoeffdingBound(
+        split_confidence=0.01,
+        max_feature=1.0,
+        grace_period=10,
+        bin_type=AdaptiveHistogram,
+        max_bins=4
+    )
+    for i in range(20):
+        node.update_stats(X[i], y[i])
+    print("Samples seen:", node.samples_seen)
+    print("Histograms:")
+    for f, h in node.histograms.items():
+        print(f"Feature {f}: bin_edges={h.bin_edges}, bin_stats={[s['count'] for s in h.bin_stats]}")
+
+    best_split, gain = node.find_best_split()
+    print("Best split:", best_split, "Gain:", gain)
+
+    print("Splitting node...")
+    node.split(best_split, split_confidence=0.01)
+    print("Left child histograms:")
+    # for f, h in node.left.histograms.items():
+    #     print(f"Feature {f}: bin_edges={h.bin_edges}, bin_stats={[s['count'] for s in h.bin_stats]}")
+    # print("Right child histograms:")
+    # for f, h in node.right.histograms.items():
+    #     print(f"Feature {f}: bin_edges={h.bin_edges}, bin_stats={[s['count'] for s in h.bin_stats]}")
+
+    print("\n\nTesting NodeHoeffdingBound with MeanSplitterHistogram (average splitter)...")
+    from src.trees.histogram import MeanSplitterHistogram
+    node_mean = NodeHoeffdingBound(
+        split_confidence=0.01,
+        max_feature=1.0,
+        grace_period=10,
+        bin_type=MeanSplitterHistogram,
+        max_bins=1
+    )
+    for i in range(20):
+        node_mean.update_stats(X[i], y[i])
+    print("Samples seen (mean splitter):", node_mean.samples_seen)
+    print("Histograms (mean splitter):")
+    for f, h in node_mean.histograms.items():
+        print(f"Feature {f}: bin_edges={h.bin_edges}, bin_stats={[s['count'] for s in h.bin_stats]}")
+    best_split_mean, gain_mean = node_mean.find_best_split()
+    print("Best split (mean splitter):", best_split_mean, "Gain:", gain_mean)
+    print("Splitting node (mean splitter)...")
+    node_mean.split(best_split_mean, split_confidence=0.01)
+    # print("Left child histograms (mean splitter):")
+    # for f, h in node_mean.left.histograms.items():
+    #     print(f"Feature {f}: bin_edges={h.bin_edges}, bin_stats={[s['count'] for s in h.bin_stats]}")
+    # print("Right child histograms (mean splitter):")
+    # for f, h in node_mean.right.histograms.items():
+    #     print(f"Feature {f}: bin_edges={h.bin_edges}, bin_stats={[s['count'] for s in h.bin_stats]}")
+
+    
+    # print("Testing with EquiWidthHistogram...")
+    # node2 = NodeHoeffdingBound(
+    #     split_confidence=0.01,
+    #     max_feature=1.0,
+    #     grace_period=10,
+    #     bin_class=EquiWidthHistogram,
+    #     bin_params={'max_bins': 8, 'min_val': 0, 'max_val': 10}
+    # )
+    # for i in range(20):
+    #     node2.update_stats(X[i], y[i])
+    # print("EquiWidth Histograms:")
+    # for f, h in node2.histograms.items():
+    #     print(f"Feature {f}: bin_edges={h.bin_edges}, bin_stats={[s['count'] for s in h.bin_stats]}")
+
+    # best_split2, gain2 = node2.find_best_split()
+    # print("Best split (EquiWidth):", best_split2, "Gain:", gain2)
+
+    # print("Splitting node2...")
+    # node2.split(best_split2, split_confidence=0.01)
+    # print("Left child histograms (EquiWidth):")
+    # for f, h in node2.left.histograms.items():
+    #     print(f"Feature {f}: bin_edges={h.bin_edges}, bin_stats={[s['count'] for s in h.bin_stats]}")
+    # print("Right child histograms (EquiWidth):")
+    # for f, h in node2.right.histograms.items():
+    #     print(f"Feature {f}: bin_edges={h.bin_edges}, bin_stats={[s['count'] for s in h.bin_stats]}")
