@@ -14,13 +14,12 @@ import os
 
 class FastODT(BaseTree):
     def __init__(self, 
-                 depth = 25, 
+                 depth=25, 
                  grace_period=10, 
-                 split_confidence=1.0, 
+                 split_confidence=0.01, 
                  tie_threshold=0.05,
-                 option = "hf", 
-                 max_feature=1.0, 
-                 eagerness = 0.0, 
+                 max_feature=1.0,
+                 eagerness=0.0, 
                  grace_period_depth=-1, 
                  bin_type='adaptive', 
                  max_bins=16,
@@ -39,12 +38,6 @@ class FastODT(BaseTree):
 
         split_confidence : float, optional (default=1.0)
             Confidence level for splitting criterion. A higher value makes splitting more conservative.
-
-        option : str, optional (default="HF")
-            Type of split criterion node to use. Options are:
-                - "HF" for Hoeffding Bound
-                - "CB" for Confidence Bound
-            If an invalid option is passed, defaults to "HF" with a warning.
 
         max_feature : float, optional (default=1.0)
             Fraction of features to consider for splitting at each node.
@@ -95,37 +88,23 @@ class FastODT(BaseTree):
             self.grace_period_depth = 999999999999999
 
         self.tie_threshold = tie_threshold
-
-        self.option = option
-        nodes_option_list = ["hf","cb"]
-        if self.option not in nodes_option_list:
-            self.option = "hf"
-            print(f"Wrong option in option: {option}, available options: {nodes_option_list}. Falling back to default: 'hf'.")
-
         if isinstance(bin_type, str) or bin_type is None:
             bin_type = get_histogram_type(bin_type)
 
         if isinstance(split_criterion, str):
             split_criterion = get_split_criterion(split_criterion)
-
-        if self.option == "hf":
-            self.root = NodeHoeffdingBound(
-                split_confidence=self.split_confidence,
-                tie_threshold=self.tie_threshold,
-                max_feature=self.max_feature,
-                eagerness=eagerness,
-                grace_period=grace_period,
-                bin_type=bin_type,
-                max_bins=max_bins,
-                inherit_bins=inherit_bins,
-                split_criterion=split_criterion
-            )
-        elif self.option == "cb":
-            # self.split_confidence = np.log(1/self.split_confidence)
-            self.root = NodeConfidenceBound(
-                max_feature=self.max_feature,
-                grace_period=grace_period,
-            )
+        # create the root node
+        self.root = NodeHoeffdingBound(
+            split_confidence=self.split_confidence,
+            tie_threshold=self.tie_threshold,
+            max_feature=self.max_feature,
+            eagerness=eagerness,
+            grace_period=grace_period,
+            bin_type=bin_type,
+            max_bins=max_bins,
+            inherit_bins=inherit_bins,
+            split_criterion=split_criterion
+        )
 
     def measure_error(self, y_baseline, y_predicted):
         self.error_rates.pop(0)
@@ -147,9 +126,10 @@ class FastODT(BaseTree):
             for i in range(len(X)):
                 self._update_tree(self.root, X[i], y[i], depth=0)
 
-    def learn_one(self, x, y):
+    def learn_one(self, x, y: float):
         """
         Incrementally update the tree with a single sample (x, y).
+        x must be a 1D array-like structure that can be converted to a numpy array (or dict).
         """
         if isinstance(x, dict):
             x = np.asarray(list(x.values()))
@@ -175,28 +155,24 @@ class FastODT(BaseTree):
         return self.predict(x)
 
     def _update_tree(self, node, x: np.ndarray, y: float, depth=0):
-
+        # Check if we reached the maximum depth
         if depth >= self.depth:
             return
-
-        if node.left is None and node.right is None:  # if node is a leaf
+        
+        # if node is a leaf, update its stats and check for split
+        if node.left is None and node.right is None:
             node.update_stats(x, y)
-            if node.reached_grace_period() or self.grace_period_depth < depth:
-                self._attempt_split(node, x, y, depth)
+            if node.reached_grace_period() or self.grace_period_depth < depth:  # check if grace period is over
+                self._attempt_split(node, depth)
+        
+        # traverse the tree to reach the correct leaf
         elif node.feature is not None:
             if x[node.feature] <= node.threshold:
                 self._update_tree(node.left, x, y, depth + 1)
-
             elif x[node.feature] > node.threshold:
                 self._update_tree(node.right, x, y, depth + 1)
 
-    def _attempt_split(self, node, x: np.ndarray, y: float, depth: int):
-        if self.option == "hf":
-            self._attempt_split_HF(node, x, y, depth)
-        # else:
-        #     self._attempt_split_confidence(node, x, y, depth)
-
-    def _attempt_split_HF(self, node, x, y, depth):
+    def _attempt_split(self, node, depth: int):
         best_split, _ = node.find_best_split() # here happens hf bound calculation
         if self.splits[depth] is not None:
             node.split(self.splits[depth], self.split_confidence)
@@ -209,20 +185,6 @@ class FastODT(BaseTree):
             node.left.update_from_parent_node(node)
             node.right.update_from_parent_node(node)
 
-
-    # def _attempt_split_confidence(self, node, x, y, depth):
-    #     best_split, best_reduction = node.find_best_split()
-
-    #     if self.splits[depth] is not None:
-    #         node.split(self.splits[depth])
-    #         node.left.update_from_parent_node(node)
-    #         node.right.update_from_parent_node(node)
-        
-    #     elif best_split and best_reduction > self.split_confidence:
-    #         self.splits[depth] = best_split 
-    #         node.split(best_split)
-    #         node.left.update_from_parent_node(node)
-    #         node.right.update_from_parent_node(node)
 
 
 if __name__ == "__main__":
