@@ -13,7 +13,19 @@ import time
 import os
 
 class FastODT(BaseTree):
-    def __init__(self, depth = 5, grace_period=10, split_confidence=1.0, option = "hf", max_feature=1.0, eagerness = 0.0, grace_period_depth=-1, bin_type='adaptive', max_bins=32, inherit_bins=False, split_criterion='variance'):
+    def __init__(self, 
+                 depth = 25, 
+                 grace_period=10, 
+                 split_confidence=1.0, 
+                 tie_threshold=0.05,
+                 option = "hf", 
+                 max_feature=1.0, 
+                 eagerness = 0.0, 
+                 grace_period_depth=-1, 
+                 bin_type='adaptive', 
+                 max_bins=16,
+                 inherit_bins=False, 
+                 split_criterion='vr_rel'):
         """
         Initialize the FastODT tree model with parameters.
 
@@ -47,7 +59,7 @@ class FastODT(BaseTree):
             If set to -1, this feature is disabled (set to over 999999999999999 internally).
 
         bin_type : str or class, optional (default='adaptive')
-            String name of histogram type (e.g., 'adaptive', 'equiwidth') or a histogram class. If None or 'adaptive', uses AdaptiveHistogram.
+            String name of histogram type (e.g., 'adaptive', 'equiwidth', 'mean') or a histogram class. If None or 'adaptive', uses AdaptiveHistogram.
 
         max_bins : int, optional (default=32)
             Maximum number of bins per feature per node.
@@ -82,6 +94,8 @@ class FastODT(BaseTree):
         if self.grace_period_depth == -1:
             self.grace_period_depth = 999999999999999
 
+        self.tie_threshold = tie_threshold
+
         self.option = option
         nodes_option_list = ["hf","cb"]
         if self.option not in nodes_option_list:
@@ -96,9 +110,10 @@ class FastODT(BaseTree):
 
         if self.option == "hf":
             self.root = NodeHoeffdingBound(
-                self.split_confidence,
+                split_confidence=self.split_confidence,
+                tie_threshold=self.tie_threshold,
                 max_feature=self.max_feature,
-                eagerness = eagerness,
+                eagerness=eagerness,
                 grace_period=grace_period,
                 bin_type=bin_type,
                 max_bins=max_bins,
@@ -112,7 +127,7 @@ class FastODT(BaseTree):
                 grace_period=grace_period,
             )
 
-    def measure_error(self,y_baseline,y_predicted):
+    def measure_error(self, y_baseline, y_predicted):
         self.error_rates.pop(0)
         self.error_rates.append(y_baseline - y_predicted)
         return np.mean(self.error_rates)
@@ -164,7 +179,7 @@ class FastODT(BaseTree):
         if depth >= self.depth:
             return
 
-        if node.left is None and node.right is None:
+        if node.left is None and node.right is None:  # if node is a leaf
             node.update_stats(x, y)
             if node.reached_grace_period() or self.grace_period_depth < depth:
                 self._attempt_split(node, x, y, depth)
@@ -184,13 +199,13 @@ class FastODT(BaseTree):
     def _attempt_split_HF(self, node, x, y, depth):
         best_split, _ = node.find_best_split() # here happens hf bound calculation
         if self.splits[depth] is not None:
-            node.split(self.splits[depth],self.split_confidence)
+            node.split(self.splits[depth], self.split_confidence, tie_threshold=self.tie_threshold)
             node.left.update_from_parent_node(node)
             node.right.update_from_parent_node(node)
         
-        elif best_split[0] is not None and best_split[1] is not None:
+        elif best_split[0] is not None:
             self.splits[depth] = best_split 
-            node.split(best_split,self.split_confidence)
+            node.split(best_split, self.split_confidence, tie_threshold=self.tie_threshold)
             node.left.update_from_parent_node(node)
             node.right.update_from_parent_node(node)
 

@@ -3,22 +3,22 @@ import numpy as np
 from collections import defaultdict
 from src.utils.utils import get_unique_random_numbers
 from src.trees.histogram import AdaptiveHistogram, EquiWidthHistogram
-from src.trees.split_criteria import variance_reduction
+from src.trees.split_criteria import variance_reduction, variance_reduction_relative
 
-def hoeffding_bound(R: int, n: int, delta: float) -> float:
+def hoeffding_bound(R: float, n: int, delta: float) -> float:
     """
     Computes Hoeffding bound given number of samples and confidence level.
 
     Parameters
     ----------
-    R: int
-        number of features (or bins) considered for splitting
+    R: float
+        Range of the split criterion (e.g., variance reduction).
     n: int
         number of samples seen so far
     delta: float
         confidence level (e.g., 0.01 for 99% confidence)
     """
-    return np.sqrt((R**2)*np.log(1 / delta) / (2 * n))
+    return np.sqrt((R**2) * np.log(1 / delta) / (2 * n))
     # harmonic_mean_n = 0
     # if n_left == 0:
     #     harmonic_mean_n = n_right
@@ -27,6 +27,7 @@ def hoeffding_bound(R: int, n: int, delta: float) -> float:
     # if n_left > 0 and n_right > 0:
     #     harmonic_mean_n = 1/((1/n_left)+(1/n_right))
     # return math.sqrt(1/(2*harmonic_mean_n) / delta)
+
 
 class NodeHoeffdingBound: # one leaf of the FastODT
     """
@@ -37,7 +38,7 @@ class NodeHoeffdingBound: # one leaf of the FastODT
     split_confidence : float
         Confidence level for splitting criterion.
     tie_threshold : float
-        Threshold for tie-breaking in split selection.
+        Threshold for tie-breaking in split selection. Default is 0.05.
     max_feature : float
         Fraction of features to consider for splitting at each node.
     eagerness : float
@@ -108,7 +109,7 @@ class NodeHoeffdingBound: # one leaf of the FastODT
         self.samples_seen: int = 0
         self.sum_y: float = 0
         self.sum_y_squared: float = 0
-        self.value: float = 0
+        self.value: float = 0  # average target value for samples seen by this node, this value is used for leaf prediction
         self.left: NodeHoeffdingBound = None  # None means it's a leaf node
         self.right: NodeHoeffdingBound = None  # None means it's a leaf node
         self.feature: int = None  # splitting feature index in the dataset (e.g. feature 'weight' with index 0)
@@ -120,7 +121,7 @@ class NodeHoeffdingBound: # one leaf of the FastODT
         self.split_period_counter: int = 0
         self.split_ideal_period: int = 10
         self.grace_period: int = grace_period
-        self.grace_period_offset: int = 0
+        self.grace_period_offset: int = 0  # this is the offset from the parent's `samples_seen` that's passed to child for proper grace period calculation
         self.prev_splitting_period: int = self.split_ideal_period
 
         self.max_feature: float = max_feature
@@ -171,8 +172,22 @@ class NodeHoeffdingBound: # one leaf of the FastODT
         self.sum_y_squared = parent.sum_y_squared
         self.value = parent.sum_y/self.samples_seen
         if self.grace_period > 0: 
-            self.grace_period_offset = parent.samples_seen
+            self.grace_period_offset = parent.samples_seen  # remove this too
 
+
+    def _hoeffding_R(self) -> float:
+        """
+        Calculate the Hoeffding bound R value based on the variance reduction used.
+        For relative reduction, R is fixed to 1.0 (as the range is normalized).
+        For absolute reduction, R is calculated as 0.25 * (y_max - y_min) ** 2, which is the Popoviciu upper bound.
+        """
+        # fixed range
+        if self.split_criterion == variance_reduction_relative:
+            return 1.0                        
+        
+        # absolute range
+        elif self.split_criterion == variance_reduction:
+            return 0.25 * (self.y_max - self.y_min) ** 2  # Popoviciu upper bound
 
     def find_best_split(self) -> tuple:
         """Find the best split based on current histograms and splitting criteria.
@@ -180,35 +195,31 @@ class NodeHoeffdingBound: # one leaf of the FastODT
         self.eager_splitting_counter += self.prev_splitting_period / self.split_ideal_period * self.eagerness
         self.split_period_counter += 1
 
-        __best_split_1st = (None, None, float('-inf'))
-        __best_split_2nd = (None, None, float('-inf'))
+        best_split_1st = (None, None, 0)
+        best_split_2nd = (None, None, 0)
 
         for feature, hist in (self.histograms or {}).items():
             candidates = hist.get_candidates()
             for thr in candidates:
                 left_stats = hist.aggregate_stats(thr, left=True)
                 right_stats = hist.aggregate_stats(thr, left=False)
-                reduction = self.split_criterion(left_stats, right_stats, self.samples_seen, self.sum_y, self.sum_y_squared)
-                if reduction > __best_split_1st[2]:
-                    __best_split_2nd = __best_split_1st
-                    __best_split_1st = (feature, thr, reduction)
-                elif reduction > __best_split_2nd[2] and reduction < __best_split_1st[2]:
-                    __best_split_2nd = (feature, thr, reduction)
+                reduction = self.split_criterion(left_stats, right_stats, 
+                                                 self.samples_seen, self.sum_y, self.sum_y_squared)
+                if reduction > best_split_1st[2]:
+                    best_split_2nd = best_split_1st
+                    best_split_1st = (feature, thr, reduction)
+                elif reduction > best_split_2nd[2] and reduction < best_split_1st[2]:
+                    best_split_2nd = (feature, thr, reduction)
 
-            R = len(self.histograms)
-            e = hoeffding_bound(R, self.samples_seen, self.delta) / self.eager_splitting_counter
-            if R > 1:
-                if __best_split_1st[2] - __best_split_2nd[2] > e:
-                    self.eager_splitting_counter = 200.0
-                    self.prev_splitting_period = self.split_period_counter
-                    self.split_period_counter = 0.0
-                    return (__best_split_1st[0], __best_split_1st[1]), __best_split_1st[2]
-            elif R == 1:
-                if __best_split_1st[2] > e:
-                    self.eager_splitting_counter = 200.0
-                    self.prev_splitting_period = self.split_period_counter
-                    self.split_period_counter = 0.0
-                    return (__best_split_1st[0], __best_split_1st[1]), __best_split_1st[2]
+        # Apply Hoeffding bound after considering all features
+        R = self._hoeffding_R()  # range based on absolute or relative reduction
+        e = hoeffding_bound(R, self.samples_seen, self.delta)# / self.eager_splitting_counter
+        
+        if best_split_1st[2] - best_split_2nd[2] > e or self.tie_threshold > e:
+            self.eager_splitting_counter = 200.0
+            self.prev_splitting_period = self.split_period_counter
+            self.split_period_counter = 0.0
+            return (best_split_1st[0], best_split_1st[1]), best_split_1st[2]
 
         return (None, None), 0
 
