@@ -199,13 +199,13 @@ class FastODT(BaseTree):
     def _attempt_split_HF(self, node, x, y, depth):
         best_split, _ = node.find_best_split() # here happens hf bound calculation
         if self.splits[depth] is not None:
-            node.split(self.splits[depth], self.split_confidence, tie_threshold=self.tie_threshold)
+            node.split(self.splits[depth], self.split_confidence)
             node.left.update_from_parent_node(node)
             node.right.update_from_parent_node(node)
         
         elif best_split[0] is not None:
             self.splits[depth] = best_split 
-            node.split(best_split, self.split_confidence, tie_threshold=self.tie_threshold)
+            node.split(best_split, self.split_confidence)
             node.left.update_from_parent_node(node)
             node.right.update_from_parent_node(node)
 
