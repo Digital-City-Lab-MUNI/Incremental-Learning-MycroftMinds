@@ -107,6 +107,8 @@ class NodeHoeffdingBound: # one leaf of the FastODT
         self.tie_threshold: float = tie_threshold
         self.delta: float = split_confidence
         self.samples_seen: int = 0
+        self.y_max: float = -np.inf
+        self.y_min: float = np.inf
         self.sum_y: float = 0
         self.sum_y_squared: float = 0
         self.value: float = 0  # average target value for samples seen by this node, this value is used for leaf prediction
@@ -151,6 +153,8 @@ class NodeHoeffdingBound: # one leaf of the FastODT
         
         # Update node statistics
         self.samples_seen += 1
+        self.y_max = max(self.y_max, y)
+        self.y_min = min(self.y_min, y)
         self.sum_y += y
         self.sum_y_squared += y ** 2
         self.value = self.sum_y / self.samples_seen  # Average target value
@@ -227,7 +231,8 @@ class NodeHoeffdingBound: # one leaf of the FastODT
         """Split the node based on the best split found."""
         self.feature, self.threshold = split_info
         self.left = NodeHoeffdingBound(
-            split_confidence,
+            split_confidence=split_confidence,
+            tie_threshold=self.tie_threshold,
             max_feature=self.max_feature,
             eagerness=self.eagerness,
             grace_period=self.grace_period,
@@ -237,7 +242,8 @@ class NodeHoeffdingBound: # one leaf of the FastODT
             split_criterion=self.split_criterion
         )
         self.right = NodeHoeffdingBound(
-            split_confidence,
+            split_confidence=split_confidence,
+            tie_threshold=self.tie_threshold,
             max_feature=self.max_feature,
             eagerness=self.eagerness,
             grace_period=self.grace_period,
