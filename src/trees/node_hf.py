@@ -88,16 +88,6 @@ class NodeHoeffdingBound: # one leaf of the FastODT
         Randomly selected feature indices based on `max_feature`.
     """
 
-    __SUM_X = 0 
-    __COUNT = 1 
-    __VAL = 2 
-    __LEFT_Y = 3 
-    __LEFT_Y_SQUARED = 4 
-    __LEFT_N = 5 
-    __RIGHT_Y = 6 
-    __RIGHT_Y_SQUARED = 7 
-    __RIGHT_N = 8
-
     # TODO:
     # reduction of memory footprint
 
@@ -171,12 +161,15 @@ class NodeHoeffdingBound: # one leaf of the FastODT
 
     def update_from_parent_node(self, parent) -> None:
         """Update this node's statistics from a parent node."""
-        self.samples_seen = parent.samples_seen
-        self.sum_y = parent.sum_y
-        self.sum_y_squared = parent.sum_y_squared
-        self.value = parent.sum_y/self.samples_seen
-        if self.grace_period > 0: 
-            self.grace_period_offset = parent.samples_seen  # remove this too
+        # !probably should get it removed properly!
+        # self.samples_seen = parent.samples_seen
+        # self.sum_y = parent.sum_y
+        # self.sum_y_squared = parent.sum_y_squared
+        # !probably should get it removed properly!
+        self.value = parent.value  # but not this
+        
+        # if self.grace_period > 0: 
+        #     self.grace_period_offset = parent.samples_seen  # remove this too
 
 
     def _hoeffding_R(self) -> float:
