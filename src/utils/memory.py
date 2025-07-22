@@ -1,6 +1,7 @@
 import sys
 import numpy as np
 import pandas as pd
+from pympler import asizeof
 import traceback
 from typing import Any, Tuple
 
@@ -13,17 +14,20 @@ def calculate_memory_usage(obj: Any) -> float:
     Returns:
         Memory usage in MB
     """
-    def _sizeof(obj):
-        if isinstance(obj, (np.ndarray)):
-            return obj.nbytes
-        elif isinstance(obj, (pd.DataFrame, pd.Series)):
-            return obj.memory_usage(deep=True).sum()
-        elif isinstance(obj, (list, tuple)):
-            return sum(_sizeof(x) for x in obj)
-        else:
-            return sys.getsizeof(obj)
-            
-    return _sizeof(obj) / (1024 * 1024)  # Convert to MB
+    try:
+        size_bytes = asizeof.asizeof(obj)
+        return size_bytes / (1024 * 1024)
+    except ImportError:
+        def _sizeof(obj):
+            if isinstance(obj, (np.ndarray)):
+                return obj.nbytes
+            elif isinstance(obj, (pd.DataFrame, pd.Series)):
+                return obj.memory_usage(deep=True).sum()
+            elif isinstance(obj, (list, tuple)):
+                return sum(_sizeof(x) for x in obj)
+            else:
+                return sys.getsizeof(obj)
+        return _sizeof(obj) / (1024 * 1024)  # Convert to MB
 
 def optimize_memory_usage(data_tuple: Tuple[np.ndarray, np.ndarray]) -> Tuple[np.ndarray, np.ndarray]:
     """Optimize memory usage of a data tuple by converting to efficient dtypes.
@@ -101,7 +105,6 @@ def print_memory_stats(train, valid, test):
         print(f"  Valid: {valid_mem:.2f} MB ({len(valid)} splits)")
         print(f"  Test:  {test_mem:.2f} MB")
         print(f"  Total: {train_mem + valid_mem + test_mem:.2f} MB")
-        
     else:
         # For standard dataset structure
         train_mem = calculate_memory_usage(train)
