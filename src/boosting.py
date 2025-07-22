@@ -1,7 +1,7 @@
 from sklearn.metrics import mean_absolute_error
 from matplotlib import pyplot as plt 
 from src.trees.fastodt import FastODT
-from src.utils.adwin import ADWIN
+#from src.utils.adwin import ADWIN
 from sklearn.metrics import mean_absolute_percentage_error
 import numpy as np
 import tqdm
@@ -11,34 +11,32 @@ import os
 
 class IncubationBoost:
 
-    def __init__(self, baseLearner, length = 5, learning_rate = 1.0, incubationMode = "DEFAULT", verbose = True, baseLearnerOptions = (5, 10, 1.0, "HF", 1.0)):
+    def __init__(self, 
+                 length: int = 5, 
+                 learning_rate: float = 1.0, 
+                 base_learner=FastODT, 
+                 base_learner_params: dict = {'depth': 15, 'grace_period': 10, 'split_confidence': 0.01, 'max_feature': 1.0, 'grace_period_depth': -1, 'eagerness': 0.0, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel'},
+                 verbose: bool = True,
+                 ):
         """
         Initializes IncubationBoost.
 
         Parameters:
-            baseLearner (object): The base learning model, for example: FastODT.
+            base_learner (object): The base learning model. Default is FastODT.
             length (int, optional): The max length of boosting chain - after this nodes are being replaced instead of addded.
-            incubationMode (str, optional): Mode of operation or configuration for incubation (e.g., "DEFAULT"). In "DEFAULT" algorithm add new node to the end,
-                                            or replaces youngest tree. In "BREAK" mode algorithm replaces the first tree in the chain (the oldest one).
-                                            "SHIFT_LEFT" shifts youngest nodes left, append new node to the end (it becomes last node), and removes oldest node.
-                                            "SHIFT_RIGHT" shifts oldest nodes right, append new node to the start (it takes place of oldest node), and removes last node. 
-            baseLearnerOptions (tuple, optional): A tuple of options or hyperparameters for the base learner. 
-                                                Default is FastOOT setting (5, 10, 1.0, "HF") - (Depth, Grace_period, HF_bound, Mode).
+            learning_rate (float, optional): The learning rate for the boosting process.
+            base_learner_params (dict, optional): Options for the base learner, such as depth, grace_period, split_confidence, max_feature, grace_period_depth, eagerness, bin_type, max_bins, and split_criterion.
+            
         """
         self.chain = []
-        self.length = length
-        self.incubatingNode = None 
-        self.baseLearner = baseLearner
-        self.baseLearnerOptions = baseLearnerOptions
-        self.incubationMode = incubationMode
-        self.modes = ["DEFAULT","SHIFT_LEFT","SHIFT_RIGHT"]
-        self.filling_counter = 0
-        self.drift_detector = ADWIN(delta = 0.000002)
-        self.under_drift_latch = False
+        self.length: int = length
+        self.learning_rate: float = learning_rate
+        self.base_learner = base_learner
+        self.base_learner_params: dict = base_learner_params
+        self.incubating_node = None 
+        #self.drift_detector = ADWIN(delta = 0.000002)
+        # self.under_drift_latch = False
         self.verbose = verbose
-        self.first_tree_hatched = False
-        self.learning_rate = learning_rate
-
         try:
             # Check if running in a Jupyter notebook
             from IPython import get_ipython
@@ -52,105 +50,80 @@ class IncubationBoost:
             self.tqdm = tqdm.tqdm
 
 
-    def partial_fit(self,X,y):
+    def partial_fit(self, X, y):
         if self.verbose == False:
             for i in range(len(X)):
-                self.__partial_fit(X[i],y[i])
+                self._partial_fit(X[i],y[i])
                 # input()
         else:
             for i in self.tqdm(range(len(X))):
-                self.__partial_fit(X[i],y[i])
+                self._partial_fit(X[i],y[i])
                 # input()
 
-    def __partial_fit(self,X,y):
+    def _partial_fit(self, X, y):
         residual = y
-        __y_pred_strong = 0.0
+        y_pred_strong = 0.0
 
         pruning_index = None
         prev_pruning_error_rate = 9999.0
 
-        self.drift_detector.add_sample(X)
+        #self.drift_detector.add_sample(X)
         # self.under_drift_latch = True
-
         # detect if drift happens - if drift already happened then keep it latched (with +) until new tree is deployed
-        self.under_drift_latch = bool(self.drift_detector.isDrift() + self.under_drift_latch)
+        #self.under_drift_latch = bool(self.drift_detector.isDrift() + self.under_drift_latch)
         
+        # if the chain is empty, create the first node
         if len(self.chain) == 0:
-            newNode = self.baseLearner(
-                *self.baseLearnerOptions
+            newNode = self.base_learner(
+                **self.base_learner_params
             )
             self.chain.append(newNode)
 
-        if self.incubationMode == "DEFAULT" or self.incubatingNode not in self.modes:
-            for n,node in enumerate(self.chain):
-                __y_pred = node.predict(X) * (1.0 if n == 0 else self.learning_rate) 
-                __y_pred_strong += __y_pred
-                residual = y - __y_pred_strong
+        # Index-based pruning (eGBDT)
+        for n, node in enumerate(self.chain):
+            y_pred = node.predict(X) * (1.0 if n == 0 else self.learning_rate)  # first node is not multiplied by learning rate
+            y_pred_strong += y_pred
+            residual = y - y_pred_strong
 
-                if node.is_filled():
-                    error_rate = node.measure_error(y,__y_pred_strong)
-                    if prev_pruning_error_rate > error_rate:
-                        pruning_index = n 
-                        prev_pruning_error_rate = error_rate 
-                    else:
-                        break
+            if node.is_filled():
+                error_rate = node.measure_error(y, y_pred_strong)
+                if prev_pruning_error_rate > error_rate:
+                    pruning_index = n 
+                    prev_pruning_error_rate = error_rate 
                 else:
-                    node.partial_fit([X], residual)
+                    break
+            else:
+                node.partial_fit([X], residual)
 
-            if pruning_index is not None:
-                self.chain = self.chain[:pruning_index+1]
+        if pruning_index is not None:
+            self.chain = self.chain[:pruning_index+1]
 
-            hatchedNode = self.incubate(X,residual)
-            if hatchedNode and len(self.chain) < self.length:
-                self.chain.append(hatchedNode)
-
-        elif self.incubationMode == "SHIFT_LEFT":
-            # Generate residual without first tree (which will go out of the scope after adding new tree)
-            for node in self.chain[1:]: 
-                __y_pred = node.predict(X) * (1.0 if n == 0 else self.learning_rate) 
-                __y_pred_strong += __y_pred
-                residual = y - __y_pred_strong
-                    
-            hatchedNode = self.incubate(X,residual)
-            if hatchedNode:
-                if (self.under_drift_latch or len(self.chain) >= self.length):
-                    self.chain = self.chain[:-1]
-                self.chain.append(hatchedNode)
-                self.under_drift_latch = False
-
-        elif self.incubationMode == "SHIFT_RIGHT":
-
-            hatchedNode = self.incubate(X,y)
-            if hatchedNode:
-                if (self.under_drift_latch or len(self.chain) >= self.length):
-                    self.chain = self.chain[1:]
-                self.chain.insert(0,hatchedNode)
-                self.under_drift_latch = False
-
+        hatched_node = self.incubate(X,residual)
+        if hatched_node and len(self.chain) < self.length:
+            self.chain.append(hatched_node)
 
     def incubate(self, X, residual):
-        if self.incubatingNode == None:
-            self.incubatingNode = self.baseLearner(
-                *self.baseLearnerOptions
+        if self.incubating_node == None:
+            self.incubating_node = self.base_learner(
+                **self.base_learner_params
             )
-            self.incubatingNode.partial_fit([X], residual)
+            self.incubating_node.partial_fit([X], residual)
 
         else:
-            self.incubatingNode.partial_fit([X], residual)
+            self.incubating_node.partial_fit([X], residual)
 
-            if self.incubatingNode.is_filled():
-
-                hatchedNode = self.incubatingNode
-                self.incubatingNode = None
-                return hatchedNode
+            if self.incubating_node.is_filled():
+                hatched_node = self.incubating_node
+                self.incubating_node = None
+                return hatched_node
             else:
                 return None
 
     def predict(self,X):
-        __y = 0.0
+        y = 0.0
         for n, node in enumerate(self.chain):
-            __y += node.predict(X) * (1.0 if n == 0 else self.learning_rate)
-        return __y
+            y += node.predict(X) * (1.0 if n == 0 else self.learning_rate)
+        return y
 
 
 if __name__=="__main__":

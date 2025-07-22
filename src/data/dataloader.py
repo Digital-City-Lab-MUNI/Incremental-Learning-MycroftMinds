@@ -7,13 +7,43 @@ import traceback
 from typing import List, Tuple, Dict, Optional, Union, Any
 from sklearn.model_selection import TimeSeriesSplit
 
-# Import modules from the new structure
 from src.data.io import save_dataset, load_dataset
 from src.utils.memory import calculate_memory_usage, optimize_memory_usage
 from src.data.preprocessing import preprocess_df, concat_dataframes_by_time, get_complete_time_series, clean_data, aggregate_and_validate_lags, read_first_batch, read_second_batch
 from src.data.feature_engineering import add_lag_features, add_cyclical_time_features
 
 warnings.filterwarnings("ignore")
+
+def handle_dst_transitions(timestamps):
+    """
+    Handle DST transitions by converting ambiguous times to UTC and back.
+    
+    Args:
+        timestamps: pandas Series or array of timestamps
+        
+    Returns:
+        pandas Series with DST issues resolved
+    """
+    if not isinstance(timestamps, pd.Series):
+        timestamps = pd.Series(timestamps)
+    
+    # If already timezone-aware, convert to UTC first to avoid DST issues
+    if timestamps.dt.tz is not None:
+        try:
+            # Convert to UTC to remove DST ambiguity
+            utc_timestamps = timestamps.dt.tz_convert('UTC')
+            # Convert back to original timezone, handling ambiguous times
+            return utc_timestamps.dt.tz_convert(timestamps.dt.tz)
+        except Exception as e:
+            print(f"[WARNING] DST conversion failed: {e}")
+            # Fall back to removing timezone info
+            return timestamps.dt.tz_convert(None)
+    else:
+        # If no timezone info, assume UTC and localize
+        try:
+            return timestamps.dt.tz_localize('UTC')
+        except:
+            return timestamps
 
 # ---------------------------
 # Main Dataset Creation Function
@@ -149,7 +179,9 @@ def get_train_test_sets(data_dir: str,
     
     for idx, ts in enumerate(complete_time_series[:]):
         try:
+            # Handle DST transitions in time column
             ts['time'] = pd.to_datetime(ts['time'])
+            ts['time'] = handle_dst_transitions(ts['time'])
             
             # Get site identifier
             site_id = ts['device_id'].iloc[0]
@@ -217,36 +249,45 @@ def get_train_test_sets(data_dir: str,
             X_train_all = np.vstack([x for x, _ in train_sets])
             y_train_all = np.hstack([y for _, y in train_sets])
 
+            # Handle timestamp column for DST issues
+            timestamps_train = handle_dst_transitions(X_train_all[:, 0])
+            timestamps_train = pd.Series(timestamps_train)
+            
             # Sort by timestamp to maintain chronological order
-            sorted_indices = np.argsort(X_train_all[:, 0])
+            sorted_indices = np.argsort(timestamps_train)
             X_train_all = X_train_all[sorted_indices]
             y_train_all = y_train_all[sorted_indices]
 
             # Combine all sites' test data
             X_test_all = np.vstack([x for x, _ in test_sets])
             y_test_all = np.hstack([y for _, y in test_sets])
-            sorted_indices = np.argsort(X_test_all[:, 0])
+            
+            # Handle timestamp column for DST issues
+            timestamps_test = pd.to_datetime(X_test_all[:, 0], unit='ns')
+            timestamps_test = handle_dst_transitions(timestamps_test)
+            
+            sorted_indices = np.argsort(timestamps_test)
             X_test_all = X_test_all[sorted_indices]
             y_test_all = y_test_all[sorted_indices]
-            
-            # Get the max timestamp in training set
-            train_max_time = X_train_all[:, 0].max()
+          
 
-            # Filter test set to only include rows with time > max train time
-            mask = X_test_all[:, 0] > train_max_time
-            X_test_all = X_test_all[mask]
-            y_test_all = y_test_all[mask]
-
-            print("Overall data time range: ", X_train_all[:, 0].min(), X_test_all[:, 0].max())
+            print("Overall data time range: ", timestamps_train.min(), timestamps_test.max())
             print()
-            print("Test data time range: ", X_test_all[:, 0].min(), X_test_all[:, 0].max())
+            print("Test data time range: ", timestamps_test.min(), timestamps_test.max())
             print()
-            print("(Train + Valid) data range: ", X_train_all[:, 0].min(), X_train_all[:, 0].max())
+            print("(Train + Valid) data range: ", timestamps_train.min(), timestamps_train.max())
             print()
 
             # Convert timestamp column to Series for easier handling
-            timestamps = pd.Series(X_train_all[:, 0])
-            unique_hours = sorted(timestamps.dt.floor('H').unique())
+            timestamps = pd.Series(timestamps_train).sort_values()
+            
+            # Use timezone-naive timestamps for floor operation to avoid DST issues
+            if timestamps.dt.tz is not None:
+                timestamps_naive = timestamps.dt.tz_convert('UTC').dt.tz_localize(None)
+            else:
+                timestamps_naive = timestamps
+
+            unique_hours = sorted(timestamps_naive.dt.floor('H').unique())
             num_hours = len(unique_hours)
 
             train_hours = train_days * 24
@@ -268,8 +309,9 @@ def get_train_test_sets(data_dir: str,
                 train_range = unique_hours[0 : start_idx + train_hours]
                 valid_range = unique_hours[start_idx + train_hours : start_idx + train_hours + valid_hours]
 
-                train_mask = timestamps.dt.floor('H').isin(train_range)
-                valid_mask = timestamps.dt.floor('H').isin(valid_range)
+                # Use timezone-naive timestamps for comparison
+                train_mask = timestamps_naive.dt.floor('H').isin(train_range)
+                valid_mask = timestamps_naive.dt.floor('H').isin(valid_range)
 
                 X_train_split = X_train_all[train_mask.values]
                 y_train_split = y_train_all[train_mask.values]
@@ -283,10 +325,10 @@ def get_train_test_sets(data_dir: str,
                 all_train_sets.append((X_train_split, y_train_split))
                 all_valid_sets.append((X_valid_split, y_valid_split))
 
-                train_start_time = X_train_split[:, 0].min()
-                train_end_time = X_train_split[:, 0].max()
-                valid_start_time = X_valid_split[:, 0].min()
-                valid_end_time = X_valid_split[:, 0].max()
+                train_start_time = timestamps[train_mask.values].min()
+                train_end_time = timestamps[train_mask.values].max()
+                valid_start_time = timestamps[valid_mask.values].min()
+                valid_end_time = timestamps[valid_mask.values].max()
 
                 print(f"Split {i + 1}:")
                 print(f"  Train window: {train_start_time} to {train_end_time}")
@@ -303,8 +345,8 @@ def get_train_test_sets(data_dir: str,
                 train_range = unique_hours[0 : start_idx + train_hours]
                 valid_range = unique_hours[start_idx + train_hours :]
 
-                train_mask = timestamps.dt.floor('H').isin(train_range)
-                valid_mask = timestamps.dt.floor('H').isin(valid_range)
+                train_mask = timestamps_naive.dt.floor('H').isin(train_range)
+                valid_mask = timestamps_naive.dt.floor('H').isin(valid_range)
 
                 X_train_split = X_train_all[train_mask.values]
                 y_train_split = y_train_all[train_mask.values]
@@ -316,10 +358,10 @@ def get_train_test_sets(data_dir: str,
                     all_train_sets.append((X_train_split, y_train_split))
                     all_valid_sets.append((X_valid_split, y_valid_split))
 
-                    train_start_time = X_train_split[:, 0].min()
-                    train_end_time = X_train_split[:, 0].max()
-                    valid_start_time = X_valid_split[:, 0].min()
-                    valid_end_time = X_valid_split[:, 0].max()
+                    train_start_time = timestamps[train_mask.values].min()
+                    train_end_time = timestamps[train_mask.values].max()
+                    valid_start_time = timestamps[valid_mask.values].min()
+                    valid_end_time = timestamps[valid_mask.values].max()
 
                     print(f"Split {i + 1}:")
                     print(f"  Train window: {train_start_time} to {train_end_time}")
@@ -407,4 +449,5 @@ def get_train_test_sets(data_dir: str,
         
     except Exception as e:
         print(f"[ERROR] Failed to stack all sets: {e}")
+        traceback.print_exc()
         return None, None, None

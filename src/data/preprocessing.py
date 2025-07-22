@@ -147,10 +147,49 @@ def aggregate_and_validate_lags(
 
             for (device_id, serial_number), group in data_concat.groupby(['device_id', 'serial_number']):
                 group = group.sort_values('time')
-                full_range = pd.date_range(start=group['time'].min(), end=group['time'].max(), freq=time_agg)
                 
-                existing_times = set(group['time'])
-                missing_times = [t for t in full_range if t not in existing_times]
+                # Create full range in UTC to avoid DST issues
+                start_time = group['time'].min()
+                end_time = group['time'].max()
+                
+                # If the data has timezone info, work in UTC
+                if start_time.tz is not None:
+                    # Convert to UTC for range generation
+                    start_utc = start_time.tz_convert('UTC')
+                    end_utc = end_time.tz_convert('UTC')
+                    
+                    # Create range in UTC
+                    full_range_utc = pd.date_range(start=start_utc, end=end_utc, freq=time_agg)
+                    
+                    # Convert back to original timezone, handling DST transitions
+                    original_tz = start_time.tz
+                    full_range = full_range_utc.tz_convert(original_tz)
+                    
+                    # Handle DST transitions by removing ambiguous/non-existent times
+                    existing_times = set(group['time'])
+                    
+                    # Filter out times that would cause DST issues
+                    valid_times = []
+                    for t in full_range:
+                        try:
+                            # Test if this timestamp is valid by trying to localize it
+                            if t not in existing_times:
+                                # Additional check: ensure the timestamp is not ambiguous
+                                # by converting to UTC and back
+                                test_utc = t.tz_convert('UTC')
+                                test_back = test_utc.tz_convert(original_tz)
+                                if test_back == t:
+                                    valid_times.append(t)
+                        except:
+                            # Skip problematic timestamps
+                            continue
+                    
+                    missing_times = valid_times
+                else:
+                    # No timezone info, proceed as before
+                    full_range = pd.date_range(start=start_time, end=end_time, freq=time_agg)
+                    existing_times = set(group['time'])
+                    missing_times = [t for t in full_range if t not in existing_times]
 
                 for t in missing_times:
                     missing_entries.append({
@@ -173,7 +212,13 @@ def aggregate_and_validate_lags(
                 agg_offset = to_offset(time_agg)
 
                 data_concat['weekday'] = data_concat['time'].dt.dayofweek
-                data_concat['rounded_slot'] = (data_concat['time'].dt.floor(time_agg)).dt.time
+                
+                # For time slot, use UTC time to avoid DST issues
+                if data_concat['time'].dt.tz is not None:
+                    utc_times = data_concat['time'].dt.tz_convert('UTC')
+                    data_concat['rounded_slot'] = utc_times.dt.floor(time_agg).dt.time
+                else:
+                    data_concat['rounded_slot'] = (data_concat['time'].dt.floor(time_agg)).dt.time
 
                 group_cols = ['device_id', 'weekday', 'rounded_slot']
 
@@ -236,17 +281,30 @@ def preprocess_df(dataframes: List[pd.DataFrame],
 
             # Convert 'time' column to datetime and handle errors
             df['time'] = pd.to_datetime(df['time'], errors='coerce', utc=True)
-            df['time'] = df['time'].dt.tz_convert(None)
+            
+            # Convert to Prague timezone, handling DST transitions
+            try:
+                df['time'] = df['time'].dt.tz_convert('Europe/Prague')
+            except Exception as e:
+                print(f"[WARNING] Timezone conversion failed: {e}")
+                # Fall back to removing timezone info
+                df['time'] = df['time'].dt.tz_convert(None)
+            
             df.reset_index(drop=True, inplace=True)
 
             if 'id' in df.columns:
                 df = df.drop(columns=['id'])
 
-            df['hour'] = df['time'].dt.hour
-            df['weekday'] = df['time'].dt.weekday
-            df['month'] = df['time'].dt.month
-            #possibly add combination hour + minute
-            #df['minute'] = df['time'].dt.hour + df['time'].dt.minute / 60
+            # Use UTC time for time features to avoid DST issues
+            if df['time'].dt.tz is not None:
+                utc_times = df['time'].dt.tz_convert('UTC')
+                df['hour'] = utc_times.dt.hour
+                df['weekday'] = utc_times.dt.weekday
+                df['month'] = utc_times.dt.month
+            else:
+                df['hour'] = df['time'].dt.hour
+                df['weekday'] = df['time'].dt.weekday
+                df['month'] = df['time'].dt.month
             
             # Optionally add cyclical features if requested
             if add_cyclical_features:

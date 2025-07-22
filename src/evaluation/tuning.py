@@ -18,7 +18,8 @@ def train_and_evaluate(model: BaseEstimator,
                        params: dict, 
                        train:List[Tuple[np.ndarray, np.ndarray]], 
                        valid:List[Tuple[np.ndarray, np.ndarray]], 
-                       data_freq='H', 
+                       data_freq='H',
+                       forecast_horizon='1h',
                        update_freq='1h',
                        start_split: int = 0,
                        end_split: Optional[int] = None) -> Dict[str, Any]:
@@ -47,16 +48,16 @@ def train_and_evaluate(model: BaseEstimator,
             incremental = False
     elif model.__class__.__name__ in ['RandomForestRegressor', 'GradientBoostingRegressor']:
         incremental = False
-
-    model = model(**params)
     
     model_all_train_preds, model_all_valid_preds, \
     model_all_train_metrics, model_all_valid_metrics = all_valid_splits_seq_fit_predict(
-        model=model, 
+        model_class=model, 
+        model_params=params,
         train=train, 
-        valid=valid, 
+        valid=valid,
         incremental=incremental,
         data_freq=data_freq,
+        forecast_horizon=forecast_horizon,
         update_freq=update_freq, 
         start_split=start_split, 
         end_split=end_split,
@@ -77,6 +78,7 @@ def grid_search_tuning(param_grid: dict,
                        valid: List[Tuple[np.ndarray, np.ndarray]], 
                        aggregation: str = 'hourly', 
                        data_freq: str = 'H', 
+                       forecast_horizon: str = '1h',
                        update_freq: str = '1h',
                        start_split: int = 0,
                        end_split: Optional[int] = None,
@@ -96,6 +98,7 @@ def grid_search_tuning(param_grid: dict,
         valid (List[Tuple[np.ndarray, np.ndarray]]): Validation data as a list of tuples (X, y).
         aggregation (str): Aggregation method for metrics ('hourly', 'daily', etc.).
         data_freq (str): Frequency of the data (default is 'H' for hourly).
+        forecast_horizon (str): Forecast horizon (default is '1h').
         update_freq (str): Frequency of updates (default is '1h').
         start_split (int): Starting index for the splits (default is 0).
         end_split (Optional[int]): Ending index for the splits (default is None, which means all splits).
