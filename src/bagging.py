@@ -544,8 +544,12 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
         merit_preprune: bool = True,
         seed: int | None = None,
         max_feature: float = 1.0,
-        eagerness : float = 200.0,
-        grace_period_depth : int = -1,
+        eagerness: float = 0.0,
+        grace_period_depth: int = -1,
+        bin_type: str = "adaptive",
+        max_bins: int = 32,
+        inherit_bins: bool = False,
+        split_criterion: str = "vr_rel",
     ):
         super().__init__(
             n_models=n_models,
@@ -578,6 +582,10 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
         self.merit_preprune = merit_preprune
         self.max_feature = max_feature
         self.eagerness = eagerness
+        self.bin_type = bin_type
+        self.max_bins = max_bins
+        self.inherit_bins = inherit_bins
+        self.split_criterion = split_criterion
 
         if aggregation_method in self._VALID_AGGREGATION_METHOD:
             self.aggregation_method = aggregation_method
@@ -636,13 +644,17 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
 
     def _new_base_model(self):
         return FastODT(
-            grace_period=self.grace_period,
             depth=self.max_depth,
+            grace_period=self.grace_period,
             split_confidence=self.delta,
-            max_feature = self.max_feature,
-            eagerness=self.eagerness, # Daniel, this is new feature, you can set it to 0 to disable it, but it basically make FastODT with hf eager to split
-            option="hf",
-            grace_period_depth = self.grace_period_depth,
+            tie_threshold=self.tau,
+            max_feature=self.max_feature,
+            eagerness=self.eagerness,
+            grace_period_depth=self.grace_period_depth,
+            bin_type=self.bin_type,
+            max_bins=self.max_bins,
+            inherit_bins=self.inherit_bins,
+            split_criterion=self.split_criterion
         )
 
     def _drift_detector_input(
