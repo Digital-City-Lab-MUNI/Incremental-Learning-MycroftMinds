@@ -59,8 +59,8 @@ def log_and_print(log_file: str, message: str, print_console: bool = True):
     """
     with open(log_file, 'a', encoding='utf-8') as f:
         f.write(message + '\n')
-    if print_console:
-        print(message)
+    # if print_console:
+    #     print(message)
 
 
 def save_checkpoint_results(results_dir: str, model_name: str, best_params: Dict[str, Any], 
