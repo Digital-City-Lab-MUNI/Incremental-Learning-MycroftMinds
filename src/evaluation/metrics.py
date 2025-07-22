@@ -4,6 +4,7 @@ import numpy as np
 from scipy.stats import pearsonr
 from typing import Dict, List, Any
 from scipy.signal import find_peaks
+from src.utils.memory import calculate_memory_usage
 
 from src.utils.utils import aggregate_values
 
@@ -118,7 +119,7 @@ def directional_accuracy(y_true, y_pred):
     return np.mean(np.sign(dy_true) == np.sign(dy_pred)), corr[0]
 
 def calculate_metrics(y_true: pd.Series, y_pred: pd.Series, device_id: str, period: str, data_freq: str = "5min", 
-                      spike_prominence=10.0, normalize_robust=True, verbose=True) -> dict:
+                      spike_prominence=10.0, normalize_robust=True, model=None, verbose=True) -> dict:
     """
     Calculate RMSE, MAE, MAPE, directional accuracy, first-difference correlation, and spike/drop metrics for predictions.
 
@@ -130,6 +131,7 @@ def calculate_metrics(y_true: pd.Series, y_pred: pd.Series, device_id: str, peri
         data_freq (str): Frequency of original data. Can be '1s', '5min', '15min', 'H', 'D', etc.
         spike_prominence (float): The prominence parameter for spike detection metrics. The data is normalized before calculating the spikes, so the prominence now means distance in std or MAD units (1.5 => 1.5*std from mean).
         normalize_robust (bool): If True, use robust (median&MAD) normalization, else use regular z-score (mean&std)normalization.
+        model: The trained model to measure memory consumption for.
         verbose (bool): If True, print the metrics.
 
     Returns:
@@ -146,6 +148,10 @@ def calculate_metrics(y_true: pd.Series, y_pred: pd.Series, device_id: str, peri
             print(f"\tRMSE: {metrics_dict['rmse']:.4f}")
             print(f"\tMAE: {metrics_dict['mae']:.4f}")
             print(f"\tMAPE: {metrics_dict['mape']:.4%}")
+            
+            # Memory usage metric
+            # if 'memory' in metrics_dict and metrics_dict['memory'] is not None:
+            #     print(f"\tModel Memory: {metrics_dict['memory']:.5f} MB")
             
             # Only show directional and spike metrics for sub-weekly aggregations
             if period_name not in ['weekly', '28_days']:
@@ -203,6 +209,7 @@ def calculate_metrics(y_true: pd.Series, y_pred: pd.Series, device_id: str, peri
             'rmse': np.sqrt(mean_squared_error(y_true_agg, y_pred_agg)),
             'mae': mean_absolute_error(y_true_agg, y_pred_agg),
             'mape': mean_absolute_percentage_error(y_true_agg, y_pred_agg),
+            # 'memory': None,  # Placeholder for memory, will be set only for original frequency
         }
         
         # Only add directional and spike metrics for sub-weekly aggregations
@@ -262,6 +269,11 @@ def calculate_metrics(y_true: pd.Series, y_pred: pd.Series, device_id: str, peri
                                                    prominence=spike_prominence, 
                                                    normalize_robust=normalize_robust, 
                                                    delta=1)
+                                                   
+    # Calculate memory usage if model is provided
+    # memory_usage = None
+    # if model is not None:
+    #     memory_usage = calculate_memory_usage(model)
 
     # Initialize original metrics with all values
     original_metrics = {
@@ -274,6 +286,7 @@ def calculate_metrics(y_true: pd.Series, y_pred: pd.Series, device_id: str, peri
         'drops_immediate': spike_metrics_immediate['drops'],
         'spikes_delayed': spike_metrics_delayed['spikes'],
         'drops_delayed': spike_metrics_delayed['drops'],
+        # 'memory': memory_usage,  # Add memory usage to metrics
     }
     
     # Add metrics for original data
@@ -332,7 +345,9 @@ def all_time_aggregation_metrics(period_metrics: Dict[str, List[Dict]], data_fre
                                   ]
                             ]
                         ] = {}
-    metric_names = ['rmse', 'mae', 'mape', 'dir_accuracy', 'first_diff_corr']
+    metric_names = ['rmse', 'mae', 'mape', 'dir_accuracy', 'first_diff_corr', 
+                    # 'memory'
+                    ]
     
     # Immediate spike detection metrics (delta=0)
     immediate_metrics = ['spikes_immediate.precision', 'spikes_immediate.recall', 'spikes_immediate.f1', 
@@ -418,10 +433,14 @@ def all_time_aggregation_metrics(period_metrics: Dict[str, List[Dict]], data_fre
                 print(f"{agg_name.capitalize()} Metrics:")
                 
                 # Basic accuracy metrics
-                for metric in ['rmse', 'mae', 'mape']:
+                for metric in ['rmse', 'mae', 'mape', 
+                            #    'memory'
+                               ]:
                     if metrics[metric]['mean'] is not None:
                         if metric == 'mape':
                             print(f"\t{metric.upper()}: {metrics[metric]['mean']:.4%} ± {metrics[metric]['std']:.4%}")
+                        # elif metric == 'memory':
+                        #     print(f"\tMEMORY: {metrics[metric]['mean']:.5f} MB ± {metrics[metric]['std']:.5f} MB")
                         else:
                             print(f"\t{metric.upper()}: {metrics[metric]['mean']:.4f} ± {metrics[metric]['std']:.4f}")
                     else:

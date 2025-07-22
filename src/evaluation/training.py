@@ -397,6 +397,7 @@ def all_valid_splits_seq_fit_predict(model_class: Type[BaseEstimator],
                     data_freq=data_freq,
                     spike_prominence=spike_prominence,
                     normalize_robust=normalize_robust,
+                    model=model,  # Pass model for memory calculation
                     verbose=False
                     )
             else:
@@ -410,6 +411,7 @@ def all_valid_splits_seq_fit_predict(model_class: Type[BaseEstimator],
                 data_freq=data_freq,
                 spike_prominence=spike_prominence,
                 normalize_robust=normalize_robust,
+                model=model,  # Pass model for memory calculation
                 verbose=verbose
                 )
 
@@ -561,6 +563,7 @@ def test_set_seq_fit_predict(model_class: Type[BaseEstimator],
                 data_freq=data_freq,
                 spike_prominence=spike_prominence,
                 normalize_robust=normalize_robust,
+                model=model,  # Pass model for memory calculation
                 verbose=False
             )
         else:
@@ -574,6 +577,7 @@ def test_set_seq_fit_predict(model_class: Type[BaseEstimator],
             data_freq=data_freq,
             spike_prominence=spike_prominence,
             normalize_robust=normalize_robust,
+            model=model,  # Pass model for memory calculation
             verbose=verbose
         )
 
