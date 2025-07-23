@@ -2,11 +2,11 @@ import math
 import numpy as np
 from collections import defaultdict
 from src.utils.utils import get_unique_random_numbers
-from split_criteria import (
-    variance_reduction,
-    friedman_mse,
-    poisson_deviance,
-    mean_absolute_error
+from .split_criteria import (
+    _variance_reduction,
+    _friedman_mse,
+    _poisson_deviance,
+    _mean_absolute_error
 )
 
 def hoeffding_bound(R,n, delta):
@@ -24,10 +24,10 @@ def hoeffding_bound(R,n, delta):
     # return math.sqrt(1/(2*harmonic_mean_n) / delta)
 
 CRITERIA = {
-    "mse": variance_reduction,
-    "friedman": friedman_mse,
-    "poisson": poisson_deviance,
-    "mae": mean_absolute_error,
+    "mse": _variance_reduction,
+    "friedman": _friedman_mse,
+    "poisson": _poisson_deviance,
+    "mae": _mean_absolute_error,
 }
 
 class NodeHoeffdingBound:
@@ -46,16 +46,18 @@ class NodeHoeffdingBound:
     __RIGHT_Y_LIST    = 12   # raw y-list for MAE on right
         
     def __init__(self,split_confidence, tie_threshold = 0.05, max_feature=1.0,
-                  eagerness=0.0, grace_period = 0,  chosen_criterion_fn=None):
+                  eagerness=0.0, grace_period = 0,  chosen_criterion_fn='mse'):
         
         # assigning chosen splitting function
         if callable(chosen_criterion_fn):
             self.chosen_criterion = chosen_criterion_fn
         else:
+            print("if statement noveho node_hf")
             self.chosen_criterion = CRITERIA.get(
-                "mse",
-                default = variance_reduction
+                chosen_criterion_fn,
+                _variance_reduction
             )
+            print(self.chosen_criterion)
         self.tie_threshold = tie_threshold
         self.delta = split_confidence
         self.samples_seen = 0
@@ -135,7 +137,11 @@ class NodeHoeffdingBound:
 
 
     def find_best_split(self):
-        self.eager_splitting_counter += self.prev_splitting_period/self.split_ideal_period * self.eagerness
+        print("Finding best split")
+        print("chosen criterion in ffind_bestsplit()" + str(self.chosen_criterion))
+        print(self.prev_splitting_period)
+        print(type(self.prev_splitting_period))
+        self.eager_splitting_counter += int(self.prev_splitting_period/self.split_ideal_period * self.eagerness)
         self.split_period_counter += 1
 
         __best_split_1st = (None, None, 0)
@@ -150,16 +156,19 @@ class NodeHoeffdingBound:
             if count < 2:
                 continue
             avg_x = sum_x / count
+            print(self.chosen_criterion)
 
-            if self.chosen_criterion is mean_absolute_error:
-                reduction = mean_absolute_error(
+            if self.chosen_criterion is _mean_absolute_error:
+                print("calling mean absolute error")
+                reduction = _mean_absolute_error(
                     self.data_from_before_split,
                     left_vals,
                     right_vals
                 )
 
-            elif self.chosen_criterion is poisson_deviance:
-                reduction = poisson_deviance(
+            elif self.chosen_criterion is _poisson_deviance:
+                print("calling poisson deviance")
+                reduction = _poisson_deviance(
                     self.sum_y,
                     self.sum_y_log,
                     self.samples_seen,
@@ -171,8 +180,9 @@ class NodeHoeffdingBound:
                     right_n
                 )
 
-            elif self.chosen_criterion is friedman_mse:
-                reduction = friedman_mse(
+            elif self.chosen_criterion is _friedman_mse:
+                print("calling friedman mse")
+                reduction = _friedman_mse(
                     self.sum_y,
                     self.samples_seen,
                     left_y,
@@ -182,7 +192,8 @@ class NodeHoeffdingBound:
                 )
 
             else:  # default to MSE
-                reduction = variance_reduction(
+                print("calling mse")
+                reduction = _variance_reduction(
                     self.sum_y,
                     self.sum_y_squared,
                     self.samples_seen,
