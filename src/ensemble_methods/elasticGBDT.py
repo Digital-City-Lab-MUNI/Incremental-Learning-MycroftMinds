@@ -95,7 +95,7 @@ class ElasticGBDT:
         for i in range(n_trees):
             new_pred = partial_pred + self.alpha * self.trees[i].predict(X_new)
             new_error = self.error_metric(y_new, new_pred)
-            improvement = old_error - new_error
+            improvement = (old_error - new_error) / old_error
             contributions.append((improvement, i))
             partial_pred = new_pred
             old_error = new_error
@@ -145,7 +145,7 @@ class ElasticGBDT:
         for i, tree in enumerate(self.trees):
             new_pred = partial_pred + self.alpha * tree.predict(X_new)
             new_error = self.error_metric(y_new, new_pred)
-            improvement = old_error - new_error
+            improvement = (old_error - new_error)   / old_error if old_error != 0 else 0
             contributions.append((improvement, i))
             partial_pred = new_pred
             old_error = new_error
@@ -172,7 +172,7 @@ class ElasticGBDT:
             tree_pred = tree.predict(X)
             new_pred = partial_pred + self.alpha * tree_pred
             new_error = self.error_metric(y, new_pred)
-            improvement = old_error - new_error
+            improvement = (old_error - new_error) / old_error if old_error != 0 else 0
             contributions.append((improvement, i))
             partial_pred = new_pred
             old_error = new_error
@@ -245,7 +245,7 @@ class ElasticGBDT:
             tree_pred = tree.predict(X)
             new_pred = partial_pred + self.alpha * tree_pred
             new_error = self.error_metric(y, new_pred)
-            improvement = error_before - new_error
+            improvement = (error_before - new_error) / error_before if error_before != 0 else 0
             contributions.append((improvement, i))
             partial_pred = new_pred
             error_before = new_error

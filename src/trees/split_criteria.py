@@ -1,21 +1,22 @@
 import numpy as np
 
 def _variance_reduction(self, left_y, left_y_squared, left_n, right_y, right_y_squared, right_n):
-        # Also known as MSE gain
-        if left_n == 0 or right_n == 0:
-            return 0
-        # Parent variance
-        var_parent = (self.sum_y_squared / self.samples_seen) - (self.sum_y / self.samples_seen) ** 2
-        # Left and right variances
-        var_left = (left_y_squared / left_n) - (left_y / left_n) ** 2
-        var_right = (right_y_squared / right_n) - (right_y / right_n) ** 2
-        # Weighted variance after split
-        var_children = (left_n / self.samples_seen) * var_left + (right_n / self.samples_seen) * var_right
+    print("Variance reduction calculation")
+    # Also known as MSE gain
+    if left_n == 0 or right_n == 0:
+        return 0
+    # Parent variance
+    var_parent = (self.sum_y_squared / self.samples_seen) - (self.sum_y / self.samples_seen) ** 2
+    # Left and right variances
+    var_left = (left_y_squared / left_n) - (left_y / left_n) ** 2
+    var_right = (right_y_squared / right_n) - (right_y / right_n) ** 2
+    # Weighted variance after split
+    var_children = (left_n / self.samples_seen) * var_left + (right_n / self.samples_seen) * var_right
 
-        return var_parent - var_children  # variance reduction
+    return var_parent - var_children  # variance reduction
     
 def _friedman_mse(self, left_y, left_n, right_y, right_n):
-    
+    print("Friedman MSE gain calculation")
     if left_n == 0 or right_n == 0:
         return 0
     
@@ -28,6 +29,7 @@ def _friedman_mse(self, left_y, left_n, right_y, right_n):
 def _poisson_deviance(self,
                         left_y, left_y_log, left_n,
                         right_y, right_y_log, right_n):
+    print("Poisson deviance reduction calculation")
     # Poisson deviance reduction
     # Requires: all y > 0, and self.sum_y_log = sum(y * log(y)) over the parent
     if left_n == 0 or right_n == 0:
@@ -54,6 +56,7 @@ def _poisson_deviance(self,
 
 
 def _mean_absolute_error(self, left_values, right_values):
+    print("Mean Absolute Error gain calculation")
     # MAE gain (reduction in absolute deviation around median)
     if len(left_values) == 0 or len(right_values) == 0:
         return 0.0

@@ -61,6 +61,7 @@ class FastODT(BaseTree):
         self.split_confidence = split_confidence  # Confidence level for splitting
         self.depth = depth
         self.splits = [None] * depth
+        print(f"FastODT initialized with depth={depth}, grace_period={grace_period}, split_confidence={split_confidence}, option={option}, max_feature={max_feature}, eagerness={eagerness}, grace_period_depth={grace_period_depth}, chosen_criterion_fn={chosen_criterion_fn}")
 
         self.error_rates = np.zeros(20).tolist() 
 
@@ -70,7 +71,7 @@ class FastODT(BaseTree):
         if self.grace_period_depth == -1:
             self.grace_period_depth = 999999999999999
 
-
+        print("chosen criterion : " + str(chosen_criterion_fn))
         self.option = option
         nodes_option_list = ["hf","cb"]
         if self.option not in nodes_option_list:
@@ -104,7 +105,7 @@ class FastODT(BaseTree):
             y = np.array([y])
         if X.shape[0] != len(y):
             raise ValueError(f"X and y must have the same number of samples. X: {X.shape}, y: {y.shape}")
-
+        print("partial_fit called")
         if verbose:
             for i in tqdm.tqdm(range(len(X))):
                 self._update_tree(self.root, X[i], y[i], depth=0)
@@ -139,15 +140,17 @@ class FastODT(BaseTree):
         return self.predict(x)
 
     def _update_tree(self, node , x, y, depth = 0):
-
+        print("_update_tree called")
         if depth >= self.depth:
             return
-
+        print("_update_tree after depth check")
         if node.left is None and node.right is None:
             node.update_stats(x, y)
             if node.reached_grace_period() or self.grace_period_depth < depth:
+                print("calling: _attempt_split in _update_tree")
                 self._attempt_split(node, x, y, depth)
         elif node.feature is not None:
+            print(f"Node feature: {node.feature}, threshold: {node.threshold}")
             if x[node.feature] <= node.threshold:
                 self._update_tree(node.left,x,y,depth + 1)
 
@@ -156,11 +159,15 @@ class FastODT(BaseTree):
 
     def _attempt_split(self, node, x, y, depth):
         if self.option == "hf":
+            print("calling _attempt_split_HF")
             self._attempt_split_HF(node, x, y, depth)
         else:
             self._attempt_split_confidence(node, x, y, depth)
 
     def _attempt_split_HF(self, node, x, y, depth):
+        print(f"[HF][depth={depth}] samples_seen={node.samples_seen!r}, grace_offset={node.grace_period_offset!r}")
+        split_info, score = node.find_best_split()
+        print(f"[HF] find_best_split returned {split_info!r}, score={score!r}")
         tmp = node.find_best_split()
         best_split, _ = tmp
         if self.splits[depth] is not None:
