@@ -1,5 +1,6 @@
 import itertools
 import numpy as np
+import random
 from datetime import datetime
 from typing import Tuple, Optional, List, Dict, Any
 from sklearn.base import BaseEstimator
@@ -73,7 +74,7 @@ def train_and_evaluate(model: BaseEstimator,
 
     return model_all_time_valid_metrics
 
-def grid_search_tuning(param_grid: dict, 
+def hyperparameter_search_tuning(param_grid: dict, 
                        model: BaseEstimator, 
                        train: List[Tuple[np.ndarray, np.ndarray]], 
                        valid: List[Tuple[np.ndarray, np.ndarray]], 
@@ -83,15 +84,14 @@ def grid_search_tuning(param_grid: dict,
                        update_freq: str = '1h',
                        start_split: int = 0,
                        end_split: Optional[int] = None,
+                       search_type: str = 'grid',
+                       n_iter: Optional[int] = None,
                        log_dir: str = None,
                        log_prefix: str = None,
                        file_prefix: str = None,
                        save_intermediate: bool = True) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """
-    Perform grid search to tune hyperparameters with conservative checkpoint output and logging.
-    Aggregates validation metrics across devices and returns
-    the best params for each metric (rmse, mae, mape) separately.
-    
+    Perform hyperparameter tuning using either grid or random search.
     Args:
         param_grid (dict): Grid of hyperparameter values.
         model (BaseEstimator): The model to train and evaluate.
@@ -103,6 +103,8 @@ def grid_search_tuning(param_grid: dict,
         update_freq (str): Frequency of updates (default is '1h').
         start_split (int): Starting index for the splits (default is 0).
         end_split (Optional[int]): Ending index for the splits (default is None, which means all splits).
+        search_type (str): 'grid' or 'random'.
+        n_iter (int): Number of random samples (only for random search).
         log_dir (str): Directory to save tuning results logs. If None, uses default.
         log_prefix (str): Prefix for log directory and files. If None, uses 'tuning'.
         file_prefix (str): Prefix for result filenames (e.g., 'dev_4_wfv'). If None, uses no prefix.
@@ -125,6 +127,20 @@ def grid_search_tuning(param_grid: dict,
     
     keys = list(param_grid.keys())
     values = list(param_grid.values())
+
+    # Generate parameter combinations based on search_type
+    if search_type == 'random':
+        # default to 1000 iterations if not specified
+        if n_iter is None:
+            n_iter = 1000
+        param_combinations = [
+            tuple(random.choice(vals) for vals in values)
+            for _ in range(n_iter)
+        ]
+        total_combinations = len(param_combinations)
+    else:
+        param_combinations = list(itertools.product(*values))
+        total_combinations = len(param_combinations)
 
     # Initialize metrics that are better when lower
     best_scores_lower_better = {
