@@ -62,7 +62,8 @@ def train_and_evaluate(model: BaseEstimator,
         start_split=start_split, 
         end_split=end_split,
         predict_train=False,
-        verbose=False
+        verbose=False,
+        tqdm_on=False
     )
 
     model_all_time_valid_metrics = all_time_aggregation_metrics(

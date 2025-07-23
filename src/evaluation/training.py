@@ -308,7 +308,8 @@ def all_valid_splits_seq_fit_predict(model_class: Type[BaseEstimator],
                                      end_split: Optional[int] = None,
                                      predict_train: bool = True,
                                      index_cols=2,
-                                     verbose: int = 1
+                                     verbose: int = 1,
+                                     tqdm_on: bool = True
                                      ) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
     """
     Fit and predict for each device in the training and validation splits.
@@ -333,6 +334,7 @@ def all_valid_splits_seq_fit_predict(model_class: Type[BaseEstimator],
             - 0: No messages.
             - 1: Print progress messages and memory usage.
             - 2: Print progress messages, memory usage, and detailed steps.
+        tqdm_on (bool): If True, use tqdm for progress bars; otherwise, disable them.
 
     Returns:
         Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
@@ -345,13 +347,25 @@ def all_valid_splits_seq_fit_predict(model_class: Type[BaseEstimator],
     device_valid_period_predictions = {}
     end_split = len(train) if not end_split else end_split
 
-    for split in tqdm(range(start_split, end_split), 
-                      desc="Processing splits", 
-                      position=0):
-        for device_id in tqdm(set(train[split][0][:, 1]), 
-                              desc=f"Processing devices in split {split}", 
-                              position=1, 
-                              leave=False):
+
+    if tqdm_on:
+        split_iter = tqdm(range(start_split, end_split),
+                          desc="Processing splits",
+                          position=0)
+    else:
+        split_iter = range(start_split, end_split)
+
+    for split in split_iter:
+        device_ids = set(train[split][0][:, 1])
+        if tqdm_on:
+            device_iter = tqdm(device_ids,
+                               desc=f"Processing devices in split {split}",
+                               position=1,
+                               leave=False)
+        else:
+            device_iter = device_ids
+
+        for device_id in device_iter:
             X_train, y_train = get_device_data(train[split], device_id=device_id)
             X_valid, y_valid = get_device_data(valid[split], device_id=device_id)
 
