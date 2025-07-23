@@ -19,8 +19,10 @@ def train_and_evaluate(model: BaseEstimator,
                        params: dict, 
                        train:List[Tuple[np.ndarray, np.ndarray]], 
                        valid:List[Tuple[np.ndarray, np.ndarray]], 
+                       spike_prominence: float,
                        data_freq='H',
                        forecast_horizon='1h',
+                       features: Optional[List[str]] = None,
                        update_freq='1h',
                        start_split: int = 0,
                        end_split: Optional[int] = None) -> Dict[str, Any]:
@@ -33,7 +35,10 @@ def train_and_evaluate(model: BaseEstimator,
         params (dict): Hyperparameters for the model.
         train (List[Tuple[np.ndarray, np.ndarray]]): Training data as a list of tuples (X, y).
         valid (List[Tuple[np.ndarray, np.ndarray]]): Validation data as a list of tuples (X, y).
+        spike_prominence (float): Prominence for spike detection.
         data_freq (str): Frequency of the data (default is 'H' for hourly).
+        forecast_horizon (str): Forecast horizon (default is '1h').
+        features (Optional[List[str]]): List of feature names to use for training.
         update_freq (str): Frequency of updates (default is '1h').
         start_split (int): Starting index for the splits (default is 0).
         end_split (Optional[int]): Ending index for the splits (default is None, which means all splits).
@@ -59,7 +64,9 @@ def train_and_evaluate(model: BaseEstimator,
         incremental=incremental,
         data_freq=data_freq,
         forecast_horizon=forecast_horizon,
-        update_freq=update_freq, 
+        features=features,
+        update_freq=update_freq,
+        spike_prominence=spike_prominence,
         start_split=start_split, 
         end_split=end_split,
         predict_train=False,
@@ -77,10 +84,12 @@ def train_and_evaluate(model: BaseEstimator,
 def hyperparameter_search_tuning(param_grid: dict, 
                        model: BaseEstimator, 
                        train: List[Tuple[np.ndarray, np.ndarray]], 
-                       valid: List[Tuple[np.ndarray, np.ndarray]], 
+                       valid: List[Tuple[np.ndarray, np.ndarray]],
+                       spike_prominence: float,
                        aggregation: str = 'hourly', 
                        data_freq: str = 'H', 
                        forecast_horizon: str = '1h',
+                       features: Optional[List[str]] = None,
                        update_freq: str = '1h',
                        start_split: int = 0,
                        end_split: Optional[int] = None,
@@ -111,8 +120,8 @@ def hyperparameter_search_tuning(param_grid: dict,
         save_intermediate (bool): Whether to save intermediate results.
 
     Returns:
-        best_params (dict): Best hyperparameters for each metric.
-        best_scores (dict): Best scores for each metric.
+        Dict[str, Any]: Best hyperparameters found.
+        
     """
 
     # Setup logging with defaults
@@ -254,8 +263,10 @@ def hyperparameter_search_tuning(param_grid: dict,
                                      params, 
                                      train=train, 
                                      valid=valid, 
+                                     spike_prominence=spike_prominence,
                                      data_freq=data_freq,
                                      forecast_horizon=forecast_horizon,
+                                     features=features,
                                      update_freq=update_freq,
                                      start_split=start_split, 
                                      end_split=end_split)
