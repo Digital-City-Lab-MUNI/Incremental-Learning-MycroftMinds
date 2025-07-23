@@ -1,5 +1,6 @@
 import itertools
 import numpy as np
+import random
 from datetime import datetime
 from typing import Tuple, Optional, List, Dict, Any
 from sklearn.base import BaseEstimator
@@ -62,7 +63,8 @@ def train_and_evaluate(model: BaseEstimator,
         start_split=start_split, 
         end_split=end_split,
         predict_train=False,
-        verbose=False
+        verbose=False,
+        tqdm_on=False
     )
 
     model_all_time_valid_metrics = all_time_aggregation_metrics(
@@ -72,7 +74,7 @@ def train_and_evaluate(model: BaseEstimator,
 
     return model_all_time_valid_metrics
 
-def grid_search_tuning(param_grid: dict, 
+def hyperparameter_search_tuning(param_grid: dict, 
                        model: BaseEstimator, 
                        train: List[Tuple[np.ndarray, np.ndarray]], 
                        valid: List[Tuple[np.ndarray, np.ndarray]], 
@@ -82,15 +84,14 @@ def grid_search_tuning(param_grid: dict,
                        update_freq: str = '1h',
                        start_split: int = 0,
                        end_split: Optional[int] = None,
+                       search_type: str = 'grid',
+                       n_iter: Optional[int] = None,
                        log_dir: str = None,
                        log_prefix: str = None,
                        file_prefix: str = None,
                        save_intermediate: bool = True) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     """
-    Perform grid search to tune hyperparameters with conservative checkpoint output and logging.
-    Aggregates validation metrics across devices and returns
-    the best params for each metric (rmse, mae, mape) separately.
-    
+    Perform hyperparameter tuning using either grid or random search.
     Args:
         param_grid (dict): Grid of hyperparameter values.
         model (BaseEstimator): The model to train and evaluate.
@@ -102,6 +103,8 @@ def grid_search_tuning(param_grid: dict,
         update_freq (str): Frequency of updates (default is '1h').
         start_split (int): Starting index for the splits (default is 0).
         end_split (Optional[int]): Ending index for the splits (default is None, which means all splits).
+        search_type (str): 'grid' or 'random'.
+        n_iter (int): Number of random samples (only for random search).
         log_dir (str): Directory to save tuning results logs. If None, uses default.
         log_prefix (str): Prefix for log directory and files. If None, uses 'tuning'.
         file_prefix (str): Prefix for result filenames (e.g., 'dev_4_wfv'). If None, uses no prefix.
@@ -124,6 +127,20 @@ def grid_search_tuning(param_grid: dict,
     
     keys = list(param_grid.keys())
     values = list(param_grid.values())
+
+    # Generate parameter combinations based on search_type
+    if search_type == 'random':
+        # default to 1000 iterations if not specified
+        if n_iter is None:
+            n_iter = 1000
+        param_combinations = [
+            tuple(random.choice(vals) for vals in values)
+            for _ in range(n_iter)
+        ]
+        total_combinations = len(param_combinations)
+    else:
+        param_combinations = list(itertools.product(*values))
+        total_combinations = len(param_combinations)
 
     # Initialize metrics that are better when lower
     best_scores_lower_better = {
@@ -151,11 +168,7 @@ def grid_search_tuning(param_grid: dict,
         'drops_f1': None
     }
 
-    # Generate all parameter combinations
-    param_combinations = list(itertools.product(*values))
-    total_combinations = len(param_combinations)
-    
-    def print_checkpoint(iteration, params, current_metrics, improvements):
+    def print_checkpoint(iteration, params, current_metrics, improvements, show_per_device=True):
         separator = "=" * 80
         
         log_and_print(log_file, f"\n{separator}")
@@ -172,14 +185,14 @@ def grid_search_tuning(param_grid: dict,
                 direction = "decreased" if metric in ['rmse', 'mae', 'mape'] else "increased"
                 log_and_print(log_file, f"   {metric.upper()}: {old_str} -> {new_str} ({direction})")
         
-        log_and_print(log_file, "\nCURRENT ITERATION RESULTS:")
+        log_and_print(log_file, "\nCURRENT ITERATION RESULTS (Averages across devices):")
         for metric in ['rmse', 'mae', 'mape', 'dir_accuracy', 'first_diff_corr', 'spikes_f1', 'drops_f1']:
             if metric in current_metrics:
                 is_perc = metric in ['mape', 'dir_accuracy', 'first_diff_corr', 'spikes_f1', 'drops_f1']
                 value_str = format_metric_value(current_metrics[metric], is_perc)
                 log_and_print(log_file, f"   {metric.upper()}: {value_str}")
         
-        log_and_print(log_file, "\nCURRENT BEST SCORES:")
+        log_and_print(log_file, "\nCURRENT BEST SCORES (OVERALL):")
         # Lower is better metrics
         for metric in ['rmse', 'mae', 'mape']:
             best_score = best_scores_lower_better[metric]
@@ -198,6 +211,29 @@ def grid_search_tuning(param_grid: dict,
             if best_params:
                 log_and_print(log_file, f"     Parameters: {best_params}")
         
+        # Show per-device best scores (can make this optional)
+        if show_per_device and 'per_device_best_scores_lower_better' in globals():
+            log_and_print(log_file, "\nPER-DEVICE BEST SCORES (SUMMARY):")
+            # Display a summary of best scores per device for each metric
+            for device_id in sorted(per_device_best_scores_lower_better.keys()):
+                rmse = per_device_best_scores_lower_better[device_id]['rmse']
+                mae = per_device_best_scores_lower_better[device_id]['mae']
+                mape = per_device_best_scores_lower_better[device_id]['mape']
+                rmse_str = format_metric_value(rmse, False)
+                mae_str = format_metric_value(mae, False)
+                mape_str = format_metric_value(mape, True)
+
+                dir_acc = per_device_best_scores_higher_better[device_id]['dir_accuracy']
+                first_diff_corr = per_device_best_scores_higher_better[device_id]['first_diff_corr']
+                spikes_f1 = per_device_best_scores_higher_better[device_id]['spikes_f1']
+                drops_f1 = per_device_best_scores_higher_better[device_id]['drops_f1']
+                dir_acc_str = format_metric_value(dir_acc, True)
+                first_diff_corr_str = format_metric_value(first_diff_corr, True)
+                spikes_f1_str = format_metric_value(spikes_f1, True)
+                drops_f1_str = format_metric_value(drops_f1, True)
+
+                log_and_print(log_file, f"   Device {device_id}: RMSE={rmse_str}, MAE={mae_str}, MAPE={mape_str}, Dir_Acc={dir_acc_str}, First_Diff_Corr={first_diff_corr_str}, Spikes_F1={spikes_f1_str}, Drops_F1={drops_f1_str}")
+
         progress = (iteration / total_combinations) * 100
         log_and_print(log_file, f"\nProgress: {progress:.1f}% ({iteration}/{total_combinations} combinations)")
         log_and_print(log_file, separator)
@@ -218,102 +254,161 @@ def grid_search_tuning(param_grid: dict,
                                      params, 
                                      train=train, 
                                      valid=valid, 
-                                     data_freq=data_freq, 
+                                     data_freq=data_freq,
+                                     forecast_horizon=forecast_horizon,
                                      update_freq=update_freq,
                                      start_split=start_split, 
                                      end_split=end_split)
 
-        # Initialize aggregate metrics
-        metric_sums = {
-            'rmse': 0.0, 'mae': 0.0, 'mape': 0.0,
-            'dir_accuracy': 0.0, 'first_diff_corr': 0.0,
-            'spikes_f1': 0.0, 'drops_f1': 0.0
-        }
-        metric_counts = {
-            'rmse': 0, 'mae': 0, 'mape': 0,
-            'dir_accuracy': 0, 'first_diff_corr': 0,
-            'spikes_f1': 0, 'drops_f1': 0
-        }
+        # Track metrics per device
+        per_device_metrics = {}
+        all_device_improvements = {}
+        
+        # Initialize structure to store best metrics per device
+        if iteration == 1:
+            # Create device-specific structures for best scores
+            for device_id in results.keys():
+                # For lower-better metrics
+                if 'per_device_best_scores_lower_better' not in locals():
+                    per_device_best_scores_lower_better = {}
+                    per_device_best_params_lower_better = {}
+                
+                per_device_best_scores_lower_better[device_id] = {
+                    'rmse': float('inf'),
+                    'mae': float('inf'),
+                    'mape': float('inf')
+                }
+                per_device_best_params_lower_better[device_id] = {
+                    'rmse': None,
+                    'mae': None,
+                    'mape': None
+                }
+                
+                # For higher-better metrics
+                if 'per_device_best_scores_higher_better' not in locals():
+                    per_device_best_scores_higher_better = {}
+                    per_device_best_params_higher_better = {}
+                
+                per_device_best_scores_higher_better[device_id] = {
+                    'dir_accuracy': float('-inf'),
+                    'first_diff_corr': float('-inf'),
+                    'spikes_f1': float('-inf'),
+                    'drops_f1': float('-inf')
+                }
+                per_device_best_params_higher_better[device_id] = {
+                    'dir_accuracy': None,
+                    'first_diff_corr': None,
+                    'spikes_f1': None,
+                    'drops_f1': None
+                }
 
-        for device_metrics in results.values():
+        # Process metrics for each device
+        for device_id, device_metrics in results.items():
             hourly_metrics = device_metrics[aggregation]
+            per_device_metrics[device_id] = {}
+            all_device_improvements[device_id] = {}
             
             # Basic metrics (lower is better)
             for metric in ['rmse', 'mae', 'mape']:
                 if metric in hourly_metrics:
                     mean_val = hourly_metrics[metric]['mean']
                     if np.isfinite(mean_val):  # skip NaNs/Infs
-                        metric_sums[metric] += mean_val
-                        metric_counts[metric] += 1
+                        per_device_metrics[device_id][metric] = mean_val
+                        
+                        # Check for improvement for this device
+                        if mean_val < per_device_best_scores_lower_better[device_id][metric]:
+                            all_device_improvements[device_id][metric] = (
+                                per_device_best_scores_lower_better[device_id][metric], 
+                                mean_val
+                            )
+                            per_device_best_scores_lower_better[device_id][metric] = float(mean_val)
+                            per_device_best_params_lower_better[device_id][metric] = params.copy()
             
             # Higher is better metrics
-            if 'dir_accuracy' in hourly_metrics:
-                mean_val = hourly_metrics['dir_accuracy']['mean']
-                if np.isfinite(mean_val):
-                    metric_sums['dir_accuracy'] += mean_val
-                    metric_counts['dir_accuracy'] += 1
-            
-            if 'first_diff_corr' in hourly_metrics:
-                mean_val = hourly_metrics['first_diff_corr']['mean']
-                if np.isfinite(mean_val):
-                    metric_sums['first_diff_corr'] += mean_val
-                    metric_counts['first_diff_corr'] += 1
-            
-            # Spikes F1
-            if 'spikes_immediate.f1' in hourly_metrics:
-                mean_val = hourly_metrics['spikes_immediate.f1']['mean']
-                if np.isfinite(mean_val):
-                    metric_sums['spikes_f1'] += mean_val
-                    metric_counts['spikes_f1'] += 1
-                    
-            # Drops F1
-            if 'drops_immediate.f1' in hourly_metrics:
-                mean_val = hourly_metrics['drops_immediate.f1']['mean']
-                if np.isfinite(mean_val):
-                    metric_sums['drops_f1'] += mean_val
-                    metric_counts['drops_f1'] += 1
-
-        # Compute averages for all devices
-        avg_metrics_lower_better = {
-            metric: (metric_sums[metric] / metric_counts[metric])
-            if metric_counts[metric] > 0 else float('inf')
-            for metric in ['rmse', 'mae', 'mape']
-        }
+            for metric, hourly_key in [
+                ('dir_accuracy', 'dir_accuracy'), 
+                ('first_diff_corr', 'first_diff_corr'),
+                ('spikes_f1', 'spikes_immediate.f1'), 
+                ('drops_f1', 'drops_immediate.f1')
+            ]:
+                if hourly_key in hourly_metrics:
+                    mean_val = hourly_metrics[hourly_key]['mean']
+                    if np.isfinite(mean_val):
+                        per_device_metrics[device_id][metric] = mean_val
+                        
+                        # Check for improvement for this device
+                        if mean_val > per_device_best_scores_higher_better[device_id][metric]:
+                            all_device_improvements[device_id][metric] = (
+                                per_device_best_scores_higher_better[device_id][metric], 
+                                mean_val
+                            )
+                            per_device_best_scores_higher_better[device_id][metric] = float(mean_val)
+                            per_device_best_params_higher_better[device_id][metric] = params.copy()
         
-        avg_metrics_higher_better = {
-            metric: (metric_sums[metric] / metric_counts[metric])
-            if metric_counts[metric] > 0 else float('-inf')
-            for metric in ['dir_accuracy', 'first_diff_corr', 'spikes_f1', 'drops_f1']
-        }
+        # For display purposes, compute aggregates across devices
+        metric_names = ['rmse', 'mae', 'mape', 'dir_accuracy', 'first_diff_corr', 'spikes_f1', 'drops_f1']
+        current_metrics = {metric: 0.0 for metric in metric_names}
+        metric_counts = {metric: 0 for metric in metric_names}
         
-        # Combine current metrics for display
-        current_metrics = {**avg_metrics_lower_better, **avg_metrics_higher_better}
+        for device_metrics in per_device_metrics.values():
+            for metric, value in device_metrics.items():
+                if np.isfinite(value):
+                    current_metrics[metric] += value
+                    metric_counts[metric] += 1
         
-        # Track improvements
+        # Average for display
+        for metric in metric_names:
+            if metric_counts[metric] > 0:
+                current_metrics[metric] = current_metrics[metric] / metric_counts[metric]
+            else:
+                current_metrics[metric] = float('inf') if metric in ['rmse', 'mae', 'mape'] else float('-inf')
+        
+        # Track improvements for display purposes
         improvements = {}
         
-        # Update best scores for lower-better metrics
-        for metric in ['rmse', 'mae', 'mape']:
-            if avg_metrics_lower_better[metric] < best_scores_lower_better[metric]:
-                improvements[metric] = (best_scores_lower_better[metric], avg_metrics_lower_better[metric])
-                best_scores_lower_better[metric] = float(avg_metrics_lower_better[metric])
-                best_params_lower_better[metric] = params.copy()
+        # Consolidate device improvements to report overall best metrics
+        for device_id, device_improvements in all_device_improvements.items():
+            for metric, (old_val, new_val) in device_improvements.items():
+                # Only track one improvement per metric for display simplicity
+                if metric not in improvements:
+                    improvements[metric] = (old_val, new_val)
         
-        # Update best scores for higher-better metrics
+        # Update best scores for lower-better metrics globally (for backward compatibility)
+        for metric in ['rmse', 'mae', 'mape']:
+            for device_id, device_metrics in per_device_metrics.items():
+                if metric in device_metrics:
+                    if device_metrics[metric] < best_scores_lower_better[metric]:
+                        best_scores_lower_better[metric] = float(device_metrics[metric])
+                        best_params_lower_better[metric] = params.copy()
+        
+        # Update best scores for higher-better metrics globally (for backward compatibility)
         for metric in ['dir_accuracy', 'first_diff_corr', 'spikes_f1', 'drops_f1']:
-            if avg_metrics_higher_better[metric] > best_scores_higher_better[metric]:
-                improvements[metric] = (best_scores_higher_better[metric], avg_metrics_higher_better[metric])
-                best_scores_higher_better[metric] = float(avg_metrics_higher_better[metric])
-                best_params_higher_better[metric] = params.copy()
+            for device_id, device_metrics in per_device_metrics.items():
+                if metric in device_metrics:
+                    if device_metrics[metric] > best_scores_higher_better[metric]:
+                        best_scores_higher_better[metric] = float(device_metrics[metric])
+                        best_params_higher_better[metric] = params.copy()
         
         # Print checkpoint every iteration
-        print_checkpoint(iteration, params, current_metrics, improvements)
+        print_checkpoint(iteration, params, current_metrics, improvements, show_per_device=(iteration % 5 == 0))
         
         # Save intermediate results periodically (every 10% or every 10 iterations)
         if save_intermediate and (iteration % max(1, total_combinations // 10) == 0 or iteration % 10 == 0):
+            # Save overall best metrics
             best_params_combined = {**best_params_lower_better, **best_params_higher_better}
             best_scores_combined = {**best_scores_lower_better, **best_scores_higher_better}
-            save_checkpoint_results(log_dir, f"{model_name}_intermediate", best_params_combined, best_scores_combined, file_prefix)
+            save_checkpoint_results(log_dir, f"{model_name}_intermediate", 
+                                  best_params_combined, best_scores_combined, file_prefix)
+            
+            # Save per-device results
+            per_device_results = {
+                'per_device_best_params_lower_better': per_device_best_params_lower_better,
+                'per_device_best_scores_lower_better': per_device_best_scores_lower_better,
+                'per_device_best_params_higher_better': per_device_best_params_higher_better,
+                'per_device_best_scores_higher_better': per_device_best_scores_higher_better
+            }
+            save_checkpoint_results(log_dir, f"{model_name}_intermediate_per_device", 
+                                  per_device_results, {}, file_prefix)
 
     # Final summary
     log_and_print(log_file, "\n" + "=" * 80)
@@ -340,8 +435,57 @@ def grid_search_tuning(param_grid: dict,
     log_and_print(log_file, "=" * 80)
     log_and_print(log_file, f"Grid Search Completed: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
+    # Log per-device results
+    log_and_print(log_file, "\nPER-DEVICE BEST RESULTS:")
+    log_and_print(log_file, "=" * 80)
+    
+    for device_id in sorted(per_device_best_scores_lower_better.keys()):
+        log_and_print(log_file, f"\nDevice: {device_id}")
+        log_and_print(log_file, "-" * 40)
+        
+        # Lower is better metrics
+        for metric in ['rmse', 'mae', 'mape']:
+            score = per_device_best_scores_lower_better[device_id][metric]
+            params = per_device_best_params_lower_better[device_id][metric]
+            score_str = format_metric_value(score, metric == 'mape')
+            log_and_print(log_file, f"BEST {metric.upper()}: {score_str}")
+            if params:
+                log_and_print(log_file, f"   Best Parameters: {params}")
+        
+        # Higher is better metrics
+        for metric in ['dir_accuracy', 'first_diff_corr', 'spikes_f1', 'drops_f1']:
+            score = per_device_best_scores_higher_better[device_id][metric]
+            params = per_device_best_params_higher_better[device_id][metric]
+            score_str = format_metric_value(score, True)
+            log_and_print(log_file, f"BEST {metric.upper()}: {score_str}")
+            if params:
+                log_and_print(log_file, f"   Best Parameters: {params}")
+    
     # Save final results
     if save_intermediate:
+        # Save both overall and per-device results
         save_checkpoint_results(log_dir, model_name, best_params, best_scores, file_prefix)
+        
+        # Save per-device results separately
+        per_device_results = {
+            'per_device_best_params_lower_better': per_device_best_params_lower_better,
+            'per_device_best_scores_lower_better': per_device_best_scores_lower_better,
+            'per_device_best_params_higher_better': per_device_best_params_higher_better,
+            'per_device_best_scores_higher_better': per_device_best_scores_higher_better
+        }
+        save_checkpoint_results(log_dir, f"{model_name}_per_device", 
+                              per_device_results, {}, file_prefix)
 
-    return best_params, best_scores
+    # Return both overall and per-device results
+    return {
+        'overall': {
+            'best_params': best_params,
+            'best_scores': best_scores
+        },
+        'per_device': {
+            'best_params_lower_better': per_device_best_params_lower_better,
+            'best_scores_lower_better': per_device_best_scores_lower_better, 
+            'best_params_higher_better': per_device_best_params_higher_better,
+            'best_scores_higher_better': per_device_best_scores_higher_better
+        }
+    }

@@ -71,8 +71,8 @@ def save_checkpoint_results(results_dir: str, model_name: str, best_params: Dict
     Args:
         results_dir: Directory to save results
         model_name: Name of the model
-        best_params: Best parameters found
-        best_scores: Best scores achieved
+        best_params: Best parameters found (can be a nested dictionary for per-device results)
+        best_scores: Best scores achieved (can be a nested dictionary for per-device results)
         file_prefix: Optional prefix for the filename (e.g., 'dev_4_wfv')
     """
     os.makedirs(results_dir, exist_ok=True)
@@ -83,8 +83,16 @@ def save_checkpoint_results(results_dir: str, model_name: str, best_params: Dict
         filename = f"{model_name}_results.pkl"
     
     checkpoint_file = os.path.join(results_dir, filename)
-    with open(checkpoint_file, 'wb') as f:
-        pickle.dump({'best_params': best_params, 'best_scores': best_scores}, f)
+    
+    # Check if we're saving per-device results (has a different structure)
+    if 'per_device_best_params_lower_better' in best_params or 'per_device_best_scores_lower_better' in best_scores:
+        # This is a per-device results format
+        with open(checkpoint_file, 'wb') as f:
+            pickle.dump(best_params, f)  # We're passing the whole dictionary structure
+    else:
+        # Standard format
+        with open(checkpoint_file, 'wb') as f:
+            pickle.dump({'best_params': best_params, 'best_scores': best_scores}, f)
     
     print(f"Results saved to {checkpoint_file}")
 
