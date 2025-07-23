@@ -422,6 +422,10 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
     grace_period
         [*Tree parameter*] Number of instances a leaf should observe between
         split attempts.
+    grace_period_depth
+        [*Tree parameter*] The depth of the grace period. If set to `-1`, the grace period
+        will be applied to all leaves. If set to `1`, the grace period will be applied
+        only to the root node.
     max_depth
         [*Tree parameter*] The maximum depth a tree can reach. If `None`, the
         tree will grow until the system recursion limit.
@@ -462,6 +466,14 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
     min_samples_split
         [*Tree parameter*] The minimum number of samples every branch resulting from a split
         candidate must have to be considered valid.
+    bin_type
+        [*Tree parameter*] The binning strategy used for numeric features.
+        - 'mean' - Bins are created based on the mean of the feature values.
+        - 'adaptive' - Bins are created dynamically based on the data distribution. Defaults to 'adaptive'.z
+    max_bins
+        [*Tree parameter*] The maximum number of bins to use for numeric features. Defaults to 32.
+    inherit_bins
+        [*Tree parameter*] If True, inherit the binning strategy from the parent node. Defaults to False.
     binary_split
         [*Tree parameter*] If True, only allow binary splits.
     max_size
