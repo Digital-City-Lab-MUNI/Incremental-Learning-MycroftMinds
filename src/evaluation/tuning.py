@@ -177,7 +177,11 @@ def hyperparameter_search_tuning(param_grid: dict,
         'drops_f1': None
     }
 
-    def print_checkpoint(iteration, params, current_metrics, improvements, show_per_device=True):
+    def print_checkpoint(iteration, params, current_metrics, improvements, show_per_device=True, 
+                         per_device_best_scores_lower_better=None,
+                         per_device_best_params_lower_better=None,
+                         per_device_best_scores_higher_better=None,
+                         per_device_best_params_higher_better=None):
         separator = "=" * 80
         
         log_and_print(log_file, f"\n{separator}")
@@ -221,27 +225,44 @@ def hyperparameter_search_tuning(param_grid: dict,
                 log_and_print(log_file, f"     Parameters: {best_params}")
         
         # Show per-device best scores (can make this optional)
-        if show_per_device and 'per_device_best_scores_lower_better' in globals():
+        if show_per_device:
             log_and_print(log_file, "\nPER-DEVICE BEST SCORES (SUMMARY):")
             # Display a summary of best scores per device for each metric
             for device_id in sorted(per_device_best_scores_lower_better.keys()):
+                # Lower is better metrics
                 rmse = per_device_best_scores_lower_better[device_id]['rmse']
+                rmse_params = per_device_best_params_lower_better[device_id]['rmse']
                 mae = per_device_best_scores_lower_better[device_id]['mae']
+                mae_params = per_device_best_params_lower_better[device_id]['mae']
                 mape = per_device_best_scores_lower_better[device_id]['mape']
+                mape_params = per_device_best_params_lower_better[device_id]['mape']
                 rmse_str = format_metric_value(rmse, False)
                 mae_str = format_metric_value(mae, False)
                 mape_str = format_metric_value(mape, True)
-
+                
+                # Higher is better metrics
                 dir_acc = per_device_best_scores_higher_better[device_id]['dir_accuracy']
+                dir_acc_params = per_device_best_params_higher_better[device_id]['dir_accuracy']
                 first_diff_corr = per_device_best_scores_higher_better[device_id]['first_diff_corr']
+                first_diff_corr_params = per_device_best_params_higher_better[device_id]['first_diff_corr']
                 spikes_f1 = per_device_best_scores_higher_better[device_id]['spikes_f1']
+                spikes_f1_params = per_device_best_params_higher_better[device_id]['spikes_f1']
                 drops_f1 = per_device_best_scores_higher_better[device_id]['drops_f1']
+                drops_f1_params = per_device_best_params_higher_better[device_id]['drops_f1']
                 dir_acc_str = format_metric_value(dir_acc, True)
                 first_diff_corr_str = format_metric_value(first_diff_corr, True)
                 spikes_f1_str = format_metric_value(spikes_f1, True)
                 drops_f1_str = format_metric_value(drops_f1, True)
 
-                log_and_print(log_file, f"   Device {device_id}: RMSE={rmse_str}, MAE={mae_str}, MAPE={mape_str}, Dir_Acc={dir_acc_str}, First_Diff_Corr={first_diff_corr_str}, Spikes_F1={spikes_f1_str}, Drops_F1={drops_f1_str}")
+                # Log per-device best scores
+                log_and_print(log_file, f"   Device {device_id}: ")
+                log_and_print(log_file, f"      RMSE={rmse_str}, {rmse_params}")
+                log_and_print(log_file, f"      MAE={mae_str}, {mae_params}")
+                log_and_print(log_file, f"      MAPE={mape_str}, {mape_params}")
+                log_and_print(log_file, f"      Dir_Acc={dir_acc_str}, {dir_acc_params}")
+                log_and_print(log_file, f"      First_Diff_Corr={first_diff_corr_str}, {first_diff_corr_params}")
+                log_and_print(log_file, f"      Spikes_F1={spikes_f1_str}, {spikes_f1_params}")
+                log_and_print(log_file, f"      Drops_F1={drops_f1_str}, {drops_f1_params}")
 
         progress = (iteration / total_combinations) * 100
         log_and_print(log_file, f"\nProgress: {progress:.1f}% ({iteration}/{total_combinations} combinations)")
@@ -401,8 +422,12 @@ def hyperparameter_search_tuning(param_grid: dict,
                         best_params_higher_better[metric] = params.copy()
         
         # Print checkpoint every iteration
-        print_checkpoint(iteration, params, current_metrics, improvements, show_per_device=(iteration % 5 == 0))
-        
+        print_checkpoint(iteration, params, current_metrics, improvements, show_per_device=(iteration % 5 == 0),
+                         per_device_best_scores_lower_better=per_device_best_scores_lower_better,
+                         per_device_best_params_lower_better=per_device_best_params_lower_better,
+                         per_device_best_scores_higher_better=per_device_best_scores_higher_better,
+                         per_device_best_params_higher_better=per_device_best_params_higher_better)
+
         # Save intermediate results periodically (every 10% or every 10 iterations)
         if save_intermediate and (iteration % max(1, total_combinations // 10) == 0 or iteration % 10 == 0):
             # Save overall best metrics
