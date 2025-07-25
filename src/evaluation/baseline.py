@@ -23,49 +23,98 @@ class PreviousValueRegressor:
 
 class SeasonalMeanRegressor(BaseEstimator, RegressorMixin):
     """
-    sklearn-style regressor that predicts the mean value based on seasonality.
+    sklearn-style regressor that predicts values based on time-of-week patterns.
+    
+    This regressor calculates the mean value for each hour of each day of the week, 
+    creating a 168-point (24 hours x 7 days) seasonality table. Any timestamp will 
+    be mapped to its corresponding hour and day of week for prediction.
     """
-    def __init__(self, freq_mins=60):
-        # freq_mins: number of minutes between observations (e.g. 60 for hourly, 15 for quarter-hour)
-        self.freq_mins = freq_mins
-        self.periods_per_day = int(24*60 / self.freq_mins)
-        self.periods_per_week = self.periods_per_day * 7
-        self.season_stats = {}   # period_id -> [sum, count]
-        self.sum_total = 0.0
-        self.count_total = 0
-        # to be set by fit()
-        self.period_means = None
-        self.default_mean = None
-
-    def _get_period_id(self, dt):
-        """Compute a unique period ID from a datetime or numpy datetime64."""
-        dt = pd.to_datetime(dt)
-        weekday = dt.weekday()      # 0 = Monday
-        mins = dt.hour*60 + dt.minute
-        slot = mins // self.freq_mins
-        return weekday * self.periods_per_day + slot
-
+    def __init__(self):
+        """Initialize the seasonal mean regressor with a weekly seasonality table."""
+        self.weekly_means = None    # (day_of_week, hour) -> mean value
+        self.hour_means = None      # Hour of day (0-23) -> mean value (fallback)
+        self.global_mean = None     # Fallback value for any missing slots
+        
     def fit(self, X, y):
-        """Vectorized fit using pandas groupby."""
-        df = pd.DataFrame({'timestamp': X[:, 0], 'y': y})  # Assuming X[:, 0] contains timestamps
-        df['dt'] = pd.to_datetime(df['timestamp'])
-        df['period_id'] = (
-            df['dt'].dt.weekday * self.periods_per_day
-            + ((df['dt'].dt.hour * 60 + df['dt'].dt.minute) // self.freq_mins)
-        )
-        self.period_means = df.groupby('period_id')['y'].mean()
-        self.default_mean = df['y'].mean()
+        """
+        Fit the model by calculating mean values for each time slot.
+        
+        Creates a 168-point seasonality table (24 hours x 7 days).
+        """
+        df = pd.DataFrame({'hour': X[:, 0],  # X[:, 0] is the hour
+                           'day_of_week': X[:, 1],  # X[:, 1] is the day of week
+                           'y': y})
+
+        # Calculate means for different seasonality patterns
+        self.hour_means = df.groupby('hour')['y'].mean()
+        self.weekly_means = df.groupby(['day_of_week', 'hour'])['y'].mean()
+        self.global_mean = df['y'].mean()
+        
         return self
 
     def predict(self, X):
-        """Vectorized predict using stored seasonal means."""
-        df = pd.DataFrame({'timestamp': X[:, 0]})
-        df['dt'] = pd.to_datetime(df['timestamp'])
-        df['period_id'] = (
-            df['dt'].dt.weekday * self.periods_per_day
-            + ((df['dt'].dt.hour * 60 + df['dt'].dt.minute) // self.freq_mins)
-        )
-        return self.period_means.reindex(df['period_id']).fillna(self.default_mean).values
+        """
+        Predict based on weekly seasonality patterns.
+        
+        Returns the mean value corresponding to the specific hour of the 
+        specific day of week for each timestamp.
+        """
+        df = pd.DataFrame({'hour': X[:, 0],  # X[:, 0] is the hour
+                           'day_of_week': X[:, 1]})  # X[:, 1] is the day of week
+
+        # Use full weekly patterns (168 values)
+        results = []
+        for _, row in df.iterrows():
+            day = row['day_of_week']
+            hour = row['hour']
+            try:
+                # Try to get the specific day+hour mean
+                val = self.weekly_means.loc[(day, hour)]
+            except KeyError:
+                print(f"Warning: No data for day {day}, hour {hour}. Using fallback...")
+                # If not found, fall back to hour-only mean
+                try:
+                    val = self.hour_means.loc[hour]
+                except KeyError:
+                    # If still not found, use global mean
+                    val = self.global_mean
+            results.append(val)
+        return np.array(results)
+
+
+class ExponentialMovingAverageRegressor:
+    """
+    Incremental learning regressor that uses an exponential moving average to make predictions.
+    Uses River-style interface with learn_one and predict_one methods.
+    """
+    def __init__(self, alpha=0.3):
+        """
+        Initialize the exponential moving average regressor.
+        
+        Parameters:
+        -----------
+        alpha : float, default=0.3
+            Smoothing factor between 0 and 1.
+            - Closer to 1: more weight on recent observations (adapts quickly)
+            - Closer to 0: more weight on historical observations (more stable)
+        """
+        self.alpha = alpha
+        self.current_average = None
+    
+    def learn_one(self, x, y):
+        """River compatibility - learn from one sample"""
+        if self.current_average is None:
+            self.current_average = y
+        else:
+            self.current_average = self.alpha * y + (1 - self.alpha) * self.current_average
+        return self
+    
+    def predict_one(self, x):
+        """River compatibility - predict for one sample"""
+        if self.current_average is None:
+            return 0.0
+        return self.current_average
+
 
 if __name__ == "__main__":
     print("Testing SeasonalMeanRegressor...")
