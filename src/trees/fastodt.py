@@ -77,6 +77,7 @@ class FastODT(BaseTree):
         self.grace_period = grace_period  # Number of samples before checking for a split
         self.split_confidence = split_confidence  # Confidence level for splitting
         self.depth = depth
+        self.current_depth = 0
         self.splits_values = [None] * depth
         self.splits_features = [None] * depth
         self.depths_containers = []
@@ -94,10 +95,12 @@ class FastODT(BaseTree):
 
         if isinstance(split_criterion, str):
             split_criterion = get_split_criterion(split_criterion)
+
         # create the root node
-        self.depths_containers.append([])
-        self.depths_containers[0].append(
-            NodeHoeffdingBound(
+        for d in range(self.depth):
+            self.depths_containers.append([None] * (2**(d+1)))
+
+        self.depths_containers[0][0] = NodeHoeffdingBound(
                 split_confidence=self.split_confidence,
                 tie_threshold=self.tie_threshold,
                 max_feature=self.max_feature,
@@ -108,7 +111,6 @@ class FastODT(BaseTree):
                 inherit_bins=inherit_bins,
                 split_criterion=split_criterion
             )
-        )
 
     def measure_error(self, y_baseline, y_predicted):
         self.error_rates.pop(0)
@@ -123,7 +125,12 @@ class FastODT(BaseTree):
         if X.shape[0] != len(y):
             raise ValueError(f"X and y must have the same number of samples. X: {X.shape}, y: {y.shape}")
 
-        self._update_tree_v(None, X, y, depth=0)
+        if verbose:
+            for i in tqdm.tqdm(range(len(X))):
+                self._update_tree_v(None, X[i], y[i], depth=0)
+        else:
+            for i in range(len(X)):
+                self._update_tree_v(None, X[i], y[i], depth=0)
 
     def learn_one(self, x, y: float):
         """
@@ -155,40 +162,39 @@ class FastODT(BaseTree):
 
     def _update_tree_v(self, node, x: np.ndarray, y: float, depth=0):
         # Check if we reached the maximum depth
-        if depth >= self.depth:
+        active_splits_features = self.splits_features[:self.current_depth]
+        active_splits_values = self.splits_values[:self.current_depth]
+        
+        if len(active_splits_features) >= self.depth - 1:
             return
 
-        active_splits_features = list(filter(None.__ne__, self.splits_features))
-        active_splits_values = list(filter(None.__ne__, self.splits_values))
+        x_split_values = x[active_splits_features]
+        decision_vector = x_split_values > active_splits_values
 
-        x_split_values = x[:, active_splits_features]
-        decision_array = x_split_values[:] > active_splits_values
-        print(decision_array)
+        if len(decision_vector) == 0:
+            node_index = 0
+            node_depth = 0
+        else:
+            # Convert to integer
+            node_index = sum((1 << i) for i, decision in enumerate(reversed(decision_vector)) if decision)
+            node_depth = len(active_splits_features)
 
-        for decision_vector in decision_array:
-            if len(decision_vector) == 0:
-                node_index = 0
-                node_depth = 0
-            else:
-                # Convert to integer
-                node_index = int(''.join(str(int(decision)) for decision in decision_vector), 2)
-                node_depth = len(active_splits_features)
+        node = self.depths_containers[node_depth][node_index]
+        if node is None:
+            node = self.__find_node(node_depth, node_index)
 
-            node = self.depths_containers[node_depth][node_index]
-            if node is None:
-                node = self.__find_node(node_depth, node_index)
+        node.update_stats(x, y)
+        best_split, _ = node.find_best_split() # here happens hf bound calculation
+        if best_split[0] is not None:
+            depth = len(decision_vector)
 
-            node.update_stats(x, y)
-    
-            best_split, _ = node.find_best_split() # here happens hf bound calculation
-            if best_split[0] is not None:
-                self.splits_features[depth] = best_split
-                self.depths_containers[depth] = []
-                for _ in range(2**(depth)):
-                    self.depths_containers[depth].append(None)
-                left, right = node.produce_split(best_split, self.split_confidence)
-                self.depths_containers[depth][left.index] = left
-                self.depths_containers[depth][right.index] = right
+            self.splits_features[depth] = best_split[0]
+            self.splits_values[depth] = best_split[1]
+
+            left, right = node.produce_split(best_split, self.split_confidence)
+            self.depths_containers[depth+1][left.index] = left
+            self.depths_containers[depth+1][right.index] = right
+            self.current_depth += 1
 
     def __find_node(self, depth, index):
         node = self.depths_containers[depth][index]
@@ -196,9 +202,9 @@ class FastODT(BaseTree):
             parent_node = None
             # check if we are in left or right node
             if index % 2 == 0:
-                parent_node = self.__find_node(depth - 1, index/2)
+                parent_node = self.__find_node(depth - 1, int(index/2))
             else:
-                parent_node = self.__find_node(depth - 1, index/2 - 1)
+                parent_node = self.__find_node(depth - 1, int(index/2 - 1))
             node = parent_node
         return node
 
@@ -211,7 +217,7 @@ class FastODT(BaseTree):
             node.update_stats(x, y)
             if node.reached_grace_period() or self.grace_period_depth < depth:  # check if grace period is over
                 self._attempt_split(node, depth)
-        
+
         # traverse the tree to reach the correct leaf
         elif node.feature is not None:
             if x[node.feature] <= node.threshold:
@@ -238,7 +244,7 @@ if __name__ == "__main__":
     Y = np.load('./smoke_data/y.npy', allow_pickle=True)
     print(X.shape, Y.shape)
     X = X[:,2:]
-    print(type(X), type(Y), X[0])
+    # print(type(X), type(Y), X[0])
 
     # Test if model will be partially filled after receiving only one sample
     start = time.time()
@@ -247,8 +253,23 @@ if __name__ == "__main__":
         grace_period=10,
         split_confidence=0.0001
     )
+    start = time.time()
     model_hf.partial_fit(X[:,:], Y, verbose=True)
     print(f"It took: {time.time() - start}s")
+
+    non_none_indices_per_row = [
+        [j for j, cell in enumerate(row) if cell is not None]
+        for row in model_hf.depths_containers
+    ]
+
+    to_print_indecies = []
+    for n, depth_list in enumerate(model_hf.depths_containers):
+        to_print_indecies.append([])
+        for obj_index, obj in enumerate(depth_list):
+            if obj is not None:
+                to_print_indecies[n].append(obj_index)
+
+    print(f"model: {to_print_indecies}")
     # only one depth split at most should be created
     # assert(False == model_hf.is_filled())
 
