@@ -81,6 +81,7 @@ class FastODT(BaseTree):
         self.splits_values = [None] * depth
         self.splits_features = [None] * depth
         self.depths_containers = []
+        self.mature_tree = False
 
         self.error_rates = np.zeros(20).tolist() 
 
@@ -158,14 +159,32 @@ class FastODT(BaseTree):
             x = np.asarray(x)
         if x.ndim == 2 and x.shape[0] == 1:
             x = x[0]
-        return self.predict(x)
+        return self.predict_v(x)
+
+    def predict(self, X: np.ndarray):
+        return_vector = []
+        for x in X:
+            # Check if we reached the maximum depth
+            active_splits_features = self.splits_features[:self.current_depth]
+            active_splits_values = self.splits_values[:self.current_depth]
+            x_split_values = x[active_splits_features]
+            decision_vector = x_split_values > active_splits_values
+
+            node_index = sum((1 << i) for i, decision in enumerate(reversed(decision_vector)) if decision)
+            node_depth = len(active_splits_features)
+
+            node = self.depths_containers[node_depth][node_index]
+            if node is None:
+                node = self.__find_node(node_depth, node_index)
+            return_vector.append(node.value)
+        return return_vector
 
     def _update_tree_v(self, node, x: np.ndarray, y: float, depth=0):
         # Check if we reached the maximum depth
         active_splits_features = self.splits_features[:self.current_depth]
         active_splits_values = self.splits_values[:self.current_depth]
-        
-        if len(active_splits_features) >= self.depth - 1:
+
+        if len(active_splits_features) >= self.depth or self.mature_tree:
             return
 
         x_split_values = x[active_splits_features]
@@ -179,9 +198,11 @@ class FastODT(BaseTree):
             node_index = sum((1 << i) for i, decision in enumerate(reversed(decision_vector)) if decision)
             node_depth = len(active_splits_features)
 
+
         node = self.depths_containers[node_depth][node_index]
         if node is None:
             node = self.__find_node(node_depth, node_index)
+        # print(f"node_depth: {node_depth}, node_index: {node_index}, node.index {node.index}")
 
         node.update_stats(x, y)
         best_split, _ = node.find_best_split() # here happens hf bound calculation
@@ -191,21 +212,29 @@ class FastODT(BaseTree):
             self.splits_features[depth] = best_split[0]
             self.splits_values[depth] = best_split[1]
 
-            left, right = node.produce_split(best_split, self.split_confidence)
-            self.depths_containers[depth+1][left.index] = left
-            self.depths_containers[depth+1][right.index] = right
-            self.current_depth += 1
+            if depth+1 < self.depth:
+                left, right = node.produce_split(best_split, self.split_confidence)
+                self.depths_containers[depth+1][left.index] = left
+                self.depths_containers[depth+1][right.index] = right
+                self.current_depth += 1
+            else:
+                self.mature_tree = True
 
     def __find_node(self, depth, index):
         node = self.depths_containers[depth][index]
+        # print(f"looking for index: {index}")
         if node is None:
             parent_node = None
             # check if we are in left or right node
+            parent_depth = depth - 1
             if index % 2 == 0:
-                parent_node = self.__find_node(depth - 1, int(index/2))
+                parent_node_index = int(index/2)
             else:
-                parent_node = self.__find_node(depth - 1, int(index/2 - 1))
-            node = parent_node
+                parent_node_index = int(index/2 - 1)
+            node = self.__find_node(parent_depth,parent_node_index)
+            node.index = index
+            self.depths_containers[depth][index] = node
+            # this is cheap trick and needs to check if we initialize nodes correclty in this case
         return node
 
     def _update_tree(self, node, x: np.ndarray, y: float, depth=0):
@@ -257,19 +286,10 @@ if __name__ == "__main__":
     model_hf.partial_fit(X[:,:], Y, verbose=True)
     print(f"It took: {time.time() - start}s")
 
-    non_none_indices_per_row = [
-        [j for j, cell in enumerate(row) if cell is not None]
-        for row in model_hf.depths_containers
-    ]
+    Y_pred_hf = model_hf.predict(X)
+    mae_hf = mean_absolute_error(Y, Y_pred_hf)
+    print(f"MAE: {mae_hf:.4f}")
 
-    to_print_indecies = []
-    for n, depth_list in enumerate(model_hf.depths_containers):
-        to_print_indecies.append([])
-        for obj_index, obj in enumerate(depth_list):
-            if obj is not None:
-                to_print_indecies[n].append(obj_index)
-
-    print(f"model: {to_print_indecies}")
     # only one depth split at most should be created
     # assert(False == model_hf.is_filled())
 
@@ -293,7 +313,7 @@ if __name__ == "__main__":
 
     # for d in depths:
     #     split_confidence_cb = 0.0001
-    #     split_confidence_hf = 0.0001
+    #     split_confidence_hf = 0.0001Y_pred_hf = model_hf.predict(X)
     #     grace_period = 1
     #     grace_period_depth = 1
 
