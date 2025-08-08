@@ -1,8 +1,7 @@
 from sklearn.metrics import mean_absolute_error
-from matplotlib import pyplot as plt 
-from src.trees.tree import BaseTree, Node
+from matplotlib import pyplot as plt
+from src.trees.tree import BaseTree
 from src.trees.node_hf import NodeHoeffdingBound
-from src.trees.node_cb import NodeConfidenceBound
 from src.utils.utils import ensure_2d_array
 from src.trees.split_criteria import get_split_criterion
 from src.trees.histogram import get_histogram_type
@@ -12,19 +11,22 @@ import tqdm
 import time
 import os
 
+
 class FastODT(BaseTree):
-    def __init__(self, 
-                 depth=25, 
-                 grace_period=10, 
-                 split_confidence=0.01, 
-                 tie_threshold=0.05,
-                 max_feature=1.0,
-                 eagerness=0.0, 
-                 grace_period_depth=-1, 
-                 bin_type='adaptive', 
-                 max_bins=16,
-                 inherit_bins=False, 
-                 split_criterion='vr_rel'):
+    def __init__(
+        self,
+        depth=25,
+        grace_period=10,
+        split_confidence=0.01,
+        tie_threshold=0.05,
+        max_feature=1.0,
+        eagerness=0.0,
+        grace_period_depth=-1,
+        bin_type="adaptive",
+        max_bins=16,
+        inherit_bins=False,
+        split_criterion="vr_rel",
+    ):
         """
         Initialize the FastODT tree model with parameters.
 
@@ -46,8 +48,8 @@ class FastODT(BaseTree):
             Parameter to control the eagerness to split for Hoeffding Bound nodes.
 
         grace_period_depth : int, optional (default=-1)
-            Grace period value to control to how deep nodes grace period should still apply. 
-            If set to 1, only first node will use grace_period, 
+            Grace period value to control to how deep nodes grace period should still apply.
+            If set to 1, only first node will use grace_period,
             If set to 100, first 100 nodes will use grace period,
             If set to -1, this feature is disabled (set to over 999999999999999 internally).
 
@@ -75,12 +77,14 @@ class FastODT(BaseTree):
         ------
         None
         """
-        self.grace_period = grace_period  # Number of samples before checking for a split
+        self.grace_period = (
+            grace_period  # Number of samples before checking for a split
+        )
         self.split_confidence = split_confidence  # Confidence level for splitting
         self.depth = depth
         self.splits = [None] * depth
 
-        self.error_rates = np.zeros(20).tolist() 
+        self.error_rates = np.zeros(20).tolist()
 
         self.max_feature = max_feature
         self.grace_period_depth = grace_period_depth
@@ -103,7 +107,7 @@ class FastODT(BaseTree):
             bin_type=bin_type,
             max_bins=max_bins,
             inherit_bins=inherit_bins,
-            split_criterion=split_criterion
+            split_criterion=split_criterion,
         )
 
     def measure_error(self, y_baseline, y_predicted):
@@ -112,12 +116,14 @@ class FastODT(BaseTree):
         return np.mean(self.error_rates)
 
     def partial_fit(self, X: np.ndarray, y: np.ndarray, verbose: bool = False):
-        X = ensure_2d_array(X) # 10.1 -> [10.1] -> (1,1)
+        X = ensure_2d_array(X)  # 10.1 -> [10.1] -> (1,1)
         y = np.asarray(y)
         if y.ndim == 0:
             y = np.array([y])
         if X.shape[0] != len(y):
-            raise ValueError(f"X and y must have the same number of samples. X: {X.shape}, y: {y.shape}")
+            raise ValueError(
+                f"X and y must have the same number of samples. X: {X.shape}, y: {y.shape}"
+            )
 
         if verbose:
             for i in tqdm.tqdm(range(len(X))):
@@ -158,13 +164,15 @@ class FastODT(BaseTree):
         # Check if we reached the maximum depth
         if depth >= self.depth:
             return
-        
+
         # if node is a leaf, update its stats and check for split
         if node.left is None and node.right is None:
             node.update_stats(x, y)
-            if node.reached_grace_period() or self.grace_period_depth < depth:  # check if grace period is over
+            if (
+                node.reached_grace_period() or self.grace_period_depth < depth
+            ):  # check if grace period is over
                 self._attempt_split(node, depth)
-        
+
         # traverse the tree to reach the correct leaf
         elif node.feature is not None:
             if x[node.feature] <= node.threshold:
@@ -173,18 +181,17 @@ class FastODT(BaseTree):
                 self._update_tree(node.right, x, y, depth + 1)
 
     def _attempt_split(self, node, depth: int):
-        best_split, _ = node.find_best_split() # here happens hf bound calculation
+        best_split, _ = node.find_best_split()  # here happens hf bound calculation
         if self.splits[depth] is not None:
             node.split(self.splits[depth], self.split_confidence)
             node.left.update_from_parent_node(node)
             node.right.update_from_parent_node(node)
-        
+
         elif best_split[0] is not None:
-            self.splits[depth] = best_split 
+            self.splits[depth] = best_split
             node.split(best_split, self.split_confidence)
             node.left.update_from_parent_node(node)
             node.right.update_from_parent_node(node)
-
 
 
 if __name__ == "__main__":

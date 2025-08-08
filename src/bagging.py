@@ -592,8 +592,8 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
         self.stop_mem_management = stop_mem_management
         self.remove_poor_attrs = remove_poor_attrs
         self.merit_preprune = merit_preprune
-        self.max_feature = max_feature
         self.eagerness = eagerness
+        self.max_feature = max_feature
         self.bin_type = bin_type
         self.max_bins = max_bins
         self.inherit_bins = inherit_bins

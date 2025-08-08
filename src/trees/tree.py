@@ -2,14 +2,15 @@ from sklearn.model_selection import train_test_split
 from src.trees.base import BaseLeaner
 import numpy as np
 
+
 class Node:
     def __init__(
         self,
         feature: int = None,
         threshold: float = None,
-        left: 'Node' = None,
-        right: 'Node' = None,
-        value: float = None
+        left: "Node" = None,
+        right: "Node" = None,
+        value: float = None,
     ):
         """
         Node for regression tree.
@@ -32,6 +33,7 @@ class Node:
         print(f"{prefix}feature: {self.feature}")
         print(f"{prefix}threshold: {self.threshold}")
         print(f"{prefix}value: {self.value}")
+
 
 class BaseTree(BaseLeaner):
     def __init__(self, depth: int):
@@ -127,7 +129,7 @@ class BaseTree(BaseLeaner):
             feature=feature,
             threshold=threshold,
             left=left_child,
-            right=right_child
+            right=right_child,
         )
 
     def __split(self, X: np.ndarray, y: np.ndarray) -> tuple:
@@ -175,6 +177,7 @@ class BaseTree(BaseLeaner):
         Returns:
             Variance reduction value.
         """
+
         def variance(labels):
             mean = sum(labels) / len(labels)
             return sum((x - mean) ** 2 for x in labels) / len(labels)
@@ -186,7 +189,9 @@ class BaseTree(BaseLeaner):
         left_weight = len(y_left) / len(y)
         right_weight = len(y_right) / len(y)
 
-        return y_variance - (left_weight * y_left_variance + right_weight * y_right_variance)
+        return y_variance - (
+            left_weight * y_left_variance + right_weight * y_right_variance
+        )
 
     def show(self) -> None:
         """Print the structure of the tree."""
@@ -239,7 +244,6 @@ class BaseTree(BaseLeaner):
             return self.__how_deep(node.right, depth + 1)
         return depth
 
-
     def __traverse_show_final(self, node: Node, prefix: str) -> None:
         if node.left is None and node.right is None:
             node.show(prefix)
@@ -249,18 +253,41 @@ class BaseTree(BaseLeaner):
         if node.right:
             self.__traverse_show_final(node.right, prefix + " ")
 
+
 if __name__ == "__main__":
 
-    X = np.array([
-        [2, 3], [1, 4], [3, 6], [4, 2], [5, 5],
-        [2, 3], [1, 4], [3, 6], [4, 2], [5, 5],
-        [2, 4], [3, 4], [5, 4], [4, 6], [2, 2],
-        [5, 3], [1, 6], [2, 5], [1, 3], [5, 2]
-    ])
+    X = np.array(
+        [
+            [2, 3],
+            [1, 4],
+            [3, 6],
+            [4, 2],
+            [5, 5],
+            [2, 3],
+            [1, 4],
+            [3, 6],
+            [4, 2],
+            [5, 5],
+            [2, 4],
+            [3, 4],
+            [5, 4],
+            [4, 6],
+            [2, 2],
+            [5, 3],
+            [1, 6],
+            [2, 5],
+            [1, 3],
+            [5, 2],
+        ]
+    )
 
-    y = np.array([10, 12, 15, 13, 16, 10, 12, 15, 13, 16, 11, 14, 17, 18, 9, 13, 14, 11, 12, 8])
+    y = np.array(
+        [10, 12, 15, 13, 16, 10, 12, 15, 13, 16, 11, 14, 17, 18, 9, 13, 14, 11, 12, 8]
+    )
 
-    X_train, X_eval, y_train, y_eval = train_test_split(X, y, test_size=0.2, random_state=42)
+    X_train, X_eval, y_train, y_eval = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
 
     tree = BaseTree(depth=3)
     tree.fit(X_train, y_train)
@@ -274,4 +301,3 @@ if __name__ == "__main__":
         print(f"predictions[{X_eval[i]}]: {tree.predict(X_eval[i])} == {y_eval[i]}")
 
     tree.show()
-    

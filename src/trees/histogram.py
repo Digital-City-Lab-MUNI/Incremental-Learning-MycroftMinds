@@ -1,7 +1,7 @@
 import bisect
 
+
 class AdaptiveHistogram:
-    
     """
     Maintains an adaptive, memory-bounded histogram for streaming data.
 
@@ -36,9 +36,9 @@ class AdaptiveHistogram:
     """
 
     def __init__(self, max_bins=32):
-        self.max_bins   = max_bins
-        self.bin_edges  = []     # sorted list of 'representative' values
-        self.bin_stats  = []     # list of dicts: {'count','sum_y','sum_y2'}
+        self.max_bins = max_bins
+        self.bin_edges = []  # sorted list of 'representative' values
+        self.bin_stats = []  # list of dicts: {'count','sum_y','sum_y2'}
 
     def copy_bins(self):
         """
@@ -59,36 +59,34 @@ class AdaptiveHistogram:
                 new_hist.bin_edges.append(edge)
                 new_hist.bin_stats.append(dict(stat))
         return new_hist
-    
-
 
     def insert(self, x: float, y: float) -> None:
         # if empty: create first bin
         if not self.bin_edges:
             self.bin_edges.append(x)
-            self.bin_stats.append({'count':1,'sum_y':y,'sum_y2':y*y})
+            self.bin_stats.append({"count": 1, "sum_y": y, "sum_y2": y * y})
             return
-        
+
         # find insertion index
         idx = bisect.bisect_left(self.bin_edges, x)
 
         # new extreme on the left → create new left‐most bin
         if idx == 0 and x < self.bin_edges[0]:
             self.bin_edges.insert(0, x)
-            self.bin_stats.insert(0, {'count':1,'sum_y':y,'sum_y2':y*y})
+            self.bin_stats.insert(0, {"count": 1, "sum_y": y, "sum_y2": y * y})
 
         # new extreme on the right → create new right‐most bin
         elif idx == len(self.bin_edges) and x > self.bin_edges[-1]:
             self.bin_edges.append(x)
-            self.bin_stats.append({'count':1,'sum_y':y,'sum_y2':y*y})
-        
+            self.bin_stats.append({"count": 1, "sum_y": y, "sum_y2": y * y})
+
         else:
             # falls into existing bin at idx (or between idx-1 and idx)
             # we choose to aggregate into bin idx
             st = self.bin_stats[idx]
-            st['count']   += 1
-            st['sum_y']   += y
-            st['sum_y2'] += y*y
+            st["count"] += 1
+            st["sum_y"] += y
+            st["sum_y2"] += y * y
 
         # merge if we exceeded max_bins
         if len(self.bin_stats) > self.max_bins:
@@ -97,15 +95,15 @@ class AdaptiveHistogram:
     def _merge_bins(self):
         # find the smallest‐count adjacent pair
         i = min(
-            range(len(self.bin_stats)-1),
-            key=lambda j: self.bin_stats[j]['count'] + self.bin_stats[j+1]['count']
+            range(len(self.bin_stats) - 1),
+            key=lambda j: self.bin_stats[j]["count"] + self.bin_stats[j + 1]["count"],
         )
         # merge bin i+1 into bin i
-        a, b = self.bin_stats[i], self.bin_stats[i+1]
-        a['count'] += b['count']
-        a['sum_y'] += b['sum_y']
-        a['sum_y2'] += b['sum_y2']
-        del self.bin_stats[i+1]
+        a, b = self.bin_stats[i], self.bin_stats[i + 1]
+        a["count"] += b["count"]
+        a["sum_y"] += b["sum_y"]
+        a["sum_y2"] += b["sum_y2"]
+        del self.bin_stats[i + 1]
         del self.bin_edges[i]
 
     def get_candidates(self):
@@ -128,7 +126,7 @@ class AdaptiveHistogram:
 
         In short, midpoints give you a cleaner, more robust split point when you only have coarse bin boundaries.
         """
-        # Calculate midpoints between consecutive bin edges        
+        # Calculate midpoints between consecutive bin edges
         mids = []
         if len(self.bin_edges) < 2:
             return mids
@@ -137,15 +135,16 @@ class AdaptiveHistogram:
             mids.append((prev + edge) / 2.0)
             prev = edge
         return mids
-    
+
     def aggregate_stats(self, threshold, left=True):
         count = sum_y = sum_y2 = 0
         for edge, stat in zip(self.bin_edges, self.bin_stats):
             if (left and edge <= threshold) or (not left and edge > threshold):
-                count += stat['count']
-                sum_y += stat['sum_y']
-                sum_y2 += stat['sum_y2']
-        return {'count': count, 'sum_y': sum_y, 'sum_y2': sum_y2}
+                count += stat["count"]
+                sum_y += stat["sum_y"]
+                sum_y2 += stat["sum_y2"]
+        return {"count": count, "sum_y": sum_y, "sum_y2": sum_y2}
+
 
 class EquiWidthHistogram:
     def copy_bins(self):
@@ -168,6 +167,7 @@ class EquiWidthHistogram:
                 new_hist.bin_edges.append(edge)
                 new_hist.bin_stats.append(dict(stat))
         return new_hist
+
     """
     Maintains a fixed-width (equi-distance) histogram over a predefined range.
 
@@ -199,23 +199,22 @@ class EquiWidthHistogram:
     
     You must call set_range() (e.g. after a warm-up) before insert().
     """
-    
+
     def __init__(self, max_bins=32, min_val=None, max_val=None):
         self.max_bins = max_bins
-        self.min_val  = min_val
-        self.max_val  = max_val
-        self.bin_edges = []   # upper boundary of each bin
-        self.bin_stats = []   # same format: list of {'count','sum_y','sum_y2'}
+        self.min_val = min_val
+        self.max_val = max_val
+        self.bin_edges = []  # upper boundary of each bin
+        self.bin_stats = []  # same format: list of {'count','sum_y','sum_y2'}
         if min_val is not None and max_val is not None:
             self._init_bins()
 
     def _init_bins(self):
         width = (self.max_val - self.min_val) / self.max_bins
         # build bin boundaries and zeroed stats
-        self.bin_edges = [self.min_val + width * (i+1) for i in range(self.max_bins)]
+        self.bin_edges = [self.min_val + width * (i + 1) for i in range(self.max_bins)]
         self.bin_stats = [
-            {'count':0, 'sum_y':0.0, 'sum_y2':0.0}
-            for _ in range(self.max_bins)
+            {"count": 0, "sum_y": 0.0, "sum_y2": 0.0} for _ in range(self.max_bins)
         ]
 
     def set_range(self, min_val, max_val):
@@ -229,7 +228,9 @@ class EquiWidthHistogram:
 
     def insert(self, x, y):
         if self.min_val is None or self.max_val is None:
-            raise ValueError("EquiWidthHistogram: call set_range(min, max) before insert()")
+            raise ValueError(
+                "EquiWidthHistogram: call set_range(min, max) before insert()"
+            )
         # map x into a bin index
         span = self.max_val - self.min_val
         if span == 0.0:
@@ -237,11 +238,11 @@ class EquiWidthHistogram:
         else:
             ratio = (x - self.min_val) / span
             idx = int(ratio * self.max_bins)
-            idx = max(0, min(self.max_bins-1, idx))
+            idx = max(0, min(self.max_bins - 1, idx))
         st = self.bin_stats[idx]
-        st['count']   += 1
-        st['sum_y']   += y
-        st['sum_y2'] += y*y
+        st["count"] += 1
+        st["sum_y"] += y
+        st["sum_y2"] += y * y
 
     def get_candidates(self):
         # midpoint between successive bin boundaries
@@ -254,11 +255,13 @@ class EquiWidthHistogram:
             prev = edge
         return mids
 
+
 class MeanSplitterHistogram:
     """
     Histogram-like interface that always proposes the running mean as the only split candidate.
     Used for average-based splitting (legacy behavior).
     """
+
     def __init__(self, max_bins=1):
         self.count = 0
         self.sum_x = 0.0
@@ -311,15 +314,15 @@ class MeanSplitterHistogram:
         # Return two bins: left (<= mean), right (> mean)
         return [
             {
-                'count': self.left_count,
-                'sum_y': self.left_sum_y,
-                'sum_y2': self.left_sum_y2
+                "count": self.left_count,
+                "sum_y": self.left_sum_y,
+                "sum_y2": self.left_sum_y2,
             },
             {
-                'count': self.right_count,
-                'sum_y': self.right_sum_y,
-                'sum_y2': self.right_sum_y2
-            }
+                "count": self.right_count,
+                "sum_y": self.right_sum_y,
+                "sum_y2": self.right_sum_y2,
+            },
         ]
 
     def copy_bins(self):
@@ -362,19 +365,28 @@ class MeanSplitterHistogram:
 
     def aggregate_stats(self, threshold, left=True):
         if left:
-            return {'count': self.left_count, 'sum_y': self.left_sum_y, 'sum_y2': self.left_sum_y2}
-        return {'count': self.right_count, 'sum_y': self.right_sum_y, 'sum_y2': self.right_sum_y2}
+            return {
+                "count": self.left_count,
+                "sum_y": self.left_sum_y,
+                "sum_y2": self.left_sum_y2,
+            }
+        return {
+            "count": self.right_count,
+            "sum_y": self.right_sum_y,
+            "sum_y2": self.right_sum_y2,
+        }
+
 
 def get_histogram_type(name):
     """
     Return a histogram class by name.
     Supported names: 'adaptive' (default), 'equiwidth', 'mean', 'average'.
     """
-    if name is None or name == 'adaptive':
+    if name is None or name == "adaptive":
         return AdaptiveHistogram
-    elif name == 'equiwidth':
+    elif name == "equiwidth":
         return EquiWidthHistogram
-    elif name in ('mean', 'average'):
+    elif name in ("mean", "average"):
         return MeanSplitterHistogram
     else:
         raise ValueError(f"Unknown histogram type: {name}")

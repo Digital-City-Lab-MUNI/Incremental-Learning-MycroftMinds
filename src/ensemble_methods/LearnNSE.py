@@ -4,8 +4,9 @@ from sklearn.metrics import mean_squared_error
 from sklearn.base import BaseEstimator
 from time import time
 
+
 def mse_per_instance(y_true, y_pred):
-    return (y_true - y_pred)**2
+    return (y_true - y_pred) ** 2
 
 
 class LearnNSE:
@@ -13,19 +14,22 @@ class LearnNSE:
     Learn++.NSE: incremental ensemble for non-stationary data, supporting classification and regression.
     Steps 1–8 of the pseudocode, with optional 'age'/'error' pruning.
     """
-    def __init__(self,
-                base_classifier=None,
-                alpha=0.5, # alpha and beta are hyperparameters for time-based weighting
-                beta=10.0,
-                ensemble_size=None,
-                pruning_type='age',
-                alpha_multiplier= 0.8,
-                beta_multiplier= 0.55,
-                gamma_multiplier= 0.3,
-                fixed_multiplier=1.2,
-                baseline=1.0,
-                removal_count_calculation=True,
-                regression_task_error_metric=mean_squared_error):
+
+    def __init__(
+        self,
+        base_classifier=None,
+        alpha=0.5,  # alpha and beta are hyperparameters for time-based weighting
+        beta=10.0,
+        ensemble_size=None,
+        pruning_type="age",
+        alpha_multiplier=0.8,
+        beta_multiplier=0.55,
+        gamma_multiplier=0.3,
+        fixed_multiplier=1.2,
+        baseline=1.0,
+        removal_count_calculation=True,
+        regression_task_error_metric=mean_squared_error,
+    ):
         # Base learner default
         if base_classifier is None:
             self.base_classifier = DecisionTreeClassifier(random_state=0)
@@ -34,9 +38,11 @@ class LearnNSE:
 
         self.alpha = alpha
         self.beta = beta
-        self.ensemble_size = ensemble_size # s in the paper
+        self.ensemble_size = ensemble_size  # s in the paper
         self.pruning_type = pruning_type
-        self.regression_task_error_metric = lambda y_true, y_pred: mse_per_instance(y_true, y_pred)
+        self.regression_task_error_metric = lambda y_true, y_pred: mse_per_instance(
+            y_true, y_pred
+        )
         # ensemble state
         self.models = []
         self.voting_weights = []
@@ -47,7 +53,6 @@ class LearnNSE:
         self.fixed_multiplier = fixed_multiplier
         self.baseline = baseline
         self.removal_count_calculation = removal_count_calculation
-
 
     def _clone_with_params(self):
         """
@@ -66,12 +71,13 @@ class LearnNSE:
 
         # Fallback: deep-copy the object
         import copy
+
         return copy.deepcopy(self.base_classifier)
 
     def _init_weights(self, n_samples):
         return np.ones(n_samples) / n_samples
 
-    def fit(self, X, y, classification_base_error = 0.5, regression_base_error = None):
+    def fit(self, X, y, classification_base_error=0.5, regression_base_error=None):
         start_time = time()
         print(f"prefit: {start_time}")
         X = np.asarray(X)
@@ -79,7 +85,9 @@ class LearnNSE:
         n = len(y)
         t = len(self.models) + 1
 
-        mean_y = np.mean(y) # up for a debate: could be np.median(y) or other robust measure
+        mean_y = np.mean(
+            y
+        )  # up for a debate: could be np.median(y) or other robust measure
         base_err = self.regression_task_error_metric(y, np.full_like(y, mean_y))
         D = np.full(n, 1.0 / n)
 
@@ -92,78 +100,122 @@ class LearnNSE:
             eps = 1e-10
 
             # classification branch
-            if hasattr(self.base_classifier, 'predict_proba') or isinstance(self.base_classifier, DecisionTreeClassifier):
+            if hasattr(self.base_classifier, "predict_proba") or isinstance(
+                self.base_classifier, DecisionTreeClassifier
+            ):
                 # Step 1: Compute ensemble error uniformly (no previous weights!)
                 mistakes = (preds != y).astype(float)
-                ensemble_error_on_original_batch = np.sum(mistakes) / n  # uniform averaging
+                ensemble_error_on_original_batch = (
+                    np.sum(mistakes) / n
+                )  # uniform averaging
 
                 # ensemble_error_on_original_batch = np.clip(ensemble_error_on_original_batch, eps, 1 - eps)        # stability
 
                 # Step 2: Update weights based on correctness
-                w = np.where(mistakes == 1, 1.0 / n, (ensemble_error_on_original_batch + eps) / n )
+                w = np.where(
+                    mistakes == 1, 1.0 / n, (ensemble_error_on_original_batch + eps) / n
+                )
 
             else:
                 # regression branch using mean(y) as base error
                 per_err = self.regression_task_error_metric(y, preds)
-                ensemble_error_on_original_batch = np.mean(per_err) 
-                ensemble_error_on_original_batch = max(ensemble_error_on_original_batch, eps)
+                ensemble_error_on_original_batch = np.mean(per_err)
+                ensemble_error_on_original_batch = max(
+                    ensemble_error_on_original_batch, eps
+                )
                 w = np.where(per_err > base_err, 1.0, ensemble_error_on_original_batch)
 
             D = w / np.sum(w)
 
         # Step 3: bootstrap sample and train h_t
-        idx = np.random.choice(n, size=n, replace=True, p=D) 
+        idx = np.random.choice(n, size=n, replace=True, p=D)
         base_learner = self._clone_with_params()
         base_learner.fit(X[idx], y[idx])
         idx = np.random.choice(n, size=n, replace=True, p=D)
 
-        if hasattr(self.base_classifier, 'predict_proba') or isinstance(self.base_classifier, DecisionTreeClassifier):
+        if hasattr(self.base_classifier, "predict_proba") or isinstance(
+            self.base_classifier, DecisionTreeClassifier
+        ):
 
-            if (base_learner.predict(X[idx]) != y[idx]).sum()/ n > classification_base_error:
+            if (
+                base_learner.predict(X[idx]) != y[idx]
+            ).sum() / n > classification_base_error:
                 self.models.append(base_learner)
             else:
                 counter = 0
-                while ((base_learner.predict(X[idx]) != y[idx]).sum() / n > classification_base_error) and counter < 10:
-                    idx = np.random.choice(n, size=n, replace=True, p=D) 
-                    base_learner = self._clone_with_params() # perhap this could experiment with different params?
+                while (
+                    (base_learner.predict(X[idx]) != y[idx]).sum() / n
+                    > classification_base_error
+                ) and counter < 10:
+                    idx = np.random.choice(n, size=n, replace=True, p=D)
+                    base_learner = (
+                        self._clone_with_params()
+                    )  # perhap this could experiment with different params?
                     base_learner.fit(X[idx], y[idx])
-                    idx = np.random.choice(n, size=n, replace=True, p=D) 
+                    idx = np.random.choice(n, size=n, replace=True, p=D)
                     counter += 1
                 self.models.append(base_learner)
         else:
 
-            regression_base_error = np.mean(self.regression_task_error_metric(np.full_like(y, mean_y), y[idx]))
-            if np.mean(self.regression_task_error_metric (base_learner.predict(X[idx]), y[idx])) < regression_base_error:
+            regression_base_error = np.mean(
+                self.regression_task_error_metric(np.full_like(y, mean_y), y[idx])
+            )
+            if (
+                np.mean(
+                    self.regression_task_error_metric(
+                        base_learner.predict(X[idx]), y[idx]
+                    )
+                )
+                < regression_base_error
+            ):
                 self.models.append(base_learner)
             else:
-                while (np.mean(self.regression_task_error_metric (base_learner.predict(X[idx]), y[idx])) < regression_base_error and counter < 10):
-                    idx = np.random.choice(n, size=n, replace=True, p=D) 
+                while (
+                    np.mean(
+                        self.regression_task_error_metric(
+                            base_learner.predict(X[idx]), y[idx]
+                        )
+                    )
+                    < regression_base_error
+                    and counter < 10
+                ):
+                    idx = np.random.choice(n, size=n, replace=True, p=D)
                     base_learner = self._clone_with_params()
                     base_learner.fit(X[idx], y[idx])
-                    idx = np.random.choice(n, size=n, replace=True, p=D) 
+                    idx = np.random.choice(n, size=n, replace=True, p=D)
                     counter += 1
                 self.models.append(base_learner)
 
         # add the new model to the ensemble
-        # Step 4: compute errors E_k 
+        # Step 4: compute errors E_k
         betas = []
         for n, m in enumerate(self.models):
             print(f"model {n}")
-            pred_k = m.predict(X[idx]) # this needs be the bootstrapped sample hence [idx]
-            if hasattr(self.base_classifier, 'predict_proba') or isinstance(self.base_classifier, DecisionTreeClassifier):
-                ek = np.sum(D * (pred_k != y[idx])) # maybe D multiplication is unnecessary here
+            pred_k = m.predict(
+                X[idx]
+            )  # this needs be the bootstrapped sample hence [idx]
+            if hasattr(self.base_classifier, "predict_proba") or isinstance(
+                self.base_classifier, DecisionTreeClassifier
+            ):
+                ek = np.sum(
+                    D * (pred_k != y[idx])
+                )  # maybe D multiplication is unnecessary here
                 if ek < classification_base_error:
-                    beta_k = (ek) / (1- ek)    
+                    beta_k = (ek) / (1 - ek)
                 else:
-                    beta_k = (classification_base_error) / (1 - classification_base_error)
+                    beta_k = (classification_base_error) / (
+                        1 - classification_base_error
+                    )
             else:
                 raw_err = self.regression_task_error_metric(y, pred_k)
                 ek = np.sum(D * raw_err)
-                mean_regressor_error = np.mean(self.regression_task_error_metric(y, np.full_like(y, mean_y)))
-                # mean_regressor_error = np.sum(D * mean_regressor_error) maybe unnecessary 
+                mean_regressor_error = np.mean(
+                    self.regression_task_error_metric(y, np.full_like(y, mean_y))
+                )
+                # mean_regressor_error = np.sum(D * mean_regressor_error) maybe unnecessary
 
                 if ek < mean_regressor_error:
-                    beta_k = (ek) / (1- ek)    
+                    beta_k = (ek) / (1 - ek)
                 else:
                     beta_k = (mean_regressor_error) / (1 - mean_regressor_error)
 
@@ -171,9 +223,13 @@ class LearnNSE:
             betas.append(beta_k)
 
         # Step 5: time-based weights (unused later)
-        t_weights = np.array([1/(1+np.exp(-self.alpha*(t-k-self.beta)))
-                               for k in range(1, len(self.models)+1)])
-        t_weights /= t_weights.sum() 
+        t_weights = np.array(
+            [
+                1 / (1 + np.exp(-self.alpha * (t - k - self.beta)))
+                for k in range(1, len(self.models) + 1)
+            ]
+        )
+        t_weights /= t_weights.sum()
         # t_weights rename to voting_weights
         # eqation 8 in the paper uses summation of t_weigthts in the next step, but it has little sense
         betas = t_weights * betas
@@ -185,7 +241,7 @@ class LearnNSE:
             removal_count = len(self.models) - self.ensemble_size
             if self.removal_count_calculation:
                 # record current error
-                if not hasattr(self, 'error_history'):
+                if not hasattr(self, "error_history"):
                     self.error_history = []
                 self.error_history.append(final_error)
                 if len(self.error_history) >= 4:
@@ -193,10 +249,14 @@ class LearnNSE:
                     r1 = e3 / e4 if e4 != 0 else 1.0
                     r2 = e2 / e3 if e3 != 0 else 1.0
                     r3 = e1 / e2 if e2 != 0 else 1.0
-                    weighted = (self.gamma_multiplier * r1
-                              + self.beta_multiplier  * r2
-                              + self.alpha_multiplier * r3)
-                    dynamic_count = max(0, round(self.fixed_multiplier * weighted - self.baseline))
+                    weighted = (
+                        self.gamma_multiplier * r1
+                        + self.beta_multiplier * r2
+                        + self.alpha_multiplier * r3
+                    )
+                    dynamic_count = max(
+                        0, round(self.fixed_multiplier * weighted - self.baseline)
+                    )
                     print(f"[BatchErrorHistory] dynamic removal_count={dynamic_count}")
                     # ensure at least the default removal
                     removal_count = max(removal_count, dynamic_count)
@@ -207,11 +267,13 @@ class LearnNSE:
                     if removal_count >= len(self.models):
                         removal_count = len(self.models) - 1
                 else:
-                    print(f"[BatchErrorHistory] insufficient history ({len(self.error_history)}), skipping dynamic prune.")
+                    print(
+                        f"[BatchErrorHistory] insufficient history ({len(self.error_history)}), skipping dynamic prune."
+                    )
             # remove models one at a time
             for _ in range(removal_count):
                 print(f"removal_count: {removal_count}, betas lenght: {len(betas)}")
-                if self.pruning_type == 'age':
+                if self.pruning_type == "age":
                     # remove the oldest model
                     self.models.pop(0)
                     betas = betas[1:]
@@ -226,11 +288,10 @@ class LearnNSE:
                     except Exception as e:
                         print(f"Caught: {e}. Betas: {betas}")
 
-
         # Step 7: voting weights
         eps = 1e-10
-        
-        self.voting_weights = np.log(1/betas)
+
+        self.voting_weights = np.log(1 / betas)
 
         # save D_t
 
@@ -273,9 +334,9 @@ class LearnNSE:
 
     def score(self, X, y):
         preds = self.predict(X)
-        if hasattr(self.models[0], 'classes_'):
+        if hasattr(self.models[0], "classes_"):
             return np.mean(preds == np.asarray(y))
         else:
-            u = np.sum((y - preds)**2)
-            v = np.sum((y - np.mean(y))**2)
-            return 1 - u/v if v != 0 else 0.0
+            u = np.sum((y - preds) ** 2)
+            v = np.sum((y - np.mean(y)) ** 2)
+            return 1 - u / v if v != 0 else 0.0

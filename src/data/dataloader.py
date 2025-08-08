@@ -9,29 +9,38 @@ from sklearn.model_selection import TimeSeriesSplit
 
 from src.data.io import save_dataset, load_dataset
 from src.utils.memory import calculate_memory_usage, optimize_memory_usage
-from src.data.preprocessing import preprocess_df, concat_dataframes_by_time, get_complete_time_series, clean_data, aggregate_and_validate_lags, read_first_batch, read_second_batch
+from src.data.preprocessing import (
+    preprocess_df,
+    concat_dataframes_by_time,
+    get_complete_time_series,
+    clean_data,
+    aggregate_and_validate_lags,
+    read_first_batch,
+    read_second_batch,
+)
 from src.data.feature_engineering import add_lag_features, add_cyclical_time_features
 
 warnings.filterwarnings("ignore")
 
+
 def handle_dst_transitions(timestamps):
     """
     Handle DST transitions by converting ambiguous times to UTC and back.
-    
+
     Args:
         timestamps: pandas Series or array of timestamps
-        
+
     Returns:
         pandas Series with DST issues resolved
     """
     if not isinstance(timestamps, pd.Series):
         timestamps = pd.Series(timestamps)
-    
+
     # If already timezone-aware, convert to UTC first to avoid DST issues
     if timestamps.dt.tz is not None:
         try:
             # Convert to UTC to remove DST ambiguity
-            utc_timestamps = timestamps.dt.tz_convert('UTC')
+            utc_timestamps = timestamps.dt.tz_convert("UTC")
             # Convert back to original timezone, handling ambiguous times
             return utc_timestamps.dt.tz_convert(timestamps.dt.tz)
         except Exception as e:
@@ -41,36 +50,34 @@ def handle_dst_transitions(timestamps):
     else:
         # If no timezone info, assume UTC and localize
         try:
-            return timestamps.dt.tz_localize('UTC')
+            return timestamps.dt.tz_localize("UTC")
         except:
             return timestamps
+
 
 # ---------------------------
 # Main Dataset Creation Function
 # ---------------------------
-def get_train_test_sets(data_dir: str,
-                        lag_freqs: Dict,
-                        columns_to_add_lag: List[str],
-                        target_feature: str = 'total_power_active',
-                        device_list: Optional[List[str]] = None,
-                        walk_forward_sets: bool = True,
-                        train_days: int = 28,
-                        valid_days: int = 28,
-                        window_size: int = 1,
-                        step: int = 1,
-                        add_cyclical_features: bool = False,
-                        optimize_memory: bool = True,
-                        save: bool = True,
-                        time_agg: Optional[str] = None,
-                        intermediate_prefix: str = '5_min_wfv', 
-                        new_data='second_batch',
-                        location=None,
-                        fill_missing=True) -> Tuple[
-                                                Any, 
-                                                Any, 
-                                                Tuple[np.ndarray, np.ndarray]
-                                                ]:
-    
+def get_train_test_sets(
+    data_dir: str,
+    lag_freqs: Dict,
+    columns_to_add_lag: List[str],
+    target_feature: str = "total_power_active",
+    device_list: Optional[List[str]] = None,
+    walk_forward_sets: bool = True,
+    train_days: int = 28,
+    valid_days: int = 28,
+    window_size: int = 1,
+    step: int = 1,
+    add_cyclical_features: bool = False,
+    optimize_memory: bool = True,
+    save: bool = True,
+    time_agg: Optional[str] = None,
+    intermediate_prefix: str = "5_min_wfv",
+    new_data="second_batch",
+    location=None,
+    fill_missing=True,
+) -> Tuple[Any, Any, Tuple[np.ndarray, np.ndarray]]:
     """
     Create training, validation, and test sets from the data directory with optimized memory usage.
 
@@ -94,9 +101,9 @@ def get_train_test_sets(data_dir: str,
         new_data (str): 'first_batch' or 'second_batch' (defaults 'second_batch')
         location (str): to be used with second batch. specify 'industrial' or 'commercial' (only valid for second batch data)
         fill_missing (bool): whether to fill the missing values (defaults True), method: weekly, hourly mean
-        
+
     Returns:
-        tuple: A tuple containing training, validation, and test sets. Each set is a tuple of (X, y), 
+        tuple: A tuple containing training, validation, and test sets. Each set is a tuple of (X, y),
                where X is the feature matrix and y is the target vector.
     """
     # Check if processed data already exists
@@ -105,20 +112,24 @@ def get_train_test_sets(data_dir: str,
         return (None, None), (None, None), (None, None)
 
     try:
-        if new_data=='first_batch':
+        if new_data == "first_batch":
             extract_path = os.path.join(data_dir, new_data)
-            dataframes = read_first_batch(extract_path, device_list, aggregation=time_agg)
-        elif new_data=='second_batch':
+            dataframes = read_first_batch(
+                extract_path, device_list, aggregation=time_agg
+            )
+        elif new_data == "second_batch":
             extract_path = os.path.join(data_dir, new_data)
-            dataframes = read_second_batch(extract_path, location=location, site_ids=device_list)
+            dataframes = read_second_batch(
+                extract_path, location=location, site_ids=device_list
+            )
         else:
             csv_files = glob.glob(os.path.join(data_dir, "smart_meter_data_*.csv"))
             if not csv_files:
                 print(f"[ERROR] No matching CSV files found in {data_dir}")
                 return (None, None), (None, None), (None, None)
-                
+
             dataframes = [pd.read_csv(file) for file in csv_files]
-    
+
     except Exception as e:
         print(f"[ERROR] Failed to read CSV files: {e}")
         traceback.print_exc()
@@ -129,22 +140,24 @@ def get_train_test_sets(data_dir: str,
         if not processed_dfs:
             print("[ERROR] Preprocessing returned empty result")
             return (None, None), (None, None), (None, None)
-            
+
         data_concat = concat_dataframes_by_time(processed_dfs)
         if data_concat.empty:
             print("[ERROR] Concatenation returned empty DataFrame")
             return (None, None), (None, None), (None, None)
 
         # Aggregation (if any)
-        data_concat, lag_freqs = aggregate_and_validate_lags(data_concat, lag_freqs, time_agg, fill_missing=fill_missing)
-        
-        data_concat.drop(columns='values_state', inplace=True, errors='ignore')
+        data_concat, lag_freqs = aggregate_and_validate_lags(
+            data_concat, lag_freqs, time_agg, fill_missing=fill_missing
+        )
+
+        data_concat.drop(columns="values_state", inplace=True, errors="ignore")
         complete_time_series = get_complete_time_series(data_concat)
 
         if not complete_time_series:
             print("f[ERROR] No complete time series found in the data")
             return (None, None), (None, None), (None, None)
-        
+
     except Exception as e:
         print(f"[ERROR] Preprocessing failed: {e}")
         traceback.print_exc()
@@ -152,15 +165,21 @@ def get_train_test_sets(data_dir: str,
 
     if columns_to_add_lag is None:
         columns_to_add_lag = [
-            'total_power_active', 'total_power_reactive', 'total_power_apparent',
-            'import_energy_active', 'export_energy_active',
-            'import_energy_reactive', 'export_energy_reactive',
-            'total_energy_active', 'total_energy_reactive'
+            "total_power_active",
+            "total_power_reactive",
+            "total_power_apparent",
+            "import_energy_active",
+            "export_energy_active",
+            "import_energy_reactive",
+            "export_energy_reactive",
+            "total_energy_active",
+            "total_energy_reactive",
         ]
 
     input_features = [
-        col for col in data_concat.drop(columns=columns_to_add_lag).columns
-        if col not in ['serial_number'] # 'time', 'device_id'
+        col
+        for col in data_concat.drop(columns=columns_to_add_lag).columns
+        if col not in ["serial_number"]  # 'time', 'device_id'
     ]
 
     # Append lagged column names to input features
@@ -176,29 +195,29 @@ def get_train_test_sets(data_dir: str,
 
     # NEW: Process each site separately to maintain site-specific timelines
     site_processed_data = {}
-    
+
     for idx, ts in enumerate(complete_time_series[:]):
         try:
             # Handle DST transitions in time column
-            ts['time'] = pd.to_datetime(ts['time'])
-            ts['time'] = handle_dst_transitions(ts['time'])
-            
+            ts["time"] = pd.to_datetime(ts["time"])
+            ts["time"] = handle_dst_transitions(ts["time"])
+
             # Get site identifier
-            site_id = ts['device_id'].iloc[0]
+            site_id = ts["device_id"].iloc[0]
             print(f"Processing site: {site_id}")
-            
+
             train_end_idx = int(len(ts) * train_ratio)
-            valid_end_idx = int(len(ts) * (train_ratio+valid_ratio))
+            valid_end_idx = int(len(ts) * (train_ratio + valid_ratio))
 
             ts_lagged = add_lag_features(ts, columns_to_add_lag, lag_freqs)
-            
+
             # Store site-specific data
             site_processed_data[site_id] = {
-                'data': ts_lagged,
-                'train_end_idx': train_end_idx,
-                'valid_end_idx': valid_end_idx
+                "data": ts_lagged,
+                "train_end_idx": train_end_idx,
+                "valid_end_idx": valid_end_idx,
             }
-            
+
         except Exception as e:
             print(f"[WARNING] Skipped one time series (index {idx}) due to error:")
             traceback.print_exc()
@@ -206,37 +225,45 @@ def get_train_test_sets(data_dir: str,
 
     # Now process train/valid/test splits while keeping sites separate
     train_sets, valid_sets, test_sets = [], [], []
-    
+
     for site_id, site_data in site_processed_data.items():
-        ts_lagged = site_data['data']
-        train_end_idx = site_data['train_end_idx']
-        valid_end_idx = site_data['valid_end_idx']
-        
+        ts_lagged = site_data["data"]
+        train_end_idx = site_data["train_end_idx"]
+        valid_end_idx = site_data["valid_end_idx"]
+
         # Test set
         ts_test = ts_lagged.iloc[valid_end_idx:]
         if len(ts_test) > 0:
-            X_test, y_test = clean_data([ts_test], input_features, target_feature, window_size, step)
+            X_test, y_test = clean_data(
+                [ts_test], input_features, target_feature, window_size, step
+            )
             if len(X_test) > 0:
                 test_sets.append((np.vstack(X_test), np.hstack(y_test)))
-        
+
         if not walk_forward_sets:
             # Non-walk-forward case
             ts_train = ts_lagged.iloc[:train_end_idx]
             if len(ts_train) > 0:
-                X_train, y_train = clean_data([ts_train], input_features, target_feature, window_size, step)
+                X_train, y_train = clean_data(
+                    [ts_train], input_features, target_feature, window_size, step
+                )
                 if len(X_train) > 0:
                     train_sets.append((np.vstack(X_train), np.hstack(y_train)))
 
             ts_valid = ts_lagged.iloc[train_end_idx:valid_end_idx]
             if len(ts_valid) > 0:
-                X_valid, y_valid = clean_data([ts_valid], input_features, target_feature, window_size, step)
+                X_valid, y_valid = clean_data(
+                    [ts_valid], input_features, target_feature, window_size, step
+                )
                 if len(X_valid) > 0:
                     valid_sets.append((np.vstack(X_valid), np.hstack(y_valid)))
         else:
             # Walk-forward case - process site data for training
             ts_train = ts_lagged.iloc[:valid_end_idx]
             if len(ts_train) > 0:
-                X_train, y_train = clean_data([ts_train], input_features, target_feature, window_size, step)
+                X_train, y_train = clean_data(
+                    [ts_train], input_features, target_feature, window_size, step
+                )
                 if len(X_train) > 0:
                     train_sets.append((np.vstack(X_train), np.hstack(y_train)))
 
@@ -252,7 +279,7 @@ def get_train_test_sets(data_dir: str,
             # Handle timestamp column for DST issues
             timestamps_train = handle_dst_transitions(X_train_all[:, 0])
             timestamps_train = pd.Series(timestamps_train)
-            
+
             # Sort by timestamp to maintain chronological order
             sorted_indices = np.argsort(timestamps_train)
             X_train_all = X_train_all[sorted_indices]
@@ -261,33 +288,42 @@ def get_train_test_sets(data_dir: str,
             # Combine all sites' test data
             X_test_all = np.vstack([x for x, _ in test_sets])
             y_test_all = np.hstack([y for _, y in test_sets])
-            
+
             # Handle timestamp column for DST issues
-            timestamps_test = pd.to_datetime(X_test_all[:, 0], unit='ns')
+            timestamps_test = pd.to_datetime(X_test_all[:, 0], unit="ns")
             timestamps_test = handle_dst_transitions(timestamps_test)
-            
+
             sorted_indices = np.argsort(timestamps_test)
             X_test_all = X_test_all[sorted_indices]
             y_test_all = y_test_all[sorted_indices]
-          
 
-            print("Overall data time range: ", timestamps_train.min(), timestamps_test.max())
+            print(
+                "Overall data time range: ",
+                timestamps_train.min(),
+                timestamps_test.max(),
+            )
             print()
-            print("Test data time range: ", timestamps_test.min(), timestamps_test.max())
+            print(
+                "Test data time range: ", timestamps_test.min(), timestamps_test.max()
+            )
             print()
-            print("(Train + Valid) data range: ", timestamps_train.min(), timestamps_train.max())
+            print(
+                "(Train + Valid) data range: ",
+                timestamps_train.min(),
+                timestamps_train.max(),
+            )
             print()
 
             # Convert timestamp column to Series for easier handling
             timestamps = pd.Series(timestamps_train).sort_values()
-            
+
             # Use timezone-naive timestamps for floor operation to avoid DST issues
             if timestamps.dt.tz is not None:
-                timestamps_naive = timestamps.dt.tz_convert('UTC').dt.tz_localize(None)
+                timestamps_naive = timestamps.dt.tz_convert("UTC").dt.tz_localize(None)
             else:
                 timestamps_naive = timestamps
 
-            unique_hours = sorted(timestamps_naive.dt.floor('H').unique())
+            unique_hours = sorted(timestamps_naive.dt.floor("H").unique())
             num_hours = len(unique_hours)
 
             train_hours = train_days * 24
@@ -307,11 +343,13 @@ def get_train_test_sets(data_dir: str,
             # Walk-forward loop
             while start_idx + train_valid <= num_hours:
                 train_range = unique_hours[0 : start_idx + train_hours]
-                valid_range = unique_hours[start_idx + train_hours : start_idx + train_hours + valid_hours]
+                valid_range = unique_hours[
+                    start_idx + train_hours : start_idx + train_hours + valid_hours
+                ]
 
                 # Use timezone-naive timestamps for comparison
-                train_mask = timestamps_naive.dt.floor('H').isin(train_range)
-                valid_mask = timestamps_naive.dt.floor('H').isin(valid_range)
+                train_mask = timestamps_naive.dt.floor("H").isin(train_range)
+                valid_mask = timestamps_naive.dt.floor("H").isin(valid_range)
 
                 X_train_split = X_train_all[train_mask.values]
                 y_train_split = y_train_all[train_mask.values]
@@ -333,7 +371,9 @@ def get_train_test_sets(data_dir: str,
                 print(f"Split {i + 1}:")
                 print(f"  Train window: {train_start_time} to {train_end_time}")
                 print(f"  Valid window: {valid_start_time} to {valid_end_time}")
-                print(f"  Train samples: {len(X_train_split)}, Valid samples: {len(X_valid_split)}")
+                print(
+                    f"  Train samples: {len(X_train_split)}, Valid samples: {len(X_valid_split)}"
+                )
                 print()
 
                 # Slide forward by train_hours for next split
@@ -345,8 +385,8 @@ def get_train_test_sets(data_dir: str,
                 train_range = unique_hours[0 : start_idx + train_hours]
                 valid_range = unique_hours[start_idx + train_hours :]
 
-                train_mask = timestamps_naive.dt.floor('H').isin(train_range)
-                valid_mask = timestamps_naive.dt.floor('H').isin(valid_range)
+                train_mask = timestamps_naive.dt.floor("H").isin(train_range)
+                valid_mask = timestamps_naive.dt.floor("H").isin(valid_range)
 
                 X_train_split = X_train_all[train_mask.values]
                 y_train_split = y_train_all[train_mask.values]
@@ -366,8 +406,10 @@ def get_train_test_sets(data_dir: str,
                     print(f"Split {i + 1}:")
                     print(f"  Train window: {train_start_time} to {train_end_time}")
                     print(f"  Valid window: {valid_start_time} to {valid_end_time}")
-                    print(f"  Train samples: {len(X_train_split)}, Valid samples: {len(X_valid_split)}")
-    
+                    print(
+                        f"  Train samples: {len(X_train_split)}, Valid samples: {len(X_valid_split)}"
+                    )
+
         else:
             # Non-walk-forward case
             X_train_all = np.vstack([x for x, _ in train_sets])
@@ -400,25 +442,33 @@ def get_train_test_sets(data_dir: str,
                 valid_mem = sum(calculate_memory_usage(ts) for ts in all_valid_sets)
                 test_mem = calculate_memory_usage(final_test)
 
-                print(f"Memory usage after optimization: Train={train_mem:.2f}MB, Valid={valid_mem:.2f}MB, Test={test_mem:.2f}MB")
+                print(
+                    f"Memory usage after optimization: Train={train_mem:.2f}MB, Valid={valid_mem:.2f}MB, Test={test_mem:.2f}MB"
+                )
 
                 # Save the processed data if requested
-                if new_data == 'second_batch':
+                if new_data == "second_batch":
                     save_location = os.path.join(data_dir, new_data, location)
-                elif new_data == 'first_batch':
+                elif new_data == "first_batch":
                     save_location = os.path.join(data_dir, new_data)
                 else:
                     save_location = data_dir
                 if save:
-                    save_dataset(all_train_sets, all_valid_sets, final_test, 
-                                data_dir=save_location, prefix=intermediate_prefix, use_numpy=True)
+                    save_dataset(
+                        all_train_sets,
+                        all_valid_sets,
+                        final_test,
+                        data_dir=save_location,
+                        prefix=intermediate_prefix,
+                        use_numpy=True,
+                    )
 
                 return all_train_sets, all_valid_sets, final_test
 
             else:
                 # Non-walk-forward case
                 train_opt = optimize_memory_usage((X_train_all, y_train_all))
-                valid_opt = optimize_memory_usage((X_valid_all, y_valid_all)) 
+                valid_opt = optimize_memory_usage((X_valid_all, y_valid_all))
                 test_opt = optimize_memory_usage((X_test_all, y_test_all))
 
                 # Save memory usage info
@@ -426,18 +476,26 @@ def get_train_test_sets(data_dir: str,
                 valid_mem = calculate_memory_usage(valid_opt)
                 test_mem = calculate_memory_usage(test_opt)
 
-                print(f"Memory usage after optimization: Train={train_mem:.2f}MB, Valid={valid_mem:.2f}MB, Test={test_mem:.2f}MB")
+                print(
+                    f"Memory usage after optimization: Train={train_mem:.2f}MB, Valid={valid_mem:.2f}MB, Test={test_mem:.2f}MB"
+                )
 
                 # Save the processed data if requested
-                if new_data == 'second_batch':
+                if new_data == "second_batch":
                     save_location = os.path.join(data_dir, new_data, location)
-                elif new_data == 'first_batch':
+                elif new_data == "first_batch":
                     save_location = os.path.join(data_dir, new_data)
                 else:
                     save_location = data_dir
                 if save:
-                    save_dataset(train_opt, valid_opt, test_opt, 
-                                data_dir=save_location, prefix=intermediate_prefix, use_numpy=True)
+                    save_dataset(
+                        train_opt,
+                        valid_opt,
+                        test_opt,
+                        data_dir=save_location,
+                        prefix=intermediate_prefix,
+                        use_numpy=True,
+                    )
 
                 return train_opt, valid_opt, test_opt
 
@@ -445,8 +503,12 @@ def get_train_test_sets(data_dir: str,
         if walk_forward_sets:
             return all_train_sets, all_valid_sets, (X_test_all, y_test_all)
         else:
-            return (X_train_all, y_train_all), (X_valid_all, y_valid_all), (X_test_all, y_test_all)
-        
+            return (
+                (X_train_all, y_train_all),
+                (X_valid_all, y_valid_all),
+                (X_test_all, y_test_all),
+            )
+
     except Exception as e:
         print(f"[ERROR] Failed to stack all sets: {e}")
         traceback.print_exc()

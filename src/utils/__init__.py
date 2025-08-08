@@ -2,7 +2,7 @@
 
 from .utils import aggregate_values
 from .memory import (
-    calculate_memory_usage, 
+    calculate_memory_usage,
     print_memory_stats,
-    optimize_memory_usage
+    optimize_memory_usage,
 )
