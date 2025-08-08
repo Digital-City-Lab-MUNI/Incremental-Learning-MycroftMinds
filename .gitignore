@@ -10,5 +10,4 @@ data/*
 !data/*.md
 results/*
 !results/*.md
-src/bagging.py
 src/ensemble_methods/elasticGBDT.py
