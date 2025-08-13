@@ -1,4 +1,21 @@
-from typing import Dict, List
+"""Evaluation metrics and spike/drop detection utilities.
+
+This module provides helper functions to compute:
+
+* Standard regression accuracy metrics (RMSE, MAE, MAPE)
+* Directional accuracy and first difference correlation
+* Event matching metrics for spikes (peaks) and drops (valleys) at multiple
+  aggregation granularities
+
+Spike / drop detection is performed by normalizing the series (either using a
+standard z-score or a robust median/MAD z-score) and then calling
+``scipy.signal.find_peaks`` on the series and on its negation (for drops).
+
+The main public entry points are ``calculate_metrics`` for per-period metrics
+and ``all_time_aggregation_metrics`` for aggregation across periods and devices.
+"""
+
+from typing import Dict, List, Iterable, Tuple, Any
 from sklearn.metrics import (
     mean_absolute_percentage_error,
     mean_squared_error,
@@ -8,33 +25,67 @@ import pandas as pd
 import numpy as np
 from scipy.stats import pearsonr
 from scipy.signal import find_peaks
-from src.utils.memory import calculate_memory_usage
 
-from src.utils.utils import aggregate_values
+from src.utils.utils import aggregate_values  # Removed unused memory import
 
 
-def normalize_zscore(y):
+def normalize_zscore(y: np.ndarray) -> np.ndarray:
+    """Return standard z-score normalized array.
+
+    Parameters
+    ----------
+    y : array-like
+        Input numeric sequence.
+
+    Returns
+    -------
+    numpy.ndarray
+        Element-wise z-score (mean 0, std 1) of ``y``.
+    """
     return (y - np.mean(y)) / np.std(y)
 
 
-def robust_zscore(y):
+def robust_zscore(y: np.ndarray) -> np.ndarray:
+    """Return robust (median/MAD) z-score normalized array.
+
+    The robust score is computed as ``(y - median) / MAD`` where MAD is the
+    median absolute deviation (with a small safeguard to avoid division by a
+    near-zero MAD).
+
+    Parameters
+    ----------
+    y : array-like
+        Input numeric sequence.
+
+    Returns
+    -------
+    numpy.ndarray
+        Robust z-score values.
+    """
     y = np.array(y)
     med = np.median(y)
     mad = np.median(np.abs(y - med))
     return (y - med) / (mad if mad > 1e-6 else 1)
 
 
-def detect_spikes_and_drops(y, prominence, normalize_robust):
-    """
-    Detect spikes (peaks) and drops (valleys) in time series data.
+def detect_spikes_and_drops(y: np.ndarray, prominence: float, normalize_robust: bool) -> Tuple[np.ndarray, np.ndarray]:
+    """Detect spike (peak) and drop (valley) indices.
 
-    Args:
-        y (array-like): Input signal.
-        prominence (float): The prominence parameter for spike detection metrics. The data is normalized before calculating the spikes, so the prominence now means distance in std or MAD units (1.5 => 1.5*std from mean).
-        normalize_robust (bool): If True, use robust (median&MAD) normalization, else use regular z-score (mean&std)normalization.
+    Parameters
+    ----------
+    y : array-like
+        Input time-ordered signal.
+    prominence : float
+        Minimum prominence for a spike/drop after normalization. Interpreted in
+        standard deviation units (z-score) or MAD units (robust mode).
+    normalize_robust : bool
+        If True, apply robust (median/MAD) normalization; otherwise standard
+        mean/std normalization.
 
-    Returns:
-        tuple: Indices of peaks and indices of drops.
+    Returns
+    -------
+    tuple[numpy.ndarray, numpy.ndarray]
+        ``(peaks, drops)`` indices of detected events.
     """
     if normalize_robust:
         y = robust_zscore(y)
@@ -45,17 +96,26 @@ def detect_spikes_and_drops(y, prominence, normalize_robust):
     return peaks, drops
 
 
-def match_events(true_idxs, pred_idxs, delta):
-    """
-    Match detected events (spikes or drops) between true and predicted data.
+def match_events(true_idxs: Iterable[int], pred_idxs: Iterable[int], delta: int) -> Tuple[int, int, int]:
+    """Match detected events (spikes or drops) between true and predicted data.
 
-    Args:
-        true_idxs (array-like): Indices of events in true data.
-        pred_idxs (array-like): Indices of events in predicted data.
-        delta (int): Maximum allowed distance between matching events.
+    Each true index is matched to at most one predicted index (first eligible
+    in order) whose absolute difference is ``<= delta``.
 
-    Returns:
-        tuple: Number of matched events, total true events, total predicted events.
+    Parameters
+    ----------
+    true_idxs : array-like
+        Indices of true events (e.g. spike positions).
+    pred_idxs : array-like
+        Indices of predicted events.
+    delta : int
+        Maximum allowed absolute index distance for a match.
+
+    Returns
+    -------
+    tuple[int, int, int]
+        ``(n_matches, n_true, n_pred)`` counts for matched, true, and predicted
+        events.
     """
     matched = []
     used_pred = set()
@@ -68,41 +128,49 @@ def match_events(true_idxs, pred_idxs, delta):
     return len(matched), len(true_idxs), len(pred_idxs)
 
 
-def spike_drop_match_score(y_true, y_pred, prominence, normalize_robust, delta=0):
-    """
-    Calculate metrics for spike and drop detection between true and predicted values.
+def spike_drop_match_score(
+    y_true: np.ndarray,
+    y_pred: np.ndarray,
+    prominence: float,
+    normalize_robust: bool,
+    delta: int = 0,
+) -> Dict[str, Dict[str, Any]]:
+    """Compute spike/drop precision, recall and F1 matching scores.
 
-    Args:
-        y_true (array-like): True values.
-        y_pred (array-like): Predicted values.
-        prominence (float): The prominence parameter for spike detection metrics. The data is normalized before calculating the spikes, so the prominence now means distance in std or MAD units (1.5 => 1.5*std from mean).
-        normalize_robust (bool): If True, use robust (median&MAD) normalization, else use regular z-score (mean&std)normalization.
-        delta (int): Maximum allowed time distance for matching peaks.
+    Detection is performed on normalized series (standard or robust). Predicted
+    and true event indices are greedily matched within ``delta`` positions.
 
-    Returns:
-        dict: Dictionary with precision, recall, and F1 scores for spikes and drops.
+    Parameters
+    ----------
+    y_true : array-like
+        Ground truth numeric sequence.
+    y_pred : array-like
+        Predicted numeric sequence.
+    prominence : float
+        Minimum prominence threshold passed to ``find_peaks`` after
+        normalization.
+    normalize_robust : bool
+        Whether to use robust (median/MAD) normalization.
+    delta : int, default=0
+        Maximum index distance allowed for matching.
+
+    Returns
+    -------
+    dict
+        Nested dictionary with keys ``spikes`` and ``drops``. Each contains
+        ``precision``, ``recall``, ``f1``, ``true_indices`` and ``pred_indices``.
     """
-    true_peaks, true_drops = detect_spikes_and_drops(
-        y_true, prominence, normalize_robust=normalize_robust
-    )
-    pred_peaks, pred_drops = detect_spikes_and_drops(
-        y_pred, prominence, normalize_robust=normalize_robust
-    )
+    true_peaks, true_drops = detect_spikes_and_drops(y_true, prominence, normalize_robust=normalize_robust)
+    pred_peaks, pred_drops = detect_spikes_and_drops(y_pred, prominence, normalize_robust=normalize_robust)
 
     # Match spikes
-    spike_match, n_true_spikes, n_pred_spikes = match_events(
-        true_peaks, pred_peaks, delta
-    )
+    spike_match, n_true_spikes, n_pred_spikes = match_events(true_peaks, pred_peaks, delta)
     drop_match, n_true_drops, n_pred_drops = match_events(true_drops, pred_drops, delta)
 
     def score(n_match, n_true, n_pred):
         precision = n_match / n_pred if n_pred > 0 else 0
         recall = n_match / n_true if n_true > 0 else 0
-        f1 = (
-            2 * precision * recall / (precision + recall)
-            if precision + recall > 0
-            else 0
-        )
+        f1 = 2 * precision * recall / (precision + recall) if precision + recall > 0 else 0
         return precision, recall, f1
 
     spike_score = score(spike_match, n_true_spikes, n_pred_spikes)
@@ -126,17 +194,27 @@ def spike_drop_match_score(y_true, y_pred, prominence, normalize_robust, delta=0
     }
 
 
-def directional_accuracy(y_true, y_pred):
-    """
-    Calculate the directional accuracy of predictions.
-    Directional accuracy is the percentage of times the predicted direction
-    matches the true direction.
+def directional_accuracy(
+    y_true: Iterable[float] | np.ndarray | pd.Series,
+    y_pred: Iterable[float] | np.ndarray | pd.Series,
+) -> Tuple[float, float]:
+    """Compute direction hit-rate and first-difference correlation.
 
-    Args:
-        y_true (pd.Series): True values.
-        y_pred (pd.Series): Predicted values.
-    Returns:
-        tuple: A tuple containing the directional accuracy and the first-difference correlation.
+    Directional accuracy counts how often the sign of the successive change
+    (first difference) in ``y_pred`` matches that of ``y_true``.
+
+    Parameters
+    ----------
+    y_true : pandas.Series or array-like
+        True target values ordered in time.
+    y_pred : pandas.Series or array-like
+        Predicted target values (aligned with ``y_true``).
+
+    Returns
+    -------
+    tuple[float, float]
+        ``(directional_accuracy, diff_correlation)`` where the second value is
+        the Pearson correlation coefficient of first differences.
     """
     dy_true = np.diff(y_true).reshape(-1, 1)
     dy_pred = np.diff(y_pred).reshape(-1, 1)
@@ -157,26 +235,55 @@ def calculate_metrics(
     model=None,
     verbose=True,
 ) -> dict:
-    """
-    Calculate RMSE, MAE, MAPE, directional accuracy, first-difference correlation, and spike/drop metrics for predictions.
+    """Compute accuracy, directional and spike/drop metrics at multiple scales.
 
-    Args:
-        y_true (pd.Series): True values.
-        y_pred (pd.Series): Predicted values.
-        device_id (str): Device's ID for which the analysis was done.
-        period (str): The period for which the metrics are calculated. Ideally in the format `'YYYY-MM-DD HH:MM:SS' - 'YYYY-MM-DD HH:MM:SS'`.
-        data_freq (str): Frequency of original data. Can be '1s', '5min', '15min', 'H', 'D', etc.
-        spike_prominence (float): The prominence parameter for spike detection metrics. The data is normalized before calculating the spikes, so the prominence now means distance in std or MAD units (1.5 => 1.5*std from mean).
-        normalize_robust (bool): If True, use robust (median&MAD) normalization, else use regular z-score (mean&std)normalization.
-        model: The trained model to measure memory consumption for.
-        verbose (bool): If True, print the metrics.
+    Metrics are produced for the original sampling frequency (unless already an
+    aggregation label like 'H', 'D', etc.) and for hourly, daily, weekly and a
+    28-day aggregation. Spike/drop precision/recall/F1 are reported for both
+    immediate detection (``delta=0``) and a one-step delayed allowance
+    (``delta=1``). Directional metrics are omitted for weekly and 28-day levels.
 
-    Returns:
-        dict: A dictionary containing the metrics for different aggregation levels.
+    Parameters
+    ----------
+    y_true : pandas.Series
+        Ground truth target series indexed by timestamp.
+    y_pred : pandas.Series
+        Predicted target series aligned to ``y_true``.
+    device_id : str
+        Identifier of the device / source series.
+    period : str
+        Human readable period string (e.g. 'YYYY-MM-DD ... - YYYY-MM-DD ...').
+    data_freq : str, default='5min'
+        Original data frequency (e.g. '1s', '5min', '15min', 'H', 'D').
+    spike_prominence : float, default=10.0
+        Prominence threshold (in normalized units) for spike detection.
+    normalize_robust : bool, default=True
+        Whether to apply robust normalization (median/MAD) prior to peak
+        detection.
+    model : Any, optional
+        Trained model instance (used only for potential memory measurements –
+        currently commented out).
+    verbose : bool, default=True
+        If True, pretty-print metrics to stdout.
+
+    Returns
+    -------
+    dict
+        Dictionary keyed by aggregation level (original freq key + 'hourly',
+        'daily', 'weekly', '28_days') each holding its metric sub-dictionary.
     """
 
     # Function to display metrics for a given period
     def display_metrics(period_name, metrics_dict):
+        """Pretty-print metrics for a single aggregation level.
+
+        Parameters
+        ----------
+        period_name : str
+            Aggregation key label.
+        metrics_dict : dict
+            Metric dictionary for that aggregation level.
+        """
         if metrics_dict:
             print(f"{period_name.capitalize()} Metrics:")
             print("-" * 50)
@@ -196,45 +303,49 @@ def calculate_metrics(
                 # Directional metrics
                 print("\nDirectional Metrics:")
                 print(f"\tDirectional Accuracy: {metrics_dict['dir_accuracy']:.4%}")
-                print(
-                    f"\tFirst-Diff Correlation: {metrics_dict['first_diff_corr']:.4f}"
-                )
+                print(f"\tFirst-Diff Correlation: {metrics_dict['first_diff_corr']:.4f}")
 
                 # Spike and drop detection - immediate (delta=0)
                 print("\nImmediate Detection (delta=0):")
                 print("\tSpikes:")
-                print(
-                    f"\t\tPrecision: {metrics_dict['spikes_immediate']['precision']:.4f}"
-                )
+                print(f"\t\tPrecision: {metrics_dict['spikes_immediate']['precision']:.4f}")
                 print(f"\t\tRecall: {metrics_dict['spikes_immediate']['recall']:.4f}")
                 print(f"\t\tF1: {metrics_dict['spikes_immediate']['f1']:.4f}")
                 print("\tDrops:")
-                print(
-                    f"\t\tPrecision: {metrics_dict['drops_immediate']['precision']:.4f}"
-                )
+                print(f"\t\tPrecision: {metrics_dict['drops_immediate']['precision']:.4f}")
+                # Spike and drop detection - immediate (delta=0)
                 print(f"\t\tRecall: {metrics_dict['drops_immediate']['recall']:.4f}")
                 print(f"\t\tF1: {metrics_dict['drops_immediate']['f1']:.4f}")
-
-                # Spike and drop detection - delayed (delta=1)
-                print(
-                    "\nDelayed Detection (delta=1 => 1-sec or 1-hour, or 1-day detection delay):"
-                )
+                print("\nDelayed Detection (delta=1 => 1-sec or 1-hour, or 1-day " "detection delay):")
                 print("\tSpikes:")
-                print(
-                    f"\t\tPrecision: {metrics_dict['spikes_delayed']['precision']:.4f}"
-                )
+                print(f"\t\tPrecision: {metrics_dict['spikes_delayed']['precision']:.4f}")
                 print(f"\t\tRecall: {metrics_dict['spikes_delayed']['recall']:.4f}")
                 print(f"\t\tF1: {metrics_dict['spikes_delayed']['f1']:.4f}")
                 print("\tDrops:")
-                print(
-                    f"\t\tPrecision: {metrics_dict['drops_delayed']['precision']:.4f}"
-                )
+                print(f"\t\tPrecision: {metrics_dict['drops_delayed']['precision']:.4f}")
                 print(f"\t\tRecall: {metrics_dict['drops_delayed']['recall']:.4f}")
                 print(f"\t\tF1: {metrics_dict['drops_delayed']['f1']:.4f}")
 
     # Function to calculate metrics for aggregated data
     def aggregate_metrics(y_true: pd.Series, y_pred: pd.Series, freq: str) -> dict:
-        """Helper function to calculate metrics for aggregated data."""
+        """Aggregate series to ``freq`` then compute metrics.
+
+        Parameters
+        ----------
+        y_true : pandas.Series
+            Original ground truth series.
+        y_pred : pandas.Series
+            Predicted series.
+        freq : str
+            Pandas offset alias for aggregation (e.g., '1H', '1D').
+
+        Returns
+        -------
+        dict
+            Metric dictionary for the aggregated series (similar schema as
+            original frequency metrics) omitting directional / spike metrics
+            for weekly and longer periods.
+        """
 
         freq_td = pd.Timedelta(freq)
 
@@ -244,16 +355,14 @@ def calculate_metrics(
             # First aggregate to hourly by mean
             y_true_hourly, y_pred_hourly = aggregate_values(y_true, y_pred, "H", "mean")
             # Then aggregate to the target frequency by sum
-            y_true_agg, y_pred_agg = aggregate_values(
-                y_true_hourly, y_pred_hourly, freq, "sum"
-            )
+            y_true_agg, y_pred_agg = aggregate_values(y_true_hourly, y_pred_hourly, freq, "sum")
         elif freq_td == pd.Timedelta("1H"):
             # Convert from kW to kWh by aggregating to hourly (mean)
             y_true_agg, y_pred_agg = aggregate_values(y_true, y_pred, freq, "mean")
         else:
             # For lower frequencies (e.g., 15-min, 5-min), aggregate by mean
             print(
-                f"[! WARNING !]: For frequencies lower than 1 hour, the aggregation is done by mean, which may not\
+                "[! WARNING !]: For frequencies lower than 1 hour, the aggregation is done by mean, which may not\
                    represent the actual `energy` consumption in kWh, but rather the average `power` (kW) consumption over the period."
             )
             y_true_agg, y_pred_agg = aggregate_values(y_true, y_pred, freq, "mean")
@@ -368,11 +477,7 @@ def calculate_metrics(
         metrics[data_freq] = original_metrics
 
     # Add hourly metrics (either from original data if data_freq is 'H' or by aggregation)
-    metrics["hourly"] = (
-        original_metrics
-        if data_freq == "H"
-        else aggregate_metrics(y_true, y_pred, "1H")
-    )
+    metrics["hourly"] = original_metrics if data_freq == "H" else aggregate_metrics(y_true, y_pred, "1H")
 
     # Add other aggregation metrics
     metrics["daily"] = aggregate_metrics(y_true, y_pred, "1D")
@@ -405,18 +510,43 @@ def calculate_metrics(
 
 
 def all_time_aggregation_metrics(
-    period_metrics: Dict[str, List[Dict]], data_freq: str, verbose=True
-) -> Dict[str, Dict[str, List[Dict[str, float]]]]:
-    """
-    Aggregate metrics across multiple periods.
+    period_metrics: Dict[str, List[Dict[str, dict]]],
+    data_freq: str,
+    verbose: bool = True,
+) -> Dict[str, Dict[str, Dict[str, Dict[str, float]]]]:
+    """Aggregate per-period metrics across all periods for each device.
 
-    Args:
-        period_metrics (dict): Dictionary containing metrics for different periods.
-        data_freq (str): Frequency of original data. Can be '1s', '5min', '15min', 'H', 'D', etc.
-        verbose (bool): If True, print the aggregated metrics.
+    For each device and aggregation level (original frequency plus 'hourly',
+    'daily', 'weekly', '28_days') this function collates lists of metric
+    values across multiple evaluation periods and summarizes them by their
+    mean and standard deviation. Directional and spike/drop metrics are
+    omitted (set to ``None``) for weekly and 28-day aggregations, mirroring
+    the per-period metric generation logic.
 
-    Returns:
-        dict: A dictionary containing the aggregated metrics for each device.
+    Parameters
+    ----------
+    period_metrics : dict
+        Mapping ``device_id -> List[period_metric_dict]`` where each
+        ``period_metric_dict`` is the output of :func:`calculate_metrics` for a
+        single time window (i.e., contains keys for each aggregation level).
+    data_freq : str
+        Original data frequency label (e.g. '5min', '15min', 'H'). Used to
+        decide whether to include the original frequency bucket in the
+        aggregated statistics.
+    verbose : bool, default=True
+        If True, prints a formatted summary to stdout.
+
+    Returns
+    -------
+    dict
+        Nested structure:
+
+        ``{device_id: {aggregation_level: {metric_name: {"mean": float | None,
+        "std": float | None}}}}``
+
+        Metrics include 'rmse', 'mae', 'mape', 'dir_accuracy',
+        'first_diff_corr' and spike/drop precision, recall, F1 for immediate
+        and delayed detection (unless weekly / 28_days where these are None).
     """
     aggregated_metrics: dict[
         str,  # device_id
@@ -476,30 +606,30 @@ def all_time_aggregation_metrics(
                     aggregated_metrics[device_id][agg_name][metric].append(value)
 
                 # Handle immediate spike metrics (delta=0)
-                aggregated_metrics[device_id][agg_name][
-                    "spikes_immediate.precision"
-                ].append(period_dict[agg_name]["spikes_immediate"]["precision"])
-                aggregated_metrics[device_id][agg_name][
-                    "spikes_immediate.recall"
-                ].append(period_dict[agg_name]["spikes_immediate"]["recall"])
+                aggregated_metrics[device_id][agg_name]["spikes_immediate.precision"].append(
+                    period_dict[agg_name]["spikes_immediate"]["precision"]
+                )
+                aggregated_metrics[device_id][agg_name]["spikes_immediate.recall"].append(
+                    period_dict[agg_name]["spikes_immediate"]["recall"]
+                )
                 aggregated_metrics[device_id][agg_name]["spikes_immediate.f1"].append(
                     period_dict[agg_name]["spikes_immediate"]["f1"]
                 )
 
-                aggregated_metrics[device_id][agg_name][
-                    "drops_immediate.precision"
-                ].append(period_dict[agg_name]["drops_immediate"]["precision"])
-                aggregated_metrics[device_id][agg_name][
-                    "drops_immediate.recall"
-                ].append(period_dict[agg_name]["drops_immediate"]["recall"])
+                aggregated_metrics[device_id][agg_name]["drops_immediate.precision"].append(
+                    period_dict[agg_name]["drops_immediate"]["precision"]
+                )
+                aggregated_metrics[device_id][agg_name]["drops_immediate.recall"].append(
+                    period_dict[agg_name]["drops_immediate"]["recall"]
+                )
                 aggregated_metrics[device_id][agg_name]["drops_immediate.f1"].append(
                     period_dict[agg_name]["drops_immediate"]["f1"]
                 )
 
                 # Handle delayed spike metrics (delta=1)
-                aggregated_metrics[device_id][agg_name][
-                    "spikes_delayed.precision"
-                ].append(period_dict[agg_name]["spikes_delayed"]["precision"])
+                aggregated_metrics[device_id][agg_name]["spikes_delayed.precision"].append(
+                    period_dict[agg_name]["spikes_delayed"]["precision"]
+                )
                 aggregated_metrics[device_id][agg_name]["spikes_delayed.recall"].append(
                     period_dict[agg_name]["spikes_delayed"]["recall"]
                 )
@@ -507,9 +637,9 @@ def all_time_aggregation_metrics(
                     period_dict[agg_name]["spikes_delayed"]["f1"]
                 )
 
-                aggregated_metrics[device_id][agg_name][
-                    "drops_delayed.precision"
-                ].append(period_dict[agg_name]["drops_delayed"]["precision"])
+                aggregated_metrics[device_id][agg_name]["drops_delayed.precision"].append(
+                    period_dict[agg_name]["drops_delayed"]["precision"]
+                )
                 aggregated_metrics[device_id][agg_name]["drops_delayed.recall"].append(
                     period_dict[agg_name]["drops_delayed"]["recall"]
                 )
@@ -566,15 +696,11 @@ def all_time_aggregation_metrics(
                 ]:
                     if metrics[metric]["mean"] is not None:
                         if metric == "mape":
-                            print(
-                                f"\t{metric.upper()}: {metrics[metric]['mean']:.4%} ± {metrics[metric]['std']:.4%}"
-                            )
+                            print(f"\t{metric.upper()}: {metrics[metric]['mean']:.4%} ± {metrics[metric]['std']:.4%}")
                         # elif metric == 'memory':
                         #     print(f"\tMEMORY: {metrics[metric]['mean']:.5f} MB ± {metrics[metric]['std']:.5f} MB")
                         else:
-                            print(
-                                f"\t{metric.upper()}: {metrics[metric]['mean']:.4f} ± {metrics[metric]['std']:.4f}"
-                            )
+                            print(f"\t{metric.upper()}: {metrics[metric]['mean']:.4f} ± {metrics[metric]['std']:.4f}")
                     else:
                         print(f"\t{metric.upper()}: N/A")
 

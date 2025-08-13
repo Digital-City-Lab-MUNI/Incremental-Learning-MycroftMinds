@@ -1,41 +1,90 @@
+"""Visualization helpers for model evaluation.
+
+This module provides convenience plotting functions used during exploratory
+analysis and model evaluation:
+
+* ``plot_date_range`` - focus on a specific calendar interval (optionally
+    aggregated) with outlier and spike/drop highlighting.
+* ``plot_part_predictions`` - tri-panel (beginning/middle/end) snapshot to
+    quickly inspect temporal drift or regime changes.
+* ``plot_hourly_predictions`` - hourly aggregation view with accompanying
+    printed metrics (directional + spike/drop detection summaries).
+
+Spike/Drop Detection
+--------------------
+All spike / drop annotations reuse the detection logic from
+``detect_spikes_and_drops``. When ``normalize_robust`` is True the underlying
+series is robustly normalized (median & MAD); otherwise standard z-score.
+
+Notes
+-----
+The functions avoid returning objects and instead immediately render figures to
+matplotlib's current backend for interactive workflows (e.g. Jupyter). They
+raise a ``ValueError`` if the requested date range is empty.
+"""
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from typing import Optional
+from typing import Optional, Union, Tuple
 
 from src.utils.utils import aggregate_values
 from src.evaluation.metrics import calculate_metrics, detect_spikes_and_drops
 
 
 def plot_date_range(
-    y_true,
-    y_pred,
-    start_date,
-    end_date,
-    device_id=None,
-    outlier_threshold=0.9,
-    figure_size=(14, 8),
-    aggregation=None,
-    show_spikes=True,
-    spike_prominence=10.0,
-    normalize_robust=True,
-):
-    """
-    Plots predictions against actual values for a specific date range with optional data aggregation.
+    y_true: pd.Series,
+    y_pred: pd.Series,
+    start_date: Union[str, pd.Timestamp],
+    end_date: Union[str, pd.Timestamp],
+    device_id: Optional[str] = None,
+    outlier_threshold: float = 0.9,
+    figure_size: Tuple[int, int] = (14, 8),
+    aggregation: Optional[str] = None,
+    show_spikes: bool = True,
+    spike_prominence: float = 10.0,
+    normalize_robust: bool = True,
+) -> None:
+    """Plot predictions vs. actual values for a date range.
 
-    Args:
-        y_true (pandas.Series): Original target values with timestamps as index.
-        y_pred (pandas.Series): Predicted target values with timestamps as index.
-        start_date (str or datetime): Start date for the range to plot.
-        end_date (str or datetime): End date for the range to plot.
-        device_id (str): Optional device ID to display in the title.
-        outlier_threshold (float): Threshold to mark outliers (default 0.9 = 90% difference).
-        figure_size (tuple): Size of the figure (width, height) in inches.
-        aggregation (str): Optional aggregation level ('15min', '30m', '1H', '6h', 'D', etc.).
-                           If None, no aggregation is applied.
-        show_spikes (bool): Whether to highlight spikes and drops in the plot.
-        spike_prominence (float): The prominence parameter for spike detection metrics. The data is normalized before calculating the spikes, so the prominence now means distance in std or MAD units (1.5 => 1.5*std from mean).
-        normalize_robust (bool): If True, use robust (median&MAD) normalization, else use regular z-score (mean&std)normalization.
+    Optionally aggregates the series (e.g. '15min', '1H', 'D'), highlights large
+    absolute percentage deviations ("outliers"), and annotates detected spikes /
+    drops.
+
+    Parameters
+    ----------
+    y_true : pandas.Series
+        Ground truth target values indexed by timestamp.
+    y_pred : pandas.Series
+        Predicted values aligned to ``y_true`` index.
+    start_date : str or datetime-like
+        Start of plotting window (inclusive); string inputs are parsed via
+        ``pandas.to_datetime``.
+    end_date : str or datetime-like
+        End of plotting window (inclusive); string inputs are parsed via
+        ``pandas.to_datetime``.
+    device_id : str, optional
+        Device identifier displayed in the title.
+    outlier_threshold : float, default 0.9
+        Relative absolute error (|y - y_hat| / (y + 1e-8)) above which points are
+        flagged as outliers.
+    figure_size : tuple(int, int), default (14, 8)
+        Matplotlib figure size in inches.
+    aggregation : str or None, optional
+        Resampling rule (Pandas offset alias). If provided both series are
+        aggregated via ``aggregate_values``.
+    show_spikes : bool, default True
+        Whether to annotate detected spikes and drops.
+    spike_prominence : float, default 10.0
+        Prominence threshold passed to ``detect_spikes_and_drops`` after
+        normalization.
+    normalize_robust : bool, default True
+        If True use robust normalization (median & MAD); else mean/std z-score.
+
+    Raises
+    ------
+    ValueError
+        If no data lies within the requested date range.
     """
     # Convert string dates to datetime if needed
     if isinstance(start_date, str):
@@ -73,9 +122,7 @@ def plot_date_range(
         # Determine display label and metrics key
         if "min" in agg_norm:
             agg_label = f"{agg_norm.replace('min', ' Minute')}"
-            metrics_key = (
-                "5_min" if agg_norm == "5min" else "5_min"
-            )  # Fallback to 5min metrics
+            metrics_key = "5_min" if agg_norm == "5min" else "5_min"  # Fallback to 5min metrics
         elif "h" in agg_norm.lower():
             agg_label = f"{agg_norm.replace('H', ' Hour').replace('h', ' Hour')}"
             metrics_key = "hourly"
@@ -90,9 +137,7 @@ def plot_date_range(
             agg_label = aggregation
 
         # Apply aggregation
-        y_true_filtered, y_pred_filtered = aggregate_values(
-            y_true_filtered, y_pred_filtered, agg_norm
-        )
+        y_true_filtered, y_pred_filtered = aggregate_values(y_true_filtered, y_pred_filtered, agg_norm)
 
     # Calculate percent difference to identify outliers
     pct_diff = abs(y_true_filtered - y_pred_filtered) / (y_true_filtered + 1e-8)
@@ -207,26 +252,36 @@ def plot_date_range(
 
 
 def plot_part_predictions(
-    y_true,
-    y_pred,
-    data_show=100,
-    outlier_threshold=0.9,
-    device_id=None,
-    show_spikes=True,
-    spike_prominence=10.0,
-    normalize_robust=True,
+    y_true: Union[pd.Series, np.ndarray],
+    y_pred: Union[pd.Series, np.ndarray],
+    data_show: int = 100,
+    outlier_threshold: float = 0.9,
+    device_id: Optional[str] = None,
+    show_spikes: bool = True,
+    spike_prominence: float = 10.0,
+    normalize_robust: bool = True,
 ) -> None:
     """
-    Plots parts of the original vs predicted values for the beginning, middle, and end of the dataset.
+    Plot the original vs predicted values for the beginning, middle, and end of the dataset.
 
-    Args:
-        y_true (numpy.ndarray): or pandas.Series, original target values.
-        y_pred (numpy.ndarray): or pandas.Series, predicted target values.
-        data_show (int): number of data points to show in each plot (default is 100).
-        outlier_threshold (float): threshold to mark outliers (default 0.9 = 90% difference).
-        device_id (str): optional device ID to display in the title.
-        show_spikes (bool): whether to highlight spikes and drops in the plot.
-        spike_prominence (float): required prominence for spike detection.
+    Parameters
+    ----------
+    y_true : numpy.ndarray or pandas.Series
+        Original target values.
+    y_pred : numpy.ndarray or pandas.Series
+        Predicted target values.
+    data_show : int, optional
+        Number of data points to show in each plot (default is 100).
+    outlier_threshold : float, optional
+        Threshold to mark outliers (default is 0.9, i.e., 90% difference).
+    device_id : str, optional
+        Device ID to display in the title.
+    show_spikes : bool, optional
+        Whether to highlight spikes and drops in the plot.
+    spike_prominence : float, optional
+        Required prominence for spike detection.
+    normalize_robust : bool, optional
+        If True, use robust (median & MAD) normalization for spike detection.
     """
 
     # Get period information for title
@@ -253,16 +308,12 @@ def plot_part_predictions(
     )
 
     # Calculate percent difference to identify outliers
-    pct_diff = abs(y_true - y_pred) / (
-        y_true + 1e-8
-    )  # Add small epsilon to avoid division by zero
+    pct_diff = abs(y_true - y_pred) / (y_true + 1e-8)  # Add small epsilon to avoid division by zero
     outliers = pct_diff > outlier_threshold
 
     # Extract timestamps and values for the beginning, middle, and end
     total_length = len(y_true)
-    data_show = min(
-        data_show, total_length // 3
-    )  # Ensure we don't try to show more than a third of the data
+    data_show = min(data_show, total_length // 3)  # Ensure we don't try to show more than a third of the data
 
     # Get slices for beginning, middle, and end
     beginning_slice = slice(0, data_show)
@@ -372,28 +423,18 @@ def plot_part_predictions(
 
     axes[0].plot([], [], " ", label=metrics_text)  # Add metrics to legend
     if show_spikes:
-        axes[0].plot(
-            [], [], " ", marker="^", markersize=10, color="red", label="Spikes"
-        )
-        axes[0].plot(
-            [], [], " ", marker="v", markersize=10, color="blue", label="Drops"
-        )
+        axes[0].plot([], [], " ", marker="^", markersize=10, color="red", label="Spikes")
+        axes[0].plot([], [], " ", marker="v", markersize=10, color="blue", label="Drops")
 
-    axes[0].set_title(
-        f"{title_prefix}\nBeginning: {y_true_beginning.index.min()} - {y_true_beginning.index.max()}"
-    )
+    axes[0].set_title(f"{title_prefix}\nBeginning: {y_true_beginning.index.min()} - {y_true_beginning.index.max()}")
     axes[0].set_xlabel("Time")
     axes[0].set_ylabel("Total Power Active")
     axes[0].legend()
     axes[0].grid(True)
 
     # Middle plot
-    axes[1].plot(
-        y_true_middle.index, y_true_middle.values, label="Original Values", marker="o"
-    )
-    axes[1].plot(
-        y_pred_middle.index, y_pred_middle.values, label="Predicted Values", marker="x"
-    )
+    axes[1].plot(y_true_middle.index, y_true_middle.values, label="Original Values", marker="o")
+    axes[1].plot(y_pred_middle.index, y_pred_middle.values, label="Predicted Values", marker="x")
     if outliers_middle.any():
         axes[1].plot(
             y_pred_middle[outliers_middle].index,
@@ -427,28 +468,18 @@ def plot_part_predictions(
 
     axes[1].plot([], [], " ", label=metrics_text)  # Add metrics to legend
     if show_spikes:
-        axes[1].plot(
-            [], [], " ", marker="^", markersize=10, color="red", label="Spikes"
-        )
-        axes[1].plot(
-            [], [], " ", marker="v", markersize=10, color="blue", label="Drops"
-        )
+        axes[1].plot([], [], " ", marker="^", markersize=10, color="red", label="Spikes")
+        axes[1].plot([], [], " ", marker="v", markersize=10, color="blue", label="Drops")
 
-    axes[1].set_title(
-        f"{title_prefix}\nMiddle: {y_true_middle.index.min()} - {y_true_middle.index.max()}"
-    )
+    axes[1].set_title(f"{title_prefix}\nMiddle: {y_true_middle.index.min()} - {y_true_middle.index.max()}")
     axes[1].set_xlabel("Time")
     axes[1].set_ylabel("Total Power Active")
     axes[1].legend()
     axes[1].grid(True)
 
     # End plot
-    axes[2].plot(
-        y_true_end.index, y_true_end.values, label="Original Values", marker="o"
-    )
-    axes[2].plot(
-        y_pred_end.index, y_pred_end.values, label="Predicted Values", marker="x"
-    )
+    axes[2].plot(y_true_end.index, y_true_end.values, label="Original Values", marker="o")
+    axes[2].plot(y_pred_end.index, y_pred_end.values, label="Predicted Values", marker="x")
     if outliers_end.any():
         axes[2].plot(
             y_pred_end[outliers_end].index,
@@ -482,16 +513,10 @@ def plot_part_predictions(
 
     axes[2].plot([], [], " ", label=metrics_text)  # Add metrics to legend
     if show_spikes:
-        axes[2].plot(
-            [], [], " ", marker="^", markersize=10, color="red", label="Spikes"
-        )
-        axes[2].plot(
-            [], [], " ", marker="v", markersize=10, color="blue", label="Drops"
-        )
+        axes[2].plot([], [], " ", marker="^", markersize=10, color="red", label="Spikes")
+        axes[2].plot([], [], " ", marker="v", markersize=10, color="blue", label="Drops")
 
-    axes[2].set_title(
-        f"{title_prefix}\nEnd: {y_true_end.index.min()} - {y_true_end.index.max()}"
-    )
+    axes[2].set_title(f"{title_prefix}\nEnd: {y_true_end.index.min()} - {y_true_end.index.max()}")
     axes[2].set_xlabel("Time")
     axes[2].set_ylabel("Total Power Active")
     axes[2].legend()
@@ -511,31 +536,47 @@ def plot_hourly_predictions(
     y_true: pd.Series,
     y_pred: pd.Series,
     data_freq: str,
-    device_id=None,
-    outlier_threshold=0.9,
-    data_show=None,
-    show_spikes=True,
-    spike_prominence=10.0,
-    normalize_robust=True,
+    device_id: Optional[str] = None,
+    outlier_threshold: float = 0.9,
+    data_show: Optional[int] = None,
+    show_spikes: bool = True,
+    spike_prominence: float = 10.0,
+    normalize_robust: bool = True,
 ) -> None:
-    """
-    Plots hourly aggregated predictions against actual values with outliers highlighted.
+    """Plot hourly aggregated predictions vs. actuals with metrics.
 
-    Args:
-        y_true (pandas.Series): original target values with timestamps as index.
-        y_pred (pandas.Series): predicted target values with timestamps as index.
-        device_id (str): the device ID for display in the title.
-        data_freq (str): frequency of the data (default is 'H' for hourly).
-        outlier_threshold: (float): threshold to mark outliers (default 0.9 = 90% difference).
-        data_show (int): number of data points to show from the end (default is all).
-        show_spikes (bool): whether to highlight spikes and drops in the plot.
-        spike_prominence (float): The prominence parameter for spike detection metrics. The data is normalized before calculating the spikes, so the prominence now means distance in std or MAD units (1.5 => 1.5*std from mean).
-        normalize_robust (bool): If True, use robust (median&MAD) normalization, else use regular z-score (mean&std)normalization.
+    Aggregates to hourly resolution (using mean) and highlights large relative
+    errors plus optional spike / drop annotations. After rendering the figure a
+    textual summary of metrics is printed.
+
+    Parameters
+    ----------
+    y_true : pandas.Series
+        Ground truth target values indexed by timestamp (possibly higher
+        frequency than hourly).
+    y_pred : pandas.Series
+        Predicted values aligned to ``y_true`` index.
+    data_freq : str
+        Original sampling frequency (Pandas offset alias) used when computing
+        metrics.
+    device_id : str, optional
+        Device identifier displayed in the title.
+    outlier_threshold : float, default 0.9
+        Relative absolute error above which points are flagged as outliers.
+    data_show : int or None, optional
+        If provided, only the most recent ``data_show`` hourly points are kept.
+    show_spikes : bool, default True
+        Whether to annotate detected spikes and drops.
+    spike_prominence : float, default 10.0
+        Prominence threshold for spike/drop detection after normalization.
+    normalize_robust : bool, default True
+        If True use robust normalization (median & MAD); else mean/std z-score.
     """
     # Aggregate hourly
     y_true_hourly, y_pred_hourly = aggregate_values(
         y_true, y_pred, "H", "mean"
-    )  # We're working with electricity data, so if we get lower granularities (e.g., 15-min) in kW, we can use 'mean' aggregation to get the consumption in kWh.
+    )  # We're working with electricity data, so if we get lower granularities (e.g., 15-min) in kW,
+    # we can use 'mean' aggregation to get the consumption in kWh.
 
     # Calculate percent difference to identify outliers
     pct_diff = abs(y_true_hourly - y_pred_hourly) / (
@@ -572,12 +613,8 @@ def plot_hourly_predictions(
     fig, ax = plt.subplots(figsize=(14, 8))
 
     # Plot regular points
-    ax.plot(
-        y_true_hourly.index, y_true_hourly.values, label="Original Values", marker="o"
-    )
-    ax.plot(
-        y_pred_hourly.index, y_pred_hourly.values, label="Predicted Values", marker="x"
-    )
+    ax.plot(y_true_hourly.index, y_true_hourly.values, label="Original Values", marker="o")
+    ax.plot(y_pred_hourly.index, y_pred_hourly.values, label="Predicted Values", marker="x")
 
     # Highlight outliers
     if outliers.any():
@@ -628,7 +665,7 @@ def plot_hourly_predictions(
             )
 
     # Set title and labels
-    title = f"Hourly Aggregated Values"
+    title = "Hourly Aggregated Values"
     if device_id:
         title = f"{title}\nDevice: {device_id}"
     title = f"{title}\nPeriod: {period}"
@@ -646,7 +683,7 @@ def plot_hourly_predictions(
 
     # Print metrics after showing the plot
     print("\n" + "=" * 50)
-    print(f"Performance Metrics for Hourly Aggregated Data")
+    print("Performance Metrics for Hourly Aggregated Data")
     print("=" * 50)
 
     # Basic prediction metrics

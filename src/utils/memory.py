@@ -7,13 +7,18 @@ from typing import Any, Tuple
 
 
 def calculate_memory_usage(obj: Any) -> float:
-    """Calculate the approximate memory usage of an object in MB.
+    """
+    Calculate the approximate memory usage of an object in MB.
 
-    Args:
-        obj: The object to measure
+    Parameters
+    ----------
+    obj : Any
+        The object to measure.
 
-    Returns:
-        Memory usage in MB
+    Returns
+    -------
+    float
+        Memory usage in MB.
     """
     try:
         size_bytes = asizeof.asizeof(obj)
@@ -36,13 +41,18 @@ def calculate_memory_usage(obj: Any) -> float:
 def optimize_memory_usage(
     data_tuple: Tuple[np.ndarray, np.ndarray],
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """Optimize memory usage of a data tuple by converting to efficient dtypes.
+    """
+    Optimize memory usage of a data tuple by converting to efficient dtypes.
 
-    Args:
-        data_tuple: A tuple of (X, y) where X is a feature matrix and y is a target vector
+    Parameters
+    ----------
+    data_tuple : Tuple[np.ndarray, np.ndarray]
+        A tuple of (X, y) where X is a feature matrix and y is a target vector.
 
-    Returns:
-        The optimized (X, y) tuple
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray]
+        The optimized (X, y) tuple.
     """
     X, y = data_tuple
 
@@ -59,10 +69,7 @@ def optimize_memory_usage(
         # For floating point arrays
         if np.issubdtype(arr.dtype, np.floating):
             # If the range fits in float32, use that
-            if (
-                np.nanmin(arr) >= np.finfo(np.float32).min
-                and np.nanmax(arr) <= np.finfo(np.float32).max
-            ):
+            if np.nanmin(arr) >= np.finfo(np.float32).min and np.nanmax(arr) <= np.finfo(np.float32).max:
                 return arr.astype(np.float32)
         # For integer arrays
         elif np.issubdtype(arr.dtype, np.integer):
@@ -96,12 +103,17 @@ def optimize_memory_usage(
 
 
 def print_memory_stats(train, valid, test):
-    """Print detailed memory usage statistics for datasets.
+    """
+    Print detailed memory usage statistics for datasets.
 
-    Args:
-        train: Training dataset
-        valid: Validation dataset
-        test: Test dataset
+    Parameters
+    ----------
+    train : Any
+        Training dataset.
+    valid : Any
+        Validation dataset.
+    test : Any
+        Test dataset.
     """
     # For walk-forward validation structure
     if isinstance(train, list):
@@ -110,7 +122,7 @@ def print_memory_stats(train, valid, test):
         test_mem = calculate_memory_usage(test)
 
         # Print summary statistics
-        print(f"Memory usage:")
+        print("Memory usage:")
         print(f"  Train: {train_mem:.2f} MB ({len(train)} splits)")
         print(f"  Valid: {valid_mem:.2f} MB ({len(valid)} splits)")
         print(f"  Test:  {test_mem:.2f} MB")
@@ -122,7 +134,7 @@ def print_memory_stats(train, valid, test):
         test_mem = calculate_memory_usage(test)
 
         # Print summary statistics
-        print(f"Memory usage:")
+        print("Memory usage:")
         print(f"  Train: {train_mem:.2f} MB")
         print(f"  Valid: {valid_mem:.2f} MB")
         print(f"  Test:  {test_mem:.2f} MB")

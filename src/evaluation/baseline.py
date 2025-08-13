@@ -1,47 +1,111 @@
+"""Baseline (naïve) regression models used for comparative evaluation.
+
+This module provides simple baseline forecasters:
+
+* ``PreviousValueRegressor`` - always predicts the most recently observed target
+    value (a persistence model).
+* ``SeasonalMeanRegressor`` - learns a weekly (day-of-week × hour-of-day) mean
+    table (168 seasonal slots) and predicts the corresponding seasonal mean.
+* ``ExponentialMovingAverageRegressor`` - maintains an exponential moving average
+    (EMA) of the target using a smoothing factor ``alpha``.
+
+All incremental models expose a light River-style interface via ``learn_one`` and
+``predict_one`` for single-sample updates / predictions. The seasonal mean model
+follows the scikit-learn ``fit`` / ``predict`` API.
+"""
+
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, RegressorMixin
 
 
 class PreviousValueRegressor:
-    """
-    Baseline regressor that always predicts the previous observed value.
-    Simple incremental learning model that remembers only the last seen value.
+    """Persistence baseline that always returns the last observed value.
+
+    Notes
+    -----
+    * Requires only O(1) memory: it keeps a single floating point value.
+    * For the very first prediction (before any observation) the default
+        ``last_value`` is ``0.0``.
+    * Provides River compatibility through ``learn_one`` / ``predict_one``.
     """
 
     def __init__(self):
         self.last_value = 0.0  # Default value when no data has been seen
 
-    def learn_one(self, x, y):
-        """River compatibility - learn from one sample"""
+    def learn_one(self, x, y: float):  # noqa: D401 - short River style docstring
+        """Update the stored value with the new target ``y``.
+
+        Parameters
+        ----------
+        x : Any
+                Feature vector (ignored - model is univariate w.r.t. target).
+        y : float
+                Observed target value.
+
+        Returns
+        -------
+        PreviousValueRegressor
+                The instance itself (for fluent usage).
+        """
         self.last_value = y
         return self
 
-    def predict_one(self, x):
-        """River compatibility - predict for one sample"""
+    def predict_one(self, x) -> float:  # noqa: D401 - short River style docstring
+        """Return the previously observed target value, or 0.0 if no data
+        has been seen yet or is_residual is True.
+
+        Parameters
+        ----------
+        x : Any
+                Feature vector (ignored).
+
+        Returns
+        -------
+        float
+                The last observed value (``0.0`` if no data has been seen yet).
+        """
         return self.last_value
 
 
 class SeasonalMeanRegressor(BaseEstimator, RegressorMixin):
-    """
-    sklearn-style regressor that predicts values based on time-of-week patterns.
+    """Weekly (hour x day-of-week) seasonal-mean forecaster.
 
-    This regressor calculates the mean value for each hour of each day of the week,
-    creating a 168-point (24 hours x 7 days) seasonality table. Any timestamp will
-    be mapped to its corresponding hour and day of week for prediction.
+    For each observed (``day_of_week``, ``hour``) combination the arithmetic mean
+    of the target is stored. Prediction maps an incoming timestamp to its
+    (``day_of_week``, ``hour``) cell and returns the stored mean. If a cell has not
+    been seen, the model falls back to the *hour-only* mean, and ultimately to the
+    *global* mean of all observed targets.
+
+    Notes
+    -----
+    * Seasonality granularity: 7 days x 24 hours = 168 cells.
+    * Complexity: O(168) space; O(1) lookup (aside from pandas indexing cost).
+    * Input ``X`` is expected to contain two columns: ``hour`` (0-23) and
+      ``day_of_week`` (0=Monday … 6=Sunday). This matches the synthetic example in
+      the module ``__main__`` block.
     """
 
-    def __init__(self):
-        """Initialize the seasonal mean regressor with a weekly seasonality table."""
+    def __init__(self):  # noqa: D401 - simple initializer
         self.weekly_means = None  # (day_of_week, hour) -> mean value
-        self.hour_means = None  # Hour of day (0-23) -> mean value (fallback)
-        self.global_mean = None  # Fallback value for any missing slots
+        self.hour_means = None  # hour -> mean value (fallback)
+        self.global_mean = None  # overall mean fallback
 
     def fit(self, X, y):
-        """
-        Fit the model by calculating mean values for each time slot.
+        """Compute mean targets for each seasonal (day, hour) slot.
 
-        Creates a 168-point seasonality table (24 hours x 7 days).
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, 2)
+            Feature matrix whose first column is ``hour`` (0-23) and second is
+            ``day_of_week`` (0-6).
+        y : array-like of shape (n_samples,)
+            Target values.
+
+        Returns
+        -------
+        SeasonalMeanRegressor
+            The fitted instance.
         """
         df = pd.DataFrame(
             {
@@ -55,21 +119,23 @@ class SeasonalMeanRegressor(BaseEstimator, RegressorMixin):
         self.hour_means = df.groupby("hour")["y"].mean()
         self.weekly_means = df.groupby(["day_of_week", "hour"])["y"].mean()
         self.global_mean = df["y"].mean()
-
         return self
 
-    def predict(self, X):
-        """
-        Predict based on weekly seasonality patterns.
+    def predict(self, X):  # noqa: D401 - concise prediction description
+        """Return seasonal mean for each sample in ``X``.
 
-        Returns the mean value corresponding to the specific hour of the
-        specific day of week for each timestamp.
-        """
-        df = pd.DataFrame(
-            {"hour": X[:, 0], "day_of_week": X[:, 1]}  # X[:, 0] is the hour
-        )  # X[:, 1] is the day of week
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, 2)
+            First column: ``hour``; second column: ``day_of_week``.
 
-        # Use full weekly patterns (168 values)
+        Returns
+        -------
+        numpy.ndarray of shape (n_samples,)
+            Predicted seasonal mean values.
+        """
+        df = pd.DataFrame({"hour": X[:, 0], "day_of_week": X[:, 1]})
+
         results = []
         for _, row in df.iterrows():
             day = row["day_of_week"]
@@ -90,9 +156,14 @@ class SeasonalMeanRegressor(BaseEstimator, RegressorMixin):
 
 
 class ExponentialMovingAverageRegressor:
-    """
-    Incremental learning regressor that uses an exponential moving average to make predictions.
-    Uses River-style interface with learn_one and predict_one methods.
+    """Incremental EMA forecaster with optional smoothing factor ``alpha``.
+
+    Maintains an exponential moving average (EMA) of the target sequence:
+
+    .. math:: \text{EMA}_t = \alpha y_t + (1-\alpha) \text{EMA}_{t-1}
+
+    The current EMA is returned as the prediction. No feature information is
+    used (univariate baseline). Implements a River-compatible interface.
     """
 
     def __init__(self, alpha=0.3):
@@ -103,24 +174,35 @@ class ExponentialMovingAverageRegressor:
         -----------
         alpha : float, default=0.3
             Smoothing factor between 0 and 1.
-            - Closer to 1: more weight on recent observations (adapts quickly)
-            - Closer to 0: more weight on historical observations (more stable)
+            Closer to 1: more weight on recent observations (adapts quickly)
+            Closer to 0: more weight on historical observations (more stable)
         """
         self.alpha = alpha
         self.current_average = None
 
-    def learn_one(self, x, y):
-        """River compatibility - learn from one sample"""
+    def learn_one(self, x, y):  # noqa: D401 - short River style docstring
+        """Update EMA with a new observation ``y``.
+
+        Parameters
+        ----------
+        x : Any
+            Feature vector (ignored).
+        y : float
+            Observed target.
+
+        Returns
+        -------
+        ExponentialMovingAverageRegressor
+            The instance itself.
+        """
         if self.current_average is None:
             self.current_average = y
         else:
-            self.current_average = (
-                self.alpha * y + (1 - self.alpha) * self.current_average
-            )
+            self.current_average = self.alpha * y + (1 - self.alpha) * self.current_average
         return self
 
-    def predict_one(self, x):
-        """River compatibility - predict for one sample"""
+    def predict_one(self, x):  # noqa: D401 - short River style docstring
+        """Return current EMA (0.0 if uninitialized)."""
         if self.current_average is None:
             return 0.0
         return self.current_average
@@ -142,10 +224,7 @@ if __name__ == "__main__":
         total_periods = days * periods_per_day
 
         # Create timestamps for the given frequency
-        timestamps = [
-            start_date + pd.Timedelta(minutes=i * freq_mins)
-            for i in range(total_periods)
-        ]
+        timestamps = [start_date + pd.Timedelta(minutes=i * freq_mins) for i in range(total_periods)]
         timestamps_array = np.array([[ts] for ts in timestamps])
 
         # Generate synthetic values with daily and weekly patterns
@@ -187,7 +266,7 @@ if __name__ == "__main__":
         seasonal_mae = np.mean(np.abs(y_test - seasonal_pred))
         seasonal_rmse = np.sqrt(np.mean((y_test - seasonal_pred) ** 2))
 
-        print(f"\nSeasonalMeanRegressor Results:")
+        print("\nSeasonalMeanRegressor Results:")
         print(f"Mean Absolute Error: {seasonal_mae:.4f}")
         print(f"Root Mean Squared Error: {seasonal_rmse:.4f}")
 
@@ -224,9 +303,7 @@ if __name__ == "__main__":
 
         # Find best alpha
         best_alpha_result = min(ema_results, key=lambda x: x[3])  # Sort by MAE
-        print(
-            f"\nBest alpha: {best_alpha_result[0]} with MAE: {best_alpha_result[3]:.4f}"
-        )
+        print(f"\nBest alpha: {best_alpha_result[0]} with MAE: {best_alpha_result[3]:.4f}")
 
         # Plot results (if matplotlib is available)
         try:
@@ -256,9 +333,7 @@ if __name__ == "__main__":
                 linestyle="-.",
             )
 
-            plt.title(
-                f"Model Comparison ({freq_mins}-minute data): Actual vs Predicted Values"
-            )
+            plt.title(f"Model Comparison ({freq_mins}-minute data): Actual vs Predicted Values")
             plt.xlabel("Date")
             plt.ylabel("Value")
             plt.legend()
@@ -268,9 +343,7 @@ if __name__ == "__main__":
             for i in range(7):
                 day_start = train_size + i * periods_per_day
                 if day_start < len(timestamps):
-                    plt.axvline(
-                        x=timestamps[day_start], color="gray", alpha=0.5, linestyle=":"
-                    )
+                    plt.axvline(x=timestamps[day_start], color="gray", alpha=0.5, linestyle=":")
 
             plt.tight_layout()
             plt.show()
@@ -279,9 +352,7 @@ if __name__ == "__main__":
             if not freq_mins > 60:  # Only show for hourly or finer granularity
                 try:
                     # Create a DataFrame from the weekly seasonality table
-                    weekly_pattern = pd.DataFrame(
-                        index=range(7), columns=range(24)  # days  # hours
-                    )
+                    weekly_pattern = pd.DataFrame(index=range(7), columns=range(24))  # days  # hours
 
                     # Fill with values
                     for (day, hour), value in seasonal_model.weekly_means.items():
@@ -349,9 +420,7 @@ if __name__ == "__main__":
             try:
                 import seaborn as sns
 
-                ax = sns.heatmap(
-                    weekly_pattern, cmap="YlGnBu", annot=True, fmt=".1f", linewidths=0.5
-                )
+                ax = sns.heatmap(weekly_pattern, cmap="YlGnBu", annot=True, fmt=".1f", linewidths=0.5)
                 ax.set_xlabel("Hour of Day")
                 ax.set_ylabel("Day of Week")
             except ImportError:

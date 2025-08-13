@@ -40,9 +40,7 @@ class LearnNSE:
         self.beta = beta
         self.ensemble_size = ensemble_size  # s in the paper
         self.pruning_type = pruning_type
-        self.regression_task_error_metric = lambda y_true, y_pred: mse_per_instance(
-            y_true, y_pred
-        )
+        self.regression_task_error_metric = lambda y_true, y_pred: mse_per_instance(y_true, y_pred)
         # ensemble state
         self.models = []
         self.voting_weights = []
@@ -85,9 +83,7 @@ class LearnNSE:
         n = len(y)
         t = len(self.models) + 1
 
-        mean_y = np.mean(
-            y
-        )  # up for a debate: could be np.median(y) or other robust measure
+        mean_y = np.mean(y)  # up for a debate: could be np.median(y) or other robust measure
         base_err = self.regression_task_error_metric(y, np.full_like(y, mean_y))
         D = np.full(n, 1.0 / n)
 
@@ -105,24 +101,18 @@ class LearnNSE:
             ):
                 # Step 1: Compute ensemble error uniformly (no previous weights!)
                 mistakes = (preds != y).astype(float)
-                ensemble_error_on_original_batch = (
-                    np.sum(mistakes) / n
-                )  # uniform averaging
+                ensemble_error_on_original_batch = np.sum(mistakes) / n  # uniform averaging
 
                 # ensemble_error_on_original_batch = np.clip(ensemble_error_on_original_batch, eps, 1 - eps)        # stability
 
                 # Step 2: Update weights based on correctness
-                w = np.where(
-                    mistakes == 1, 1.0 / n, (ensemble_error_on_original_batch + eps) / n
-                )
+                w = np.where(mistakes == 1, 1.0 / n, (ensemble_error_on_original_batch + eps) / n)
 
             else:
                 # regression branch using mean(y) as base error
                 per_err = self.regression_task_error_metric(y, preds)
                 ensemble_error_on_original_batch = np.mean(per_err)
-                ensemble_error_on_original_batch = max(
-                    ensemble_error_on_original_batch, eps
-                )
+                ensemble_error_on_original_batch = max(ensemble_error_on_original_batch, eps)
                 w = np.where(per_err > base_err, 1.0, ensemble_error_on_original_batch)
 
             D = w / np.sum(w)
@@ -133,49 +123,27 @@ class LearnNSE:
         base_learner.fit(X[idx], y[idx])
         idx = np.random.choice(n, size=n, replace=True, p=D)
 
-        if hasattr(self.base_classifier, "predict_proba") or isinstance(
-            self.base_classifier, DecisionTreeClassifier
-        ):
+        if hasattr(self.base_classifier, "predict_proba") or isinstance(self.base_classifier, DecisionTreeClassifier):
 
-            if (
-                base_learner.predict(X[idx]) != y[idx]
-            ).sum() / n > classification_base_error:
+            if (base_learner.predict(X[idx]) != y[idx]).sum() / n > classification_base_error:
                 self.models.append(base_learner)
             else:
                 counter = 0
-                while (
-                    (base_learner.predict(X[idx]) != y[idx]).sum() / n
-                    > classification_base_error
-                ) and counter < 10:
+                while ((base_learner.predict(X[idx]) != y[idx]).sum() / n > classification_base_error) and counter < 10:
                     idx = np.random.choice(n, size=n, replace=True, p=D)
-                    base_learner = (
-                        self._clone_with_params()
-                    )  # perhap this could experiment with different params?
+                    base_learner = self._clone_with_params()  # perhap this could experiment with different params?
                     base_learner.fit(X[idx], y[idx])
                     idx = np.random.choice(n, size=n, replace=True, p=D)
                     counter += 1
                 self.models.append(base_learner)
         else:
 
-            regression_base_error = np.mean(
-                self.regression_task_error_metric(np.full_like(y, mean_y), y[idx])
-            )
-            if (
-                np.mean(
-                    self.regression_task_error_metric(
-                        base_learner.predict(X[idx]), y[idx]
-                    )
-                )
-                < regression_base_error
-            ):
+            regression_base_error = np.mean(self.regression_task_error_metric(np.full_like(y, mean_y), y[idx]))
+            if np.mean(self.regression_task_error_metric(base_learner.predict(X[idx]), y[idx])) < regression_base_error:
                 self.models.append(base_learner)
             else:
                 while (
-                    np.mean(
-                        self.regression_task_error_metric(
-                            base_learner.predict(X[idx]), y[idx]
-                        )
-                    )
+                    np.mean(self.regression_task_error_metric(base_learner.predict(X[idx]), y[idx]))
                     < regression_base_error
                     and counter < 10
                 ):
@@ -191,27 +159,19 @@ class LearnNSE:
         betas = []
         for n, m in enumerate(self.models):
             print(f"model {n}")
-            pred_k = m.predict(
-                X[idx]
-            )  # this needs be the bootstrapped sample hence [idx]
+            pred_k = m.predict(X[idx])  # this needs be the bootstrapped sample hence [idx]
             if hasattr(self.base_classifier, "predict_proba") or isinstance(
                 self.base_classifier, DecisionTreeClassifier
             ):
-                ek = np.sum(
-                    D * (pred_k != y[idx])
-                )  # maybe D multiplication is unnecessary here
+                ek = np.sum(D * (pred_k != y[idx]))  # maybe D multiplication is unnecessary here
                 if ek < classification_base_error:
                     beta_k = (ek) / (1 - ek)
                 else:
-                    beta_k = (classification_base_error) / (
-                        1 - classification_base_error
-                    )
+                    beta_k = (classification_base_error) / (1 - classification_base_error)
             else:
                 raw_err = self.regression_task_error_metric(y, pred_k)
                 ek = np.sum(D * raw_err)
-                mean_regressor_error = np.mean(
-                    self.regression_task_error_metric(y, np.full_like(y, mean_y))
-                )
+                mean_regressor_error = np.mean(self.regression_task_error_metric(y, np.full_like(y, mean_y)))
                 # mean_regressor_error = np.sum(D * mean_regressor_error) maybe unnecessary
 
                 if ek < mean_regressor_error:
@@ -224,10 +184,7 @@ class LearnNSE:
 
         # Step 5: time-based weights (unused later)
         t_weights = np.array(
-            [
-                1 / (1 + np.exp(-self.alpha * (t - k - self.beta)))
-                for k in range(1, len(self.models) + 1)
-            ]
+            [1 / (1 + np.exp(-self.alpha * (t - k - self.beta))) for k in range(1, len(self.models) + 1)]
         )
         t_weights /= t_weights.sum()
         # t_weights rename to voting_weights
@@ -249,14 +206,8 @@ class LearnNSE:
                     r1 = e3 / e4 if e4 != 0 else 1.0
                     r2 = e2 / e3 if e3 != 0 else 1.0
                     r3 = e1 / e2 if e2 != 0 else 1.0
-                    weighted = (
-                        self.gamma_multiplier * r1
-                        + self.beta_multiplier * r2
-                        + self.alpha_multiplier * r3
-                    )
-                    dynamic_count = max(
-                        0, round(self.fixed_multiplier * weighted - self.baseline)
-                    )
+                    weighted = self.gamma_multiplier * r1 + self.beta_multiplier * r2 + self.alpha_multiplier * r3
+                    dynamic_count = max(0, round(self.fixed_multiplier * weighted - self.baseline))
                     print(f"[BatchErrorHistory] dynamic removal_count={dynamic_count}")
                     # ensure at least the default removal
                     removal_count = max(removal_count, dynamic_count)

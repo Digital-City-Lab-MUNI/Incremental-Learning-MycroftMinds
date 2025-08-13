@@ -1,23 +1,53 @@
+"""Data loading and preprocessing utilities for time series datasets.
+
+This module provides helper functions to:
+
+* Read raw CSV batches (``first_batch`` / ``second_batch``) into pandas DataFrames.
+* Optionally aggregate time series to a coarser temporal resolution while validating lag specifications.
+* Preprocess individual device DataFrames (timezone normalization, temporal feature extraction, optional cyclical features).
+* Concatenate per-device frames while preserving temporal ordering.
+* Filter for complete (non-missing) device time series.
+* Generate supervised learning samples via sliding windows.
+
+Only documentation / typing updates were introduced; no functional logic changes are intended.
+"""
+
 import os
 import pandas as pd
 import numpy as np
 import traceback
 from pandas.tseries.frequencies import to_offset
-from typing import List, Optional, Optional, Dict, Tuple
+from typing import List, Optional, Dict, Tuple
 
 
-def read_second_batch(extract_path, location="industrial", site_ids=None):
-    """
-    Reads data from the 'second_batch' folder for specified sites.
+def read_second_batch(
+    extract_path: str,
+    location: str = "industrial",
+    site_ids: Optional[List[str]] = None,
+) -> List[pd.DataFrame]:
+    """Read site CSV files from the ``second_batch`` directory.
 
-    Args:
-        extract_path (str): Base path containing the 'second_batch' folder.
-        site_ids (list or None): List of site identifiers like ['site1', 'site2'].
-                                 If None, reads all site files.
-        location (str): industrial or commercial.
+    Parameters
+    ----------
+    extract_path : str
+        Base directory containing the ``second_batch`` subfolder (split into
+        ``industrial`` or ``commercial``).
+    location : str, default="industrial"
+        Either ``"industrial"`` or ``"commercial"`` - selects the subfolder.
+    site_ids : list of str, optional
+        Specific site identifiers to load. If ``None`` all sites in the folder
+        are loaded.
 
-    Returns:
-        List of DataFrames, one per site.
+    Returns
+    -------
+    list of pd.DataFrame
+        One DataFrame per loaded site. Columns are minimally cleaned and a
+        ``device_id`` / ``serial_number`` column is injected.
+
+    Raises
+    ------
+    ValueError
+        If the expected location directory does not exist.
     """
     if location == "industrial":
         second_batch_path = os.path.join(extract_path, "industrial")
@@ -43,9 +73,7 @@ def read_second_batch(extract_path, location="industrial", site_ids=None):
             df["serial_number"] = site_name
             df = df.sort_values(by=["time"])
             if location == "industrial":
-                df.drop(
-                    columns={"Q+ total", "min", "max"}, errors="ignore", inplace=True
-                )
+                df.drop(columns={"Q+ total", "min", "max"}, errors="ignore", inplace=True)
             elif location == "commercial":
                 df.drop(columns={"seriesId"}, inplace=True)
                 df["consumption"] = df["consumption"].diff()
@@ -61,17 +89,35 @@ def read_second_batch(extract_path, location="industrial", site_ids=None):
     return all_site_data
 
 
-def read_first_batch(extract_path, meter_names=None, aggregation=None):
-    """
-    Reads data from specified meter files into pandas DataFrames.
+def read_first_batch(
+    extract_path: str,
+    meter_names: Optional[List[str]] = None,
+    aggregation: Optional[str] = None,
+) -> List[pd.DataFrame]:
+    """Read ``first_batch`` meter CSV files and assemble per-meter DataFrames.
 
-    Args:
-        data_path: The path to the directory containing the meter data files.
-        meter_names: A list of meter names to read data for.
+    Parameters
+    ----------
+    extract_path : str
+        Directory containing the CSV exports for the first batch.
+    meter_names : list of str, optional
+        Meter base-name prefixes to include (e.g. ``["df_TRB145-1", ...]``).
+        If ``None`` a default list of known meters is used.
+    aggregation : str, optional
+        (Reserved) Frequency string for optional temporal aggregation. Currently
+        unused; present for future extension.
 
-    Returns:
-        A list with corresponding DataFrames.
-        Returns an empty list if no valid meter files are found or an error occurs.
+    Returns
+    -------
+    list of pd.DataFrame
+        One concatenated DataFrame per meter name (even if composed from
+        multiple monthly files).
+
+    Notes
+    -----
+    If a meter has no matching files, an empty list passed to ``pd.concat``
+    would raise an error. Current implementation assumes at least one file per
+    meter; consider adding a guard if this assumption may not hold.
     """
     if meter_names is None:
         meter_names = [
@@ -86,18 +132,14 @@ def read_first_batch(extract_path, meter_names=None, aggregation=None):
     for meter_name in meter_names:
         individual_meter_data = []
         for filename in os.listdir(extract_path):
-            if filename.startswith(meter_name) and filename.endswith(
-                ".csv"
-            ):  # Assuming CSV files
+            if filename.startswith(meter_name) and filename.endswith(".csv"):  # Assuming CSV files
                 # print(filename)
                 filepath = os.path.join(extract_path, filename)
                 try:
                     df = pd.read_csv(filepath)  # Or pd.read_excel(...) for Excel files
                     df["device_id"] = meter_name
                     df["serial_number"] = meter_name
-                    df.drop(
-                        columns={"result", "table", "_time", "Unnamed: 0"}, inplace=True
-                    )
+                    df.drop(columns={"result", "table", "_time", "Unnamed: 0"}, inplace=True)
                     df.rename(columns={"timestamp": "time"}, inplace=True)
 
                     # if aggregation is not None:
@@ -125,22 +167,41 @@ def aggregate_and_validate_lags(
     data_concat: pd.DataFrame,
     lag_freqs: Dict[str, int],
     time_agg: Optional[str] = None,
-    fill_missing=False,
+    fill_missing: bool = False,
 ) -> Tuple[pd.DataFrame, Dict[str, int]]:
-    """
-    Aggregates the time series data and filters lag frequencies that are incompatible
-    with the aggregation level.
+    """Aggregate data and filter incompatible lag specifications.
 
-    Parameters:
-        data_concat (pd.DataFrame): Original time series dataframe with 'time', 'device_id' and 'serial_number' columns.
-        lag_freqs (dict): Dictionary mapping lag frequency strings (e.g., '1H', '1D') to the number of lags.
-        time_agg (str, optional): Aggregation frequency string (e.g., '1H', '30min'). If None, no aggregation.
-        fill_missing (bool): fill missing values
+    Performs optional temporal aggregation (by mean over numerical columns) at
+    the frequency ``time_agg`` and then removes lag entries whose resolution is
+    finer than the aggregation level.
 
-    Returns:
-        Tuple of:
-        - Aggregated (or original) data_concat
-        - Filtered lag_freqs dict where each lag >= aggregation level
+    Parameters
+    ----------
+    data_concat : pd.DataFrame
+        Original time series containing at least ``time``, ``device_id`` and
+        ``serial_number`` columns.
+    lag_freqs : dict
+        Mapping of (label -> frequency value). Implementation expects values
+        usable by ``pandas.to_offset``; entries whose offset is finer than the
+        aggregation level are dropped. (Naming suggests frequency strings but
+        current code calls ``to_offset`` on the dict value.)
+    time_agg : str, optional
+        Pandas offset alias (e.g. ``"1H"``, ``"30min"``). If ``None`` no
+        aggregation is applied and lag filtering is skipped.
+    fill_missing : bool, default=False
+        If ``True`` attempts to fill in missing timestamps per device using a
+        weekday + time-slot mean strategy (DST aware for tz-aware data).
+
+    Returns
+    -------
+    (pd.DataFrame, dict)
+        Tuple of the (possibly aggregated and gap-filled) DataFrame and a
+        filtered dictionary of lag specifications.
+
+    Raises
+    ------
+    Exception
+        Propagates unexpected aggregation or validation failures after logging.
     """
     if not time_agg:
         return data_concat, lag_freqs
@@ -150,9 +211,9 @@ def aggregate_and_validate_lags(
         data_concat["time"] = pd.to_datetime(data_concat["time"])
         data_concat = data_concat.set_index("time")
         agg_cols = data_concat.select_dtypes(include="number").columns
-        data_concat = data_concat.groupby(
-            [pd.Grouper(freq=time_agg), "device_id", "serial_number"]
-        ).agg({col: "mean" for col in agg_cols})
+        data_concat = data_concat.groupby([pd.Grouper(freq=time_agg), "device_id", "serial_number"]).agg(
+            {col: "mean" for col in agg_cols}
+        )
         data_concat = data_concat.reset_index()
 
         if fill_missing:
@@ -161,9 +222,7 @@ def aggregate_and_validate_lags(
             # Ensure 'time' is datetime with tz info preserved
             data_concat["time"] = pd.to_datetime(data_concat["time"])
 
-            for (device_id, serial_number), group in data_concat.groupby(
-                ["device_id", "serial_number"]
-            ):
+            for (device_id, serial_number), group in data_concat.groupby(["device_id", "serial_number"]):
                 group = group.sort_values("time")
 
                 # Create full range in UTC to avoid DST issues
@@ -177,9 +236,7 @@ def aggregate_and_validate_lags(
                     end_utc = end_time.tz_convert("UTC")
 
                     # Create range in UTC
-                    full_range_utc = pd.date_range(
-                        start=start_utc, end=end_utc, freq=time_agg
-                    )
+                    full_range_utc = pd.date_range(start=start_utc, end=end_utc, freq=time_agg)
 
                     # Convert back to original timezone, handling DST transitions
                     original_tz = start_time.tz
@@ -200,16 +257,14 @@ def aggregate_and_validate_lags(
                                 test_back = test_utc.tz_convert(original_tz)
                                 if test_back == t:
                                     valid_times.append(t)
-                        except:
+                        except Exception:
                             # Skip problematic timestamps
                             continue
 
                     missing_times = valid_times
                 else:
                     # No timezone info, proceed as before
-                    full_range = pd.date_range(
-                        start=start_time, end=end_time, freq=time_agg
-                    )
+                    full_range = pd.date_range(start=start_time, end=end_time, freq=time_agg)
                     existing_times = set(group["time"])
                     missing_times = [t for t in full_range if t not in existing_times]
 
@@ -228,14 +283,10 @@ def aggregate_and_validate_lags(
                 data_concat = pd.concat([data_concat, missing_df], ignore_index=True)
 
             # Sort
-            data_concat = data_concat.sort_values(
-                ["device_id", "serial_number", "time"]
-            ).reset_index(drop=True)
+            data_concat = data_concat.sort_values(["device_id", "serial_number", "time"]).reset_index(drop=True)
 
             # Filling strategy: average by weekday and exact time slot (as per aggregation level)
             if not data_concat.empty:
-                from pandas.tseries.frequencies import to_offset
-
                 agg_offset = to_offset(time_agg)
 
                 data_concat["weekday"] = data_concat["time"].dt.dayofweek
@@ -245,15 +296,11 @@ def aggregate_and_validate_lags(
                     utc_times = data_concat["time"].dt.tz_convert("UTC")
                     data_concat["rounded_slot"] = utc_times.dt.floor(time_agg).dt.time
                 else:
-                    data_concat["rounded_slot"] = (
-                        data_concat["time"].dt.floor(time_agg)
-                    ).dt.time
+                    data_concat["rounded_slot"] = (data_concat["time"].dt.floor(time_agg)).dt.time
 
                 group_cols = ["device_id", "weekday", "rounded_slot"]
 
-                fill_values = data_concat.groupby(group_cols)[agg_cols].transform(
-                    "mean"
-                )
+                fill_values = data_concat.groupby(group_cols)[agg_cols].transform("mean")
 
                 for col in agg_cols:
                     data_concat[col] = data_concat[col].fillna(fill_values[col])
@@ -273,9 +320,7 @@ def aggregate_and_validate_lags(
             try:
                 lag_offset = to_offset(val)
                 if lag_offset.nanos < agg_offset.nanos:
-                    print(
-                        f"[WARNING] Skipping lag '{freq}' — smaller than aggregation level '{time_agg}'"
-                    )
+                    print(f"[WARNING] Skipping lag '{freq}' — smaller than aggregation level '{time_agg}'")
                 else:
                     valid_lag_freqs[freq] = val
             except Exception as e:
@@ -292,17 +337,32 @@ def preprocess_df(
     device_list: Optional[List[str]] = None,
     add_cyclical_features: bool = False,
 ) -> List[pd.DataFrame]:
-    """
-    Preprocess a list of DataFrames by converting 'time' column to datetime and extracting time components.
+    """Normalize timezone and enrich each DataFrame with temporal features.
 
-    Args:
-        dataframes (list of pd.DataFrame): List of DataFrames to preprocess.
-        device_list (list of str): List of device IDs to filter the DataFrames. If None, no filtering is applied.
-        add_cyclical_features (bool): Whether to add sine/cosine cyclical features for time components.
-                                     Default is False for backward compatibility.
+    Processing steps per DataFrame:
+    * Optional device filtering.
+    * Convert ``time`` to timezone-aware UTC then localize to Europe/Prague
+      (falls back to naive on failure).
+    * Extract hour / weekday / month (in UTC to avoid DST discontinuities).
+    * Optionally append cyclical (sine/cosine) encodings via
+      ``add_cyclical_time_features``.
 
-    Returns:
-        list of pd.DataFrame: List of preprocessed DataFrames.
+    Parameters
+    ----------
+    dataframes : list of pd.DataFrame
+        Input per-device or per-site DataFrames containing at least a ``time``
+        column and ``device_id``.
+    device_list : list of str, optional
+        Subset of device IDs to retain. If ``None`` all devices are kept.
+    add_cyclical_features : bool, default=False
+        When ``True`` injects additional cyclical time-of-day / day-of-week
+        features.
+
+    Returns
+    -------
+    list of pd.DataFrame
+        Preprocessed DataFrames in the same order as input (filtered if
+        applicable). Returns an empty list on unrecoverable error.
     """
     try:
         processed = []
@@ -356,15 +416,19 @@ def preprocess_df(
 
 
 def concat_dataframes_by_time(dataframes: List[pd.DataFrame]) -> pd.DataFrame:
-    """
-    Concatenate a list of DataFrames into a single DataFrame and order the rows by 'time'.
-    Assumes that 'time' column is already in datetime format and sorted from preprocess_df.
+    """Concatenate multiple preprocessed DataFrames and order the rows by 'time'.
+    Assumes that 'time' column is already in ``datetime`` format and sorted from ``preprocess_df``.
 
-    Args:
-        dataframes (list of pd.DataFrame): List of DataFrames to concatenate.
+    Parameters
+    ----------
+    dataframes : list of pd.DataFrame
+        DataFrames already normalized & time-sorted (output of
+        :func:`preprocess_df`).
 
-    Returns:
-        pd.DataFrame: Concatenated DataFrame.
+    Returns
+    -------
+    pd.DataFrame
+        Single combined DataFrame, index reset.
     """
     try:
         # Simply concatenate, data is already sorted by time in preprocess_df
@@ -379,15 +443,18 @@ def concat_dataframes_by_time(dataframes: List[pd.DataFrame]) -> pd.DataFrame:
 
 
 def get_complete_time_series(df: pd.DataFrame) -> List[pd.DataFrame]:
-    """
-    Group the concatenated DataFrame by device_id and serial_number,
-    then return a list of groups (DataFrames) that have no missing values.
+    """Extract only fully observed device time series (without missing values).
 
-    Args:
-        df (pd.DataFrame): DataFrame to group and filter.
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Concatenated DataFrame containing multiple devices / serial numbers.
 
-    Returns:
-        list of pd.DataFrame: List of DataFrames, each representing a complete time series for a device.
+    Returns
+    -------
+    list of pd.DataFrame
+        One DataFrame per ``(device_id, serial_number)`` pair without any
+        missing values. Groups with any NA are skipped.
     """
     try:
         complete_series = []
@@ -398,9 +465,7 @@ def get_complete_time_series(df: pd.DataFrame) -> List[pd.DataFrame]:
 
             # Skip groups with any missing data.
             if group_sorted.isnull().any().any():
-                print(
-                    f"Skipping time series for device_id: {device}, serial_number: {serial} due to missing data."
-                )
+                print(f"Skipping time series for device_id: {device}, serial_number: {serial} due to missing data.")
                 continue
             complete_series.append(group_sorted)
 
@@ -418,19 +483,31 @@ def create_supervised_data_from_series(
     target_feature: str,
     window_size: int = 1,
     step: int = 1,
-) -> tuple:
-    """
-    Create supervised data from a time series DataFrame.
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Convert a single time series DataFrame into windowed supervised samples.
 
-    Args:
-        df (pd.DataFrame): DataFrame containing the time series data.
-        input_features (list of str): List of feature names to be used as inputs.
-        target_feature (str): Name of the target feature.
-        window_size (int): Size of the sliding window. Defaults to 1.
-        step (int): Step size for the sliding window. Defaults to 1.
+    Constructs sliding windows of size ``window_size`` (moving forward with
+    stride ``step``) over the ordered rows of ``df``.
 
-    Returns:
-        tuple: Tuple containing the input features (X) and target variable (y).
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Source time series (must be ordered by time externally).
+    input_features : list of str
+        Column names used as predictor variables inside each window.
+    target_feature : str
+        Column whose value at the prediction index (the row immediately after
+        each window) becomes the target.
+    window_size : int, default=1
+        Number of consecutive rows included as model input for each sample.
+    step : int, default=1
+        Offset increment between successive windows.
+
+    Returns
+    -------
+    (np.ndarray, np.ndarray)
+        Tuple ``(X, y)`` where ``X`` has shape ``(n_samples, window_size * n_features)``
+        and ``y`` has shape ``(n_samples,)``.
     """
     try:
         X, y = [], []
@@ -452,26 +529,32 @@ def clean_data(
     target_feature: str,
     window_size: int,
     step: int,
-) -> tuple:
-    """
-    Clean the data by creating supervised data from a set of time series.
+) -> Tuple[List[np.ndarray], List[np.ndarray]]:
+    """Generate supervised samples for multiple time series and drop NA windows.
 
-    Args:
-        ts_set (list of pd.DataFrame): List of DataFrames representing time series data.
-        input_features (list of str): List of feature names to be used as inputs.
-        target_feature (str): Name of the target feature.
-        window_size (int): Size of the sliding window.
-        step (int): Step size for the sliding window.
+    Parameters
+    ----------
+    ts_set : list of pd.DataFrame
+        Collection of complete (ideally) time series DataFrames.
+    input_features : list of str
+        Predictor columns to extract per window.
+    target_feature : str
+        Target column for each sample.
+    window_size : int
+        Sliding window length.
+    step : int
+        Stride between starting indices of successive windows.
 
-    Returns:
-        tuple: Tuple containing the input features (X) and target variable (y) for all time series.
+    Returns
+    -------
+    (list of np.ndarray, list of np.ndarray)
+        Lists ``X_list`` and ``y_list`` each containing arrays per input
+        time series after removing any samples with missing values.
     """
     try:
         X_list, y_list = [], []
         for ts in ts_set:
-            X_ts, y_ts = create_supervised_data_from_series(
-                ts, input_features, target_feature, window_size, step
-            )
+            X_ts, y_ts = create_supervised_data_from_series(ts, input_features, target_feature, window_size, step)
             valid = ~pd.DataFrame(X_ts).isna().any(axis=1)
             X_list.append(X_ts[valid])
             y_list.append(y_ts[valid])

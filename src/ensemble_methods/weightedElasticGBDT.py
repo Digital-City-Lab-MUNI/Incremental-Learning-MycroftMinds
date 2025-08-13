@@ -30,9 +30,7 @@ class AccuracyUpdatedGBDT:
         self.num_trees = num_trees
         self.alpha = alpha
         self.eps = eps
-        self.error_metric = (
-            error_metric if error_metric is not None else root_mean_squared_error
-        )
+        self.error_metric = error_metric if error_metric is not None else root_mean_squared_error
         self.error_damping = error_damping
         self.reg_coef = reg_coef
         self.initial_pred = np.mean(y_train)
@@ -64,13 +62,9 @@ class AccuracyUpdatedGBDT:
             predictions += self.alpha * w * tree.predict(X)
         return predictions
 
-    def update_weights_by_contribution_rel(
-        self, X_new, y_new, weight_threshold_ratio=0.1, eps=1e-8
-    ):
+    def update_weights_by_contribution_rel(self, X_new, y_new, weight_threshold_ratio=0.1, eps=1e-8):
 
-        X_new = (
-            np.array(X_new).reshape(1, -1) if len(np.array(X_new).shape) == 1 else X_new
-        )
+        X_new = np.array(X_new).reshape(1, -1) if len(np.array(X_new).shape) == 1 else X_new
 
         n = len(self.trees)
         contributions = np.zeros(n)
@@ -98,9 +92,7 @@ class AccuracyUpdatedGBDT:
         indices_to_keep = [i for i, w in enumerate(self.weights) if w >= threshold]
         removed_indices = [i for i in range(n) if i not in indices_to_keep]
         if removed_indices:
-            print(
-                f"Removing trees at indices {removed_indices} due to low relative weight."
-            )
+            print(f"Removing trees at indices {removed_indices} due to low relative weight.")
             self.trees = [self.trees[i] for i in indices_to_keep]
             self.weights = self.weights[indices_to_keep]
             for _ in range(len(removed_indices)):
@@ -123,9 +115,7 @@ class AccuracyUpdatedGBDT:
         residuals = y_buffer - y_pred_current
         from sklearn.tree import DecisionTreeRegressor
 
-        tree = DecisionTreeRegressor(
-            max_depth=self.max_depth, random_state=self.random_state + len(self.trees)
-        )
+        tree = DecisionTreeRegressor(max_depth=self.max_depth, random_state=self.random_state + len(self.trees))
         tree.fit(X_buffer, residuals)
         self.trees.append(tree)
         self.weights = np.append(self.weights, 1.0)

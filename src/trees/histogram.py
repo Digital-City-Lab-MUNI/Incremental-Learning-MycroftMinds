@@ -1,11 +1,58 @@
+"""Histogram data structures for streaming feature split discovery.
+
+This module provides lightweight, streaming-friendly histogram abstractions used
+by incremental tree learners to propose candidate split thresholds without
+storing the full set of observed feature values.
+
+Implemented variants
+--------------------
+AdaptiveHistogram
+    Maintains a variable set of representative bin edges (cluster centers)
+    subject to a maximum number of bins. When the limit is exceeded, the least
+    populated adjacent pair of bins is merged. Produces split candidates at the
+    midpoints between consecutive bin edges.
+EquiWidthHistogram
+    Uses a fixed number of equal-width bins over a preset value range defined
+    after an initial warm‑up phase. Produces midpoints between bin boundaries.
+MeanSplitterHistogram
+    Not a true histogram: tracks only the running mean of feature values and
+    exposes it as the single split candidate. Retains synthetic left/right
+    aggregates for compatibility with downstream variance / impurity routines.
+
+All histogram objects expose a shared minimal API relied upon by the tree code:
+
+    insert(x, y) -> None
+        Consume a (feature_value, target_value) sample.
+    get_candidates() -> list[float]
+        Return an ordered list of prospective split thresholds.
+    partition_bins(split_thr, left=True)
+        Return a new histogram instance containing only bins on one side of a
+        threshold (used for optimistic / incremental split evaluation).
+    aggregate_stats(threshold, left=True) -> dict
+        Aggregate statistics (count, sum_y, sum_y2) for one side of a threshold.
+
+Statistics stored per (synthetic) bin enable downstream calculation of simple
+impurity measures such as variance or mean squared error without revisiting raw
+samples.
+"""
+
+from __future__ import annotations
+
+from typing import Sequence, Type, Union, Dict, List
 import bisect
 
 
 class AdaptiveHistogram:
     """
-    Maintains an adaptive, memory-bounded histogram for streaming data.
+    Adaptive, memory-bounded histogram for streaming numerical data.
 
-    Step-by-Step:
+    Parameters
+    ----------
+    max_bins : int, default=32
+        Maximum number of bins before triggering merges.
+
+    Step-by-step description
+    ----------
     1. Initialization:
        - max_bins: maximum number of bins to retain.
        - bin_edges: empty list; will hold one representative value per bin.
@@ -35,23 +82,39 @@ class AdaptiveHistogram:
        - Return list of these mids as potential thresholds.
     """
 
-    def __init__(self, max_bins=32):
-        self.max_bins = max_bins
-        self.bin_edges = []  # sorted list of 'representative' values
-        self.bin_stats = []  # list of dicts: {'count','sum_y','sum_y2'}
+    def __init__(self, max_bins: int = 32) -> None:
+        self.max_bins: int = max_bins
+        self.bin_edges: List[float] = []  # sorted representative values
+        self.bin_stats: List[Dict[str, float | int]] = []  # per-bin aggregates
 
-    def copy_bins(self):
-        """
-        Returns a deep copy of the histogram (all bins and stats).
+    def copy_bins(self) -> "AdaptiveHistogram":
+        """Return a deep copy of the histogram state.
+
+        Returns
+        -------
+        AdaptiveHistogram
+            Independent copy of this histogram.
         """
         new_hist = AdaptiveHistogram(self.max_bins)
         new_hist.bin_edges = list(self.bin_edges)
         new_hist.bin_stats = [dict(s) for s in self.bin_stats]
         return new_hist
 
-    def partition_bins(self, split_thr, left=True):
-        """
-        Returns a new AdaptiveHistogram containing only bins to the left (<=) or right (>) of split_thr.
+    def partition_bins(self, split_thr: float, left: bool = True) -> "AdaptiveHistogram":
+        """Return a new histogram keeping only bins on one side of a threshold.
+
+        Parameters
+        ----------
+        split_thr : float
+            Threshold value used to select bins.
+        left : bool, default=True
+            If True keep bins with edge ``<= split_thr``; otherwise keep bins
+            with edge ``> split_thr``.
+
+        Returns
+        -------
+        AdaptiveHistogram
+            New histogram with a subset of bins.
         """
         new_hist = AdaptiveHistogram(self.max_bins)
         for edge, stat in zip(self.bin_edges, self.bin_stats):
@@ -61,6 +124,15 @@ class AdaptiveHistogram:
         return new_hist
 
     def insert(self, x: float, y: float) -> None:
+        """Insert a new sample.
+
+        Parameters
+        ----------
+        x : float
+            Feature value.
+        y : float
+            Target (label) value whose aggregate statistics are stored.
+        """
         # if empty: create first bin
         if not self.bin_edges:
             self.bin_edges.append(x)
@@ -92,7 +164,15 @@ class AdaptiveHistogram:
         if len(self.bin_stats) > self.max_bins:
             self._merge_bins()
 
-    def _merge_bins(self):
+    def _merge_bins(self) -> None:
+        """Merge the least-populated adjacent pair of bins.
+
+        Notes
+        -----
+        Uses a greedy heuristic selecting the pair with minimal combined
+        ``count`` to reduce total bins while attempting to minimize information
+        loss.
+        """
         # find the smallest‐count adjacent pair
         i = min(
             range(len(self.bin_stats) - 1),
@@ -106,23 +186,30 @@ class AdaptiveHistogram:
         del self.bin_stats[i + 1]
         del self.bin_edges[i]
 
-    def get_candidates(self):
-        """
-        Using raw bin edges as split thresholds means you'll split exactly at one of the observed values (or cluster representatives), which can lead to:
+    def get_candidates(self) -> List[float]:
+        """Return midpoint split candidates between consecutive bin edges.
 
-        • Imbalanced splits
-        - If a bin edge corresponds to an extreme outlier, you might send almost all data to one side.
-        • Boundary ambiguity
-        - Points equal to the edge need a tie-breaking rule (<= vs. >).
+        Returns
+        -------
+        list[float]
+            Midpoints between successive bin edges. Empty list if fewer than
+            two bins exist.
+
+        Notes
+        ----------
+        Using raw bin edges as split thresholds means you'll split exactly at one of the observed values (or cluster representatives), which can lead to:
+        - Imbalanced splits
+            If a bin edge corresponds to an extreme outlier, you might send almost all data to one side.
+        - Boundary ambiguity
+            Points equal to the edge need a tie-breaking rule (<= vs. >).
 
         By contrast, using the midpoint between two adjacent edges:
-
-        • Sits in the 'gap' between clusters
-        - No data value lies exactly at that split, so left/right assignments are unambiguous.
-        • Better approximates the true best split
-        - If the ideal split falls anywhere between two observed values, the midpoint is a natural proxy.
-        • Encourages more balanced partitions
-        - You're dividing bins, not cutting right through one, so you're distributing whole clusters more evenly.
+        - Sits in the 'gap' between clusters
+            No data value lies exactly at that split, so left/right assignments are unambiguous.
+        - Better approximates the true best split
+            If the ideal split falls anywhere between two observed values, the midpoint is a natural proxy.
+        - Encourages more balanced partitions
+            You're dividing bins, not cutting right through one, so you're distributing whole clusters more evenly.
 
         In short, midpoints give you a cleaner, more robust split point when you only have coarse bin boundaries.
         """
@@ -136,42 +223,48 @@ class AdaptiveHistogram:
             prev = edge
         return mids
 
-    def aggregate_stats(self, threshold, left=True):
-        count = sum_y = sum_y2 = 0
+    def aggregate_stats(self, threshold: float, left: bool = True) -> Dict[str, float | int]:
+        """Aggregate statistics on one side of a threshold.
+
+        Parameters
+        ----------
+        threshold : float
+            Threshold dividing the histogram.
+        left : bool, default=True
+            If True aggregate edges ``<= threshold`` else edges ``> threshold``.
+
+        Returns
+        -------
+        dict
+            Keys: ``count`` (int), ``sum_y`` (float), ``sum_y2`` (float).
+        """
+        count = 0
+        sum_y = 0.0
+        sum_y2 = 0.0
         for edge, stat in zip(self.bin_edges, self.bin_stats):
             if (left and edge <= threshold) or (not left and edge > threshold):
-                count += stat["count"]
-                sum_y += stat["sum_y"]
-                sum_y2 += stat["sum_y2"]
+                count += int(stat["count"])
+                sum_y += float(stat["sum_y"])
+                sum_y2 += float(stat["sum_y2"])
         return {"count": count, "sum_y": sum_y, "sum_y2": sum_y2}
 
 
 class EquiWidthHistogram:
-    def copy_bins(self):
-        """
-        Returns a deep copy of the histogram (all bins and stats).
-        """
-        new_hist = EquiWidthHistogram(self.max_bins, self.min_val, self.max_val)
-        new_hist.bin_edges = list(self.bin_edges)
-        new_hist.bin_stats = [dict(s) for s in self.bin_stats]
-        return new_hist
+    """Fixed-width histogram over a predefined numeric range.
 
-    def partition_bins(self, split_thr, left=True):
-        """
-        Returns a new EquiWidthHistogram containing only bins to the left (<=) or right (>) of split_thr.
-        """
-        new_hist = EquiWidthHistogram(self.max_bins, self.min_val, self.max_val)
-        for edge, stat in zip(self.bin_edges, self.bin_stats):
-            # For equi-width, bin_edges are upper boundaries
-            if (left and edge <= split_thr) or (not left and edge > split_thr):
-                new_hist.bin_edges.append(edge)
-                new_hist.bin_stats.append(dict(stat))
-        return new_hist
+    Parameters
+    ----------
+    max_bins : int, default=32
+        Number of equal-width bins.
+    min_val : float, optional
+        Lower bound of the feature range. If provided with ``max_val`` the
+        histogram is initialized immediately.
+    max_val : float, optional
+        Upper bound of the feature range. If provided with ``min_val`` the
+        histogram is initialized immediately.
 
-    """
-    Maintains a fixed-width (equi-distance) histogram over a predefined range.
-
-    Step-by-Step:
+    Step-by-Step
+    ------------
     1. Initialization:
        - max_bins: number of equal-width bins.
        - min_val, max_val: optional; if provided, bins are immediately initialized.
@@ -195,42 +288,93 @@ class EquiWidthHistogram:
        - Compute midpoints between edges[k] and edges[k+1] for k in 0..max_bins-1.
        - Return list of these midpoints as thresholds.
 
-       
-    
     You must call set_range() (e.g. after a warm-up) before insert().
     """
 
-    def __init__(self, max_bins=32, min_val=None, max_val=None):
-        self.max_bins = max_bins
-        self.min_val = min_val
-        self.max_val = max_val
-        self.bin_edges = []  # upper boundary of each bin
-        self.bin_stats = []  # same format: list of {'count','sum_y','sum_y2'}
+    def __init__(self, max_bins: int = 32, min_val: float | None = None, max_val: float | None = None) -> None:
+        self.max_bins: int = max_bins
+        self.min_val: float | None = min_val
+        self.max_val: float | None = max_val
+        self.bin_edges: List[float] = []  # upper boundary of each bin
+        self.bin_stats: List[Dict[str, float | int]] = []
         if min_val is not None and max_val is not None:
             self._init_bins()
 
-    def _init_bins(self):
+    def _init_bins(self) -> None:
+        """(Re)initialize bin edges and zero statistics based on current range."""
         width = (self.max_val - self.min_val) / self.max_bins
         # build bin boundaries and zeroed stats
         self.bin_edges = [self.min_val + width * (i + 1) for i in range(self.max_bins)]
-        self.bin_stats = [
-            {"count": 0, "sum_y": 0.0, "sum_y2": 0.0} for _ in range(self.max_bins)
-        ]
+        self.bin_stats = [{"count": 0, "sum_y": 0.0, "sum_y2": 0.0} for _ in range(self.max_bins)]
 
-    def set_range(self, min_val, max_val):
+    def copy_bins(self) -> "EquiWidthHistogram":
+        """Return a deep copy of the histogram state."""
+        new_hist = EquiWidthHistogram(self.max_bins, self.min_val, self.max_val)
+        new_hist.bin_edges = list(self.bin_edges)
+        new_hist.bin_stats = [dict(s) for s in self.bin_stats]
+        return new_hist
+
+    def partition_bins(self, split_thr: float, left: bool = True) -> "EquiWidthHistogram":
+        """Partition bins relative to a threshold.
+
+        Parameters
+        ----------
+        split_thr : float
+            Threshold value (compared against each bin's upper edge).
+        left : bool, default=True
+            If True keep bins with edge ``<= split_thr`` else keep strictly
+            larger edges.
+
+        Returns
+        -------
+        EquiWidthHistogram
+            Histogram with selected bins only.
         """
-        Define or redefine the full feature range.
-        Drops all previous stats.
+        new_hist = EquiWidthHistogram(self.max_bins, self.min_val, self.max_val)
+        for edge, stat in zip(self.bin_edges, self.bin_stats):
+            # For equi-width, bin_edges are upper boundaries
+            if (left and edge <= split_thr) or (not left and edge > split_thr):
+                new_hist.bin_edges.append(edge)
+                new_hist.bin_stats.append(dict(stat))
+        return new_hist
+
+    def set_range(self, min_val: float, max_val: float) -> None:
+        """Define or redefine the full feature range.
+
+        Parameters
+        ----------
+        min_val : float
+            New lower bound.
+        max_val : float
+            New upper bound.
+
+        Notes
+        -----
+        Existing statistics are discarded. Call once after an initial warm-up
+        sample if the range is not known a priori.
         """
         self.min_val = min_val
         self.max_val = max_val
         self._init_bins()
 
-    def insert(self, x, y):
+    def insert(self, x: float, y: float) -> None:
+        """Insert a sample accumulating target statistics in the proper bin.
+
+        Parameters
+        ----------
+        x : float
+            Feature value. Values outside the configured range are clamped to
+            the nearest boundary bin.
+        y : float
+            Target / label value.
+
+        Raises
+        ------
+        ValueError
+            If the range has not yet been set via :meth:`set_range`.
+        """
         if self.min_val is None or self.max_val is None:
-            raise ValueError(
-                "EquiWidthHistogram: call set_range(min, max) before insert()"
-            )
+            raise ValueError("EquiWidthHistogram: call set_range(min, max) before insert()")
         # map x into a bin index
         span = self.max_val - self.min_val
         if span == 0.0:
@@ -244,7 +388,15 @@ class EquiWidthHistogram:
         st["sum_y"] += y
         st["sum_y2"] += y * y
 
-    def get_candidates(self):
+    def get_candidates(self) -> List[float]:
+        """Return midpoint split candidates between successive boundaries.
+
+        Returns
+        -------
+        list[float]
+            Midpoints between successive boundaries including the implicit
+            leftmost boundary ``min_val``. Empty list if uninitialized.
+        """
         # midpoint between successive bin boundaries
         mids = []
         if not self.bin_edges:
@@ -257,25 +409,40 @@ class EquiWidthHistogram:
 
 
 class MeanSplitterHistogram:
-    """
-    Histogram-like interface that always proposes the running mean as the only split candidate.
-    Used for average-based splitting (legacy behavior).
+    """Facade that proposes only the running mean as a split threshold.
+
+    Unlike true histograms this structure maintains only global aggregates and
+    synthesizes two pseudo-bins (left / right of the current mean) for API
+    compatibility. Primarily useful for very small memory footprints.
+
+    Parameters
+    ----------
+    max_bins : int, default=1
+        Ignored (retained for interface uniformity).
     """
 
-    def __init__(self, max_bins=1):
-        self.count = 0
-        self.sum_x = 0.0
-        self.sum_y = 0.0
-        self.sum_y2 = 0.0
-        # Legacy-style left/right stats
-        self.left_count = 0
-        self.left_sum_y = 0.0
-        self.left_sum_y2 = 0.0
-        self.right_count = 0
-        self.right_sum_y = 0.0
-        self.right_sum_y2 = 0.0
+    def __init__(self, max_bins: int = 1) -> None:  # noqa: D401 (parameter kept for interface)
+        self.count: int = 0
+        self.sum_x: float = 0.0
+        self.sum_y: float = 0.0
+        self.sum_y2: float = 0.0
+        self.left_count: int = 0
+        self.left_sum_y: float = 0.0
+        self.left_sum_y2: float = 0.0
+        self.right_count: int = 0
+        self.right_sum_y: float = 0.0
+        self.right_sum_y2: float = 0.0
 
-    def insert(self, x, y):
+    def insert(self, x: float, y: float) -> None:
+        """Insert a new sample updating left/right aggregates.
+
+        Parameters
+        ----------
+        x : float
+            Feature value.
+        y : float
+            Target value.
+        """
         self.count += 1
         self.sum_x += x
         self.sum_y += y
@@ -297,35 +464,35 @@ class MeanSplitterHistogram:
                 self.right_sum_y += y
                 self.right_sum_y2 += y * y
 
-    def get_candidates(self):
+    def get_candidates(self) -> List[float]:
+        """Return the current running mean as the sole split candidate.
+
+        Returns
+        -------
+        list[float]
+            Single-element list containing the mean, or empty if no samples.
+        """
         if self.count == 0:
             return []
         return [self.sum_x / self.count]
 
     @property
-    def bin_edges(self):
-        # Return the mean as the split point
+    def bin_edges(self) -> List[float]:
+        """Representative 'edge' list containing only the running mean."""
         if self.count == 0:
             return []
         return [self.sum_x / self.count]
 
     @property
-    def bin_stats(self):
-        # Return two bins: left (<= mean), right (> mean)
+    def bin_stats(self) -> List[Dict[str, float | int]]:
+        """Synthetic two-bin statistics (left ``<=`` mean, right ``>`` mean)."""
         return [
-            {
-                "count": self.left_count,
-                "sum_y": self.left_sum_y,
-                "sum_y2": self.left_sum_y2,
-            },
-            {
-                "count": self.right_count,
-                "sum_y": self.right_sum_y,
-                "sum_y2": self.right_sum_y2,
-            },
+            {"count": self.left_count, "sum_y": self.left_sum_y, "sum_y2": self.left_sum_y2},
+            {"count": self.right_count, "sum_y": self.right_sum_y, "sum_y2": self.right_sum_y2},
         ]
 
-    def copy_bins(self):
+    def copy_bins(self) -> "MeanSplitterHistogram":
+        """Return a deep copy of the current state."""
         new_hist = MeanSplitterHistogram()
         new_hist.count = self.count
         new_hist.sum_x = self.sum_x
@@ -339,8 +506,22 @@ class MeanSplitterHistogram:
         new_hist.right_sum_y2 = self.right_sum_y2
         return new_hist
 
-    def partition_bins(self, split_thr, left=True):
-        # Partition left/right stats based on mean vs split_thr
+    def partition_bins(self, split_thr: float, left: bool = True) -> "MeanSplitterHistogram":
+        """Partition synthetic bins given an external threshold.
+
+        Parameters
+        ----------
+        split_thr : float
+            Threshold to compare against the current mean.
+        left : bool, default=True
+            If True retain the side (relative to ``split_thr``) interpreted as
+            *left*; otherwise retain the *right* side.
+
+        Returns
+        -------
+        MeanSplitterHistogram
+            Histogram containing aggregates for the retained side(s).
+        """
         new_hist = MeanSplitterHistogram()
         mean = self.sum_x / self.count if self.count > 0 else 0.0
         if left:
@@ -363,7 +544,22 @@ class MeanSplitterHistogram:
                 new_hist.left_sum_y2 = self.left_sum_y2
         return new_hist
 
-    def aggregate_stats(self, threshold, left=True):
+    def aggregate_stats(self, threshold: float, left: bool = True) -> Dict[str, float | int]:  # noqa: D401
+        """Return aggregate stats for one side of the synthetic split.
+
+        Parameters
+        ----------
+        threshold : float
+            External threshold (ignored for partitioning, included for API
+            symmetry with real histograms).
+        left : bool, default=True
+            If True return left-side stats else right-side stats.
+
+        Returns
+        -------
+        dict
+            Keys: ``count`` (int), ``sum_y`` (float), ``sum_y2`` (float).
+        """
         if left:
             return {
                 "count": self.left_count,
@@ -377,16 +573,29 @@ class MeanSplitterHistogram:
         }
 
 
-def get_histogram_type(name):
-    """
-    Return a histogram class by name.
-    Supported names: 'adaptive' (default), 'equiwidth', 'mean', 'average'.
+def get_histogram_type(name: str | None) -> Type[Union[AdaptiveHistogram, EquiWidthHistogram, MeanSplitterHistogram]]:
+    """Return a histogram class given its name.
+
+    Parameters
+    ----------
+    name : str or None
+        One of ``{'adaptive', 'equiwidth', 'mean', 'average'}``. ``None`` maps
+        to ``'adaptive'``. ``'mean'`` and ``'average'`` are aliases.
+
+    Returns
+    -------
+    type
+        Corresponding histogram class.
+
+    Raises
+    ------
+    ValueError
+        If ``name`` is unrecognized.
     """
     if name is None or name == "adaptive":
         return AdaptiveHistogram
-    elif name == "equiwidth":
+    if name == "equiwidth":
         return EquiWidthHistogram
-    elif name in ("mean", "average"):
+    if name in ("mean", "average"):
         return MeanSplitterHistogram
-    else:
-        raise ValueError(f"Unknown histogram type: {name}")
+    raise ValueError(f"Unknown histogram type: {name}")

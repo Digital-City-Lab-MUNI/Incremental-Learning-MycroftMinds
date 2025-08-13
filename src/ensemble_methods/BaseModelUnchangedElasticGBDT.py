@@ -42,9 +42,7 @@ class HybridElasticGBDT:
         self.warmup_trees_per_batch = warmup_trees_per_batch
 
         # Use provided error_metric or default to mean absolute error.
-        self.error_metric = (
-            error_metric if error_metric is not None else mean_absolute_error
-        )
+        self.error_metric = error_metric if error_metric is not None else mean_absolute_error
 
         # Use the base model's learning rate as alpha if not provided.
         self.alpha = base_model.learning_rate if alpha is None else alpha
@@ -96,13 +94,8 @@ class HybridElasticGBDT:
 
         n_trees = len(self.incremental_trees)
         if n_trees == 0:
-            print(
-                "[Index-Based] No incremental trees; adding warmup trees "
-                f"({self.warmup_trees_per_batch} trees)."
-            )
-            self.build_incremental_trees(
-                X_new, residual, number_of_incremental_trees=self.warmup_trees_per_batch
-            )
+            print("[Index-Based] No incremental trees; adding warmup trees " f"({self.warmup_trees_per_batch} trees).")
+            self.build_incremental_trees(X_new, residual, number_of_incremental_trees=self.warmup_trees_per_batch)
             return self
 
         partial_pred = np.full(y_new.shape, self.incremental_initial_pred)
@@ -116,20 +109,14 @@ class HybridElasticGBDT:
                 best_error = current_error
                 best_i = i
 
-        print(
-            f"[Index-Based] Best incremental tree index = {best_i}, Error = {best_error:.4f}"
-        )
+        print(f"[Index-Based] Best incremental tree index = {best_i}, Error = {best_error:.4f}")
         if best_i < self.m_threshold:
-            print(
-                f"[Index-Based] {best_i} < {self.m_threshold} -> Full retraining of incremental trees."
-            )
+            print(f"[Index-Based] {best_i} < {self.m_threshold} -> Full retraining of incremental trees.")
             self._retrain_incremental(X_new, residual)
         else:
             pruned_count = n_trees - (best_i + 1)
             self.incremental_trees = self.incremental_trees[: best_i + 1]
-            print(
-                f"[Index-Based] Pruned {pruned_count} incremental trees. Now {len(self.incremental_trees)} remain."
-            )
+            print(f"[Index-Based] Pruned {pruned_count} incremental trees. Now {len(self.incremental_trees)} remain.")
         return self
 
     def update_contribution_based(self, X_new, y_new, threshold_difference=-5):
@@ -146,9 +133,7 @@ class HybridElasticGBDT:
                 "[Contribution-Based] No incremental trees; adding warmup trees "
                 f"({self.warmup_trees_per_batch} trees)."
             )
-            self.build_incremental_trees(
-                X_new, residual, number_of_incremental_trees=self.warmup_trees_per_batch
-            )
+            self.build_incremental_trees(X_new, residual, number_of_incremental_trees=self.warmup_trees_per_batch)
             return self
 
         partial_pred = np.full(y_new.shape, self.incremental_initial_pred)
@@ -156,9 +141,7 @@ class HybridElasticGBDT:
         contributions = []
 
         for i in range(n_trees):
-            new_pred = partial_pred + self.alpha * self.incremental_trees[i].predict(
-                X_new
-            )
+            new_pred = partial_pred + self.alpha * self.incremental_trees[i].predict(X_new)
             new_error = self.error_metric(residual, new_pred)
             improvement = old_error - new_error
             contributions.append((improvement, i))
@@ -169,9 +152,7 @@ class HybridElasticGBDT:
         to_remove = [idx for (imp, idx) in contributions if imp < threshold_difference]
 
         if not to_remove:
-            print(
-                f"[Contribution-Based] No incremental tree below {threshold_difference}. No pruning."
-            )
+            print(f"[Contribution-Based] No incremental tree below {threshold_difference}. No pruning.")
             return self
 
         print(
@@ -186,9 +167,7 @@ class HybridElasticGBDT:
             )
             self._retrain_incremental(X_new, residual)
         else:
-            print(
-                f"[Contribution-Based] Now {len(self.incremental_trees)} incremental trees remain."
-            )
+            print(f"[Contribution-Based] Now {len(self.incremental_trees)} incremental trees remain.")
         return self
 
     # (Other update methods such as update_contribution_ema, update_contribution_ratio_adapt, etc.,
@@ -230,7 +209,5 @@ class HybridElasticGBDT:
         )
         new_gbdt.fit(X, residual)
         self.incremental_trees = [estimator for estimator in new_gbdt.estimators_[:, 0]]
-        print(
-            f"Retrained incremental trees: {len(self.incremental_trees)} trees built."
-        )
+        print(f"Retrained incremental trees: {len(self.incremental_trees)} trees built.")
         return self

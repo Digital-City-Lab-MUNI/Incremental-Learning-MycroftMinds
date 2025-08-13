@@ -1,13 +1,32 @@
+"""Dataset construction utilities for time series forecasting experiments.
+
+This module orchestrates the full pipeline:
+
+* Loading raw CSV exports (first or second batch) or generic smart meter files.
+* Per-device preprocessing (timezone normalization, temporal feature creation).
+* Optional temporal aggregation with lag validation and gap filling.
+* Feature engineering (lagged predictors, optional cyclical encodings).
+* Train/validation/test splitting in either single split or walk-forward mode.
+* Sliding-window supervised sample generation and (optional) memory optimization.
+* Persistence of processed datasets using the :func:`save_dataset` helper.
+
+Notes
+-----
+Only documentation / typing improvements were applied in this pass. Core logic
+remains unchanged.
+"""
+
 import os
 import glob
 import pandas as pd
 import numpy as np
 import warnings
 import traceback
-from typing import List, Tuple, Dict, Optional, Union, Any
-from sklearn.model_selection import TimeSeriesSplit
+from typing import List, Tuple, Dict, Optional, Union
 
-from src.data.io import save_dataset, load_dataset
+# from sklearn.model_selection import TimeSeriesSplit
+
+from src.data.io import save_dataset
 from src.utils.memory import calculate_memory_usage, optimize_memory_usage
 from src.data.preprocessing import (
     preprocess_df,
@@ -18,20 +37,37 @@ from src.data.preprocessing import (
     read_first_batch,
     read_second_batch,
 )
-from src.data.feature_engineering import add_lag_features, add_cyclical_time_features
+from src.data.feature_engineering import add_lag_features
 
 warnings.filterwarnings("ignore")
 
+# Type aliases for clarity
+Array2D = np.ndarray  # Feature matrix
+TargetArray = np.ndarray  # 1D target vector
+SampleSet = Tuple[Array2D, TargetArray]
+SampleSetList = List[SampleSet]
 
-def handle_dst_transitions(timestamps):
-    """
-    Handle DST transitions by converting ambiguous times to UTC and back.
 
-    Args:
-        timestamps: pandas Series or array of timestamps
+def handle_dst_transitions(timestamps) -> pd.Series:
+    """Resolve daylight saving time (DST) ambiguities in timestamp data.
 
-    Returns:
-        pandas Series with DST issues resolved
+    Strategy
+    --------
+    * If timestamps are timezone-aware: convert to UTC (canonical, DST-free)
+      then back to the original timezone, letting pandas handle ambiguous
+      transitions. Failures fall back to naive (timezone-removed) timestamps.
+    * If timestamps are naive: assume UTC and localize.
+
+    Parameters
+    ----------
+    timestamps : Sequence-like or pandas.Series
+        Collection of datetime-like objects. Can be a pandas Series or any
+        array-like coercible to ``pd.Series``.
+
+    Returns
+    -------
+    pd.Series
+        Timezone-aware (or naive fallback) Series with reduced DST ambiguity.
     """
     if not isinstance(timestamps, pd.Series):
         timestamps = pd.Series(timestamps)
@@ -51,7 +87,8 @@ def handle_dst_transitions(timestamps):
         # If no timezone info, assume UTC and localize
         try:
             return timestamps.dt.tz_localize("UTC")
-        except:
+        except Exception as e:
+            print(f"[WARNING] DST localization failed: {e}")
             return timestamps
 
 
@@ -60,8 +97,8 @@ def handle_dst_transitions(timestamps):
 # ---------------------------
 def get_train_test_sets(
     data_dir: str,
-    lag_freqs: Dict,
-    columns_to_add_lag: List[str],
+    lag_freqs: Dict[str, str],
+    columns_to_add_lag: Optional[List[str]],
     target_feature: str = "total_power_active",
     device_list: Optional[List[str]] = None,
     walk_forward_sets: bool = True,
@@ -74,37 +111,83 @@ def get_train_test_sets(
     save: bool = True,
     time_agg: Optional[str] = None,
     intermediate_prefix: str = "5_min_wfv",
-    new_data="second_batch",
-    location=None,
-    fill_missing=True,
-) -> Tuple[Any, Any, Tuple[np.ndarray, np.ndarray]]:
-    """
-    Create training, validation, and test sets from the data directory with optimized memory usage.
+    new_data: str = "second_batch",
+    location: Optional[str] = None,
+    fill_missing: bool = True,
+) -> Union[
+    Tuple[SampleSetList, SampleSetList, SampleSet],
+    Tuple[SampleSet, SampleSet, SampleSet],
+]:
+    """Build training, validation, and test datasets from raw meter exports.
 
-    The data is preprocessed, lag features are added, and the result is returned in memory-efficient format.
+    Parameters
+    ----------
+    data_dir : str
+        Root directory containing raw data subfolders / files.
+    lag_freqs : dict
+        Mapping ``suffix -> pandas Timedelta string`` for lag offsets.
+    columns_to_add_lag : list of str, optional
+        Base columns for which lagged variants are generated. If ``None`` a
+        default energy / power set is used.
+    target_feature : str, default="total_power_active"
+        Target variable column name.
+    device_list : list of str, optional
+        Subset of devices / site IDs to include.
+    walk_forward_sets : bool, default=True
+        If ``True`` produces multiple expanding train windows with rolling
+        validation windows; else returns single train/valid/test splits.
+    train_days : int, default=28
+        Training window length (in days) for walk-forward schedule.
+    valid_days : int, default=28
+        Validation window length (in days) for walk-forward schedule.
+    window_size : int, default=1
+        Sliding window length for supervised sample creation.
+    step : int, default=1
+        Stride between successive sliding windows.
+    add_cyclical_features : bool, default=False
+        When ``True`` add sine/cosine encodings for hour / weekday / month.
+    optimize_memory : bool, default=True
+        Whether to invoke downcasting utilities on produced arrays.
+    save : bool, default=True
+        Persist resulting datasets via :func:`save_dataset`.
+    time_agg : str, optional
+        Optional pandas offset alias for uniform temporal aggregation.
+    intermediate_prefix : str, default="5_min_wfv"
+        Prefix for persisted dataset artifacts.
+    new_data : str, default="second_batch"
+        Data flavor selector (``"first_batch"`` / ``"second_batch"`` or other).
+    location : str, optional
+        Industrial / commercial subtype (only for second batch layout).
+    fill_missing : bool, default=True
+        Fill missing aggregated timestamps using weekday + timeslot averaging.
 
-    Args:
-        data_dir (str): Directory containing the CSV files.
-        lag_freqs (dict): Dictionary mapping suffixes to lag frequencies.
-        columns_to_add_lag (list of str): List of columns to create lag features for.
-        target_feature (str): Target feature for prediction. Defaults to 'total_power_active'.
-        device_list (list of str): List of devices to include. If None, all devices are included. Defaults to None.
-        walk_forward_sets (bool): Whether to use walk-forward validation. Defaults to True.
-        train_days (int): Number of days for the training window (if using walk-forward validation). Defaults to 28 (4 weeks).
-        valid_days (int): Number of days for the validation window (if using walk-forward validation). Defaults to 28 (4 weeks).
-        window_size (int): Size of the sliding window for creating supervised data. Defaults to 1.
-        step (int): Step size for the sliding window. Defaults to 1.
-        add_cyclical_features (bool): Whether to use sine/cosine transformations for time features. Defaults to False.
-        optimize_memory (bool): Whether to optimize memory usage by using efficient dtypes. Defaults to True.
-        save (bool): Whether to save the results to disk. Defaults to True.
-        intermediate_prefix (str): Prefix for intermediate files. Defaults to 'processed'.
-        new_data (str): 'first_batch' or 'second_batch' (defaults 'second_batch')
-        location (str): to be used with second batch. specify 'industrial' or 'commercial' (only valid for second batch data)
-        fill_missing (bool): whether to fill the missing values (defaults True), method: weekly, hourly mean
+    Returns
+    -------
+    Union[Tuple[list, list, SampleSet], Tuple[SampleSet, SampleSet, SampleSet]]
+        Walk-forward mode: ``(train_sets, valid_sets, final_test)`` where each
+        of ``train_sets`` / ``valid_sets`` is a list of ``(X, y)`` tuples.
+        Single-split mode: ``(train, valid, test)`` each a ``(X, y)`` tuple.
 
-    Returns:
-        tuple: A tuple containing training, validation, and test sets. Each set is a tuple of (X, y),
-               where X is the feature matrix and y is the target vector.
+    Pipeline Steps
+    --------------
+    1. Load raw CSVs (first or second batch variants or generic pattern).
+    2. Preprocess each DataFrame (timezone normalization, temporal features,
+       optional cyclical encodings).
+    3. Optional aggregation & lag specification validation / gap filling.
+    4. Identify complete device time series; engineer lag features.
+    5. Partition per-device data into train/valid/test regions (ratios or
+       walk-forward windows).
+    6. Convert each partition to supervised samples via sliding windows.
+    7. (Optional) Apply memory footprint optimization and persist results.
+
+    Notes
+    -----
+    * Input feature ordering includes original non-lag columns plus all lagged
+      variants (``{base}_{suffix}``).
+    * Timestamp handling aims to mitigate DST effects by operating in UTC for
+      alignment steps.
+    * Memory optimization modifies dtype precision; downstream consumers should
+      tolerate reduced numeric precision.
     """
     # Check if processed data already exists
     if not os.path.exists(data_dir):
@@ -114,14 +197,10 @@ def get_train_test_sets(
     try:
         if new_data == "first_batch":
             extract_path = os.path.join(data_dir, new_data)
-            dataframes = read_first_batch(
-                extract_path, device_list, aggregation=time_agg
-            )
+            dataframes = read_first_batch(extract_path, device_list, aggregation=time_agg)
         elif new_data == "second_batch":
             extract_path = os.path.join(data_dir, new_data)
-            dataframes = read_second_batch(
-                extract_path, location=location, site_ids=device_list
-            )
+            dataframes = read_second_batch(extract_path, location=location, site_ids=device_list)
         else:
             csv_files = glob.glob(os.path.join(data_dir, "smart_meter_data_*.csv"))
             if not csv_files:
@@ -218,7 +297,7 @@ def get_train_test_sets(
                 "valid_end_idx": valid_end_idx,
             }
 
-        except Exception as e:
+        except Exception:
             print(f"[WARNING] Skipped one time series (index {idx}) due to error:")
             traceback.print_exc()
             continue
@@ -234,9 +313,7 @@ def get_train_test_sets(
         # Test set
         ts_test = ts_lagged.iloc[valid_end_idx:]
         if len(ts_test) > 0:
-            X_test, y_test = clean_data(
-                [ts_test], input_features, target_feature, window_size, step
-            )
+            X_test, y_test = clean_data([ts_test], input_features, target_feature, window_size, step)
             if len(X_test) > 0:
                 test_sets.append((np.vstack(X_test), np.hstack(y_test)))
 
@@ -244,26 +321,20 @@ def get_train_test_sets(
             # Non-walk-forward case
             ts_train = ts_lagged.iloc[:train_end_idx]
             if len(ts_train) > 0:
-                X_train, y_train = clean_data(
-                    [ts_train], input_features, target_feature, window_size, step
-                )
+                X_train, y_train = clean_data([ts_train], input_features, target_feature, window_size, step)
                 if len(X_train) > 0:
                     train_sets.append((np.vstack(X_train), np.hstack(y_train)))
 
             ts_valid = ts_lagged.iloc[train_end_idx:valid_end_idx]
             if len(ts_valid) > 0:
-                X_valid, y_valid = clean_data(
-                    [ts_valid], input_features, target_feature, window_size, step
-                )
+                X_valid, y_valid = clean_data([ts_valid], input_features, target_feature, window_size, step)
                 if len(X_valid) > 0:
                     valid_sets.append((np.vstack(X_valid), np.hstack(y_valid)))
         else:
             # Walk-forward case - process site data for training
             ts_train = ts_lagged.iloc[:valid_end_idx]
             if len(ts_train) > 0:
-                X_train, y_train = clean_data(
-                    [ts_train], input_features, target_feature, window_size, step
-                )
+                X_train, y_train = clean_data([ts_train], input_features, target_feature, window_size, step)
                 if len(X_train) > 0:
                     train_sets.append((np.vstack(X_train), np.hstack(y_train)))
 
@@ -303,9 +374,7 @@ def get_train_test_sets(
                 timestamps_test.max(),
             )
             print()
-            print(
-                "Test data time range: ", timestamps_test.min(), timestamps_test.max()
-            )
+            print("Test data time range: ", timestamps_test.min(), timestamps_test.max())
             print()
             print(
                 "(Train + Valid) data range: ",
@@ -343,9 +412,7 @@ def get_train_test_sets(
             # Walk-forward loop
             while start_idx + train_valid <= num_hours:
                 train_range = unique_hours[0 : start_idx + train_hours]
-                valid_range = unique_hours[
-                    start_idx + train_hours : start_idx + train_hours + valid_hours
-                ]
+                valid_range = unique_hours[start_idx + train_hours : start_idx + train_hours + valid_hours]
 
                 # Use timezone-naive timestamps for comparison
                 train_mask = timestamps_naive.dt.floor("H").isin(train_range)
@@ -371,9 +438,7 @@ def get_train_test_sets(
                 print(f"Split {i + 1}:")
                 print(f"  Train window: {train_start_time} to {train_end_time}")
                 print(f"  Valid window: {valid_start_time} to {valid_end_time}")
-                print(
-                    f"  Train samples: {len(X_train_split)}, Valid samples: {len(X_valid_split)}"
-                )
+                print(f"  Train samples: {len(X_train_split)}, Valid samples: {len(X_valid_split)}")
                 print()
 
                 # Slide forward by train_hours for next split
@@ -406,9 +471,7 @@ def get_train_test_sets(
                     print(f"Split {i + 1}:")
                     print(f"  Train window: {train_start_time} to {train_end_time}")
                     print(f"  Valid window: {valid_start_time} to {valid_end_time}")
-                    print(
-                        f"  Train samples: {len(X_train_split)}, Valid samples: {len(X_valid_split)}"
-                    )
+                    print(f"  Train samples: {len(X_train_split)}, Valid samples: {len(X_valid_split)}")
 
         else:
             # Non-walk-forward case

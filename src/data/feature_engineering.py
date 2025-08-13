@@ -1,22 +1,52 @@
+"""Feature engineering utilities for time series forecasting.
+
+This module provides helpers to:
+
+* Create time-based lag features across arbitrary temporal offsets while
+    handling timezone / DST complexities via UTC alignment.
+* Generate cyclical encodings (sine / cosine) for common calendar components.
+* Filter feature sets so that lagged predictors respect a required forecast
+    horizon.
+
+Only documentation and typing adjustments were introduced in this pass; logic
+remains unchanged.
+"""
+
 import pandas as pd
 import numpy as np
 import traceback
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 
-def add_lag_features(
-    df: pd.DataFrame, columns: List[str], lag_freqs: Dict[str, str]
-) -> pd.DataFrame:
-    """
-    Add lagged features to a DataFrame based on specified columns and lag frequencies.
+def add_lag_features(df: pd.DataFrame, columns: List[str], lag_freqs: Dict[str, str]) -> pd.DataFrame:
+    """Add lagged variants of selected columns at arbitrary time offsets.
 
-    Args:
-        df (pd.DataFrame): The input DataFrame with a 'time' column
-        columns (List[str]): List of columns to create lag features for
-        lag_freqs (Dict[str, str]): Dictionary mapping suffix names to lag frequencies
+    For each ``(suffix, offset)`` pair in ``lag_freqs`` a set of features is
+    produced by aligning each row's UTC timestamp minus the offset to the
+    nearest earlier (``direction='backward'``) observation within a tolerance
+    equal to the offset duration. This approach avoids issues with daylight
+    saving transitions by performing merges on UTC-normalized timestamps.
 
-    Returns:
-        pd.DataFrame: DataFrame with added lag features
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input DataFrame containing a ``time`` column. The ``time`` column will
+        be localized/converted to ``Europe/Prague`` (DST-safe) if needed.
+    columns : list of str
+        Base feature columns to lag.
+    lag_freqs : dict
+        Mapping ``suffix -> pandas Timedelta string`` (e.g. ``{"1h": "1H"}``).
+
+    Returns
+    -------
+    pd.DataFrame
+        Copy of the original DataFrame with additional lagged columns named
+        ``{original}_{suffix}``.
+
+    Notes
+    -----
+    Rows whose timestamps are ambiguous or non-existent during localization are
+    removed (logged) to preserve temporal consistency.
     """
     try:
         df = df.copy()
@@ -25,9 +55,7 @@ def add_lag_features(
         # Handle timezone localization more carefully
         if df["time"].dt.tz is None:
             # If no timezone, localize to Prague timezone with DST handling
-            df["time"] = df["time"].dt.tz_localize(
-                "Europe/Prague", ambiguous="NaT", nonexistent="shift_forward"
-            )
+            df["time"] = df["time"].dt.tz_localize("Europe/Prague", ambiguous="NaT", nonexistent="shift_forward")
         elif df["time"].dt.tz.zone != "Europe/Prague":
             # If different timezone, convert to Prague
             df["time"] = df["time"].dt.tz_convert("Europe/Prague")
@@ -41,9 +69,7 @@ def add_lag_features(
         dropped_count = initial_count - len(df)
 
         if dropped_count > 0:
-            print(
-                f"[INFO] Dropped {dropped_count} rows due to DST ambiguity/invalid timestamps"
-            )
+            print(f"[INFO] Dropped {dropped_count} rows due to DST ambiguity/invalid timestamps")
 
         df.sort_values("time_utc", inplace=True)
         df.reset_index(drop=True, inplace=True)
@@ -77,9 +103,7 @@ def add_lag_features(
                 df.drop(columns=[f"time_utc_shift_{suffix}"], inplace=True)
 
             except Exception as e:
-                print(
-                    f"[WARNING] Failed to add lag features for {suffix} ({lag_str}): {e}"
-                )
+                print(f"[WARNING] Failed to add lag features for {suffix} ({lag_str}): {e}")
                 continue
 
         # Clean up UTC time column
@@ -94,16 +118,19 @@ def add_lag_features(
 
 
 def add_cyclical_time_features(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Add cyclical time features using sine and cosine transformations.
-    This creates better features for time-based data by encoding the cyclical nature
-    of time components (hour of day, day of week, month of year, etc.)
+    """Encode cyclic calendar components with sine and cosine pairs.
 
-    Args:
-        df (pd.DataFrame): DataFrame with a 'time' column in datetime format
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing a timezone-aware or naive ``time`` column already
+        in datetime format.
 
-    Returns:
-        pd.DataFrame: DataFrame with added cyclical time features
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame copy with added columns: ``hour_sin``, ``hour_cos``,
+        ``weekday_sin``, ``weekday_cos``, ``month_sin``, ``month_cos``.
     """
     try:
         df = df.copy()
@@ -145,16 +172,22 @@ def add_cyclical_time_features(df: pd.DataFrame) -> pd.DataFrame:
 
 def filter_features_for_forecast_horizon(
     feature_names: List[str], forecast_horizon: str
-) -> List[str]:
-    """
-    Filter out features with lag periods shorter than the forecast horizon.
+) -> Tuple[List[str], List[str]]:
+    """Filter out lag features whose period is shorter than the horizon.
 
-    Args:
-        feature_names (List[str]): List of feature column names
-        forecast_horizon (str): Forecast horizon as string (e.g., "24h", "7d")
+    Parameters
+    ----------
+    feature_names : list of str
+        Candidate feature column names (may contain lag patterns of the form
+        ``..._lag_<offset>``).
+    forecast_horizon : str
+        Horizon as pandas Timedelta string (e.g. ``"24h"``, ``"7d"``).
 
-    Returns:
-        List[str]: Filtered list of feature names valid for the forecast horizon
+    Returns
+    -------
+    (list of str, list of str)
+        Tuple ``(valid_features, excluded_features)``. Non-lag features are
+        always retained.
     """
     forecast_td = pd.Timedelta(forecast_horizon)
     valid_features = []

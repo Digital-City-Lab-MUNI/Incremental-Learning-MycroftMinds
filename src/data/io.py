@@ -1,10 +1,22 @@
+"""I/O helpers for persisting split datasets.
+
+This module centralizes lightweight save / load utilities used for experiment
+reproducibility and faster iteration. Two serialization backends are supported:
+
+* NumPy ``.npz`` compressed archives (fast numeric loading, metadata via keys).
+* Python ``pickle`` (fallback for arbitrary Python objects / structures).
+
+Each dataset can be either a single ``(X, y)`` tuple or a list of such tuples
+representing multiple temporal or device splits. The save functions embed a
+``data_type`` flag so the corresponding load function can reconstruct the
+original structure automatically.
+"""
+
 import os
 import numpy as np
 import traceback
-import pandas as pd
-import sys
 import pickle
-from typing import List, Tuple, Dict, Optional, Union, Any
+from typing import List, Tuple, Optional, Union, Any
 
 
 def save_data_numpy(
@@ -12,15 +24,23 @@ def save_data_numpy(
     filename: str,
     save_dir: str = "../data",
 ) -> str:
-    """Save data using NumPy's compressed format for efficient storage and fast I/O.
+    """Persist data splits to a compressed ``.npz`` archive.
 
-    Args:
-        data: The data to save, either a list of (X, y) tuples or a single (X, y) tuple
-        filename: The filename without extension
-        save_dir: Directory to save the data in
+    Parameters
+    ----------
+    data : list[tuple[numpy.ndarray, numpy.ndarray]] | tuple[numpy.ndarray, numpy.ndarray]
+        Either a list of ``(X, y)`` tuples (multiple splits) or a single
+        ``(X, y)`` tuple.
+    filename : str
+        Basename (without extension) of the output file.
+    save_dir : str, default '../data'
+        Directory in which to write the file (created if missing).
 
-    Returns:
-        The path to the saved file
+    Returns
+    -------
+    str
+        Absolute or relative path to the created ``.npz`` file. Empty string on
+        failure.
     """
     save_path = os.path.join(save_dir, f"{filename}.npz")
 
@@ -66,15 +86,21 @@ def save_data_pickle(
     filename: str,
     save_dir: str = "../data",
 ) -> str:
-    """Save data using pickle format.
+    """Persist data splits using Python pickle.
 
-    Args:
-        data: The data to save, either a list of (X, y) tuples or a single (X, y) tuple
-        filename: The filename without extension
-        save_dir: Directory to save the data in
+    Parameters
+    ----------
+    data : list[tuple[numpy.ndarray, numpy.ndarray]] | tuple[numpy.ndarray, numpy.ndarray]
+        List of splits or single split to serialize.
+    filename : str
+        Basename (no extension) for output.
+    save_dir : str, default '../data'
+        Output directory (created if necessary).
 
-    Returns:
-        The path to the saved file
+    Returns
+    -------
+    str
+        Path to the written pickle file or empty string on failure.
     """
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
@@ -96,14 +122,20 @@ def save_data_pickle(
 def load_data_numpy(
     filename: str, load_dir: str = "../data"
 ) -> Union[List[Tuple[np.ndarray, np.ndarray]], Tuple[np.ndarray, np.ndarray], None]:
-    """Load data saved with NumPy's compressed format.
+    """Load splits from a ``.npz`` archive produced by :func:`save_data_numpy`.
 
-    Args:
-        filename: The filename without extension
-        load_dir: Directory to load the data from
+    Parameters
+    ----------
+    filename : str
+        Basename (without extension) of the ``.npz`` file.
+    load_dir : str, default '../data'
+        Directory from which to read.
 
-    Returns:
-        Either a list of tuples containing (X, y) for each split or a single (X, y) tuple
+    Returns
+    -------
+    list[tuple[numpy.ndarray, numpy.ndarray]] | tuple[numpy.ndarray, numpy.ndarray] | None
+        List of splits, a single split tuple, or ``None`` if the file doesn't
+        exist or loading fails.
     """
     load_path = os.path.join(load_dir, f"{filename}.npz")
 
@@ -146,14 +178,19 @@ def load_data_numpy(
 def load_data_pickle(
     filename: str, load_dir: str = "../data"
 ) -> Union[List[Tuple[np.ndarray, np.ndarray]], Tuple[np.ndarray, np.ndarray], None]:
-    """Load data saved with pickle format.
+    """Load splits from a pickle file produced by :func:`save_data_pickle`.
 
-    Args:
-        filename: The filename without extension
-        load_dir: Directory to load the data from
+    Parameters
+    ----------
+    filename : str
+        Basename (without extension) of the pickle file.
+    load_dir : str, default '../data'
+        Directory from which to read.
 
-    Returns:
-        Either a list of tuples containing (X, y) for each split or a single (X, y) tuple
+    Returns
+    -------
+    list[tuple[numpy.ndarray, numpy.ndarray]] | tuple[numpy.ndarray, numpy.ndarray] | None
+        Restored list of splits, single split, or ``None`` on failure.
     """
     load_path = os.path.join(load_dir, f"{filename}.pkl")
 
@@ -172,19 +209,31 @@ def load_data_pickle(
         return None
 
 
-def save_dataset(train, valid, test, data_dir="../data", prefix="", use_numpy=True):
-    """Save the train, validation, and test datasets.
+def save_dataset(
+    train: Union[List[Tuple[np.ndarray, np.ndarray]], Tuple[np.ndarray, np.ndarray]],
+    valid: Union[List[Tuple[np.ndarray, np.ndarray]], Tuple[np.ndarray, np.ndarray]],
+    test: Union[List[Tuple[np.ndarray, np.ndarray]], Tuple[np.ndarray, np.ndarray]],
+    data_dir: str = "../data",
+    prefix: str = "",
+    use_numpy: bool = True,
+) -> Tuple[str, str, str]:
+    """Save train/validation/test splits using a chosen backend.
 
-    Args:
-        train: Training dataset
-        valid: Validation dataset
-        test: Test dataset
-        data_dir: Directory to save the data in
-        prefix: Optional prefix for filenames
-        use_numpy: Whether to use NumPy (True) or pickle (False) for saving
+    Parameters
+    ----------
+    train, valid, test : list[tuple[numpy.ndarray, numpy.ndarray]] | tuple[numpy.ndarray, numpy.ndarray]
+        Dataset splits to store.
+    data_dir : str, default '../data'
+        Target directory for saved artifacts.
+    prefix : str, default ''
+        Optional filename prefix (e.g. experiment id) applied to each file.
+    use_numpy : bool, default True
+        If True use compressed NumPy archives; otherwise pickle.
 
-    Returns:
-        Tuple of paths to the saved files (train_path, valid_path, test_path)
+    Returns
+    -------
+    tuple[str, str, str]
+        Paths to the saved (train_path, valid_path, test_path).
     """
     if not os.path.exists(data_dir):
         os.makedirs(data_dir)
@@ -211,20 +260,32 @@ def save_dataset(train, valid, test, data_dir="../data", prefix="", use_numpy=Tr
 
 
 def load_dataset(
-    data_dir="../data", prefix="", use_numpy=True, train=True, valid=True, test=True
-):
-    """Load the train, validation, and test datasets.
+    data_dir: str = "../data",
+    prefix: str = "",
+    use_numpy: bool = True,
+    train: bool = True,
+    valid: bool = True,
+    test: bool = True,
+) -> Tuple[Any, Any, Any]:
+    """Load persisted dataset splits.
 
-    Args:
-        data_dir: Directory to load the data from
-        prefix: Optional prefix for filenames
-        use_numpy: Whether to use NumPy (True) or pickle (False) for loading
-        train: Whether to load the training dataset
-        valid: Whether to load the validation dataset
-        test: Whether to load the test dataset
+    Parameters
+    ----------
+    data_dir : str, default '../data'
+        Directory containing saved artifacts.
+    prefix : str, default ''
+        Filename prefix used during saving.
+    use_numpy : bool, default True
+        If True expect NumPy archives; otherwise pickle files.
+    train, valid, test : bool, default True
+        Flags controlling which splits to load. Unrequested splits retain their
+        input argument value (which callers typically ignore) if False.
 
-    Returns:
-        Tuple of (train, valid, test) datasets
+    Returns
+    -------
+    tuple
+        Tuple ``(train, valid, test)`` where each element is either a list of
+        splits, a single split tuple, or ``None`` if not loaded / unavailable.
     """
     # Set filenames based on prefix
     prefix = f"{prefix}_" if prefix else ""
@@ -250,9 +311,7 @@ def load_dataset(
 
         # Check if all files exist before loading
         if not all(os.path.exists(f) for f in [train_file, valid_file, test_file]):
-            missing = [
-                f for f in [train_file, valid_file, test_file] if not os.path.exists(f)
-            ]
+            missing = [f for f in [train_file, valid_file, test_file] if not os.path.exists(f)]
             print(f"[ERROR] The following files do not exist: {missing}")
             return None, None, None
 

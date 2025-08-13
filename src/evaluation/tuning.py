@@ -1,18 +1,42 @@
+"""Hyperparameter tuning utilities.
+
+This module provides functions to (a) run a single end-to-end training / validation
+cycle for a given model + parameter set (`train_and_evaluate`) and (b) perform a
+grid or random search over a parameter space (`hyperparameter_search_tuning`).
+
+Key features
+------------
+* Handles both incremental (online / partial_fit / learn_one) and batch models.
+* Supports per-split walk-forward validation through the shared sequential
+    evaluation helpers in :mod:`src.evaluation.training`.
+* Aggregates metrics across devices as well as per-device best tracking.
+* Logs rich intermediate checkpoints (overall + per-device) that can be resumed
+    or audited later.
+
+Returned metric structure
+-------------------------
+For each parameter combination we first obtain the per-split per-device metrics
+and then aggregate them using ``all_time_aggregation_metrics``. During tuning we
+track best parameters for both *lower-is-better* metrics (``rmse``, ``mae``,
+``mape``) and *higher-is-better* metrics (``dir_accuracy``, ``first_diff_corr``,
+``spikes_f1``, ``drops_f1``).
+
+Notes
+-----
+Imports related to plotting or unused training helpers are intentionally kept
+minimal here to avoid unnecessary dependencies during search.
+"""
+
 import itertools
 import numpy as np
 import random
 from datetime import datetime
-from typing import Tuple, Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 from sklearn.base import BaseEstimator
-from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from tqdm.notebook import tqdm
 
-from src.evaluation.metrics import calculate_metrics, all_time_aggregation_metrics
-from src.evaluation.visualization import plot_part_predictions, plot_hourly_predictions
-from src.evaluation.training import (
-    all_valid_splits_seq_fit_predict,
-    test_set_seq_fit_predict,
-)
+from src.evaluation.metrics import all_time_aggregation_metrics
+from src.evaluation.training import all_valid_splits_seq_fit_predict
 from src.utils.logging import (
     setup_log_directory,
     create_log_file,
@@ -35,24 +59,49 @@ def train_and_evaluate(
     start_split: int = 0,
     end_split: Optional[int] = None,
 ) -> Dict[str, Any]:
-    """
-    Fits and evaluate the model with given param sets
+    """Train and evaluate a single parameter configuration.
 
-    Args:
-        model (BaseEstimator): The model to train and evaluate.
-        params (dict): Hyperparameters for the model.
-        train (List[Tuple[np.ndarray, np.ndarray]]): Training data as a list of tuples (X, y).
-        valid (List[Tuple[np.ndarray, np.ndarray]]): Validation data as a list of tuples (X, y).
-        spike_prominence (float): Prominence for spike detection.
-        data_freq (str): Frequency of the data (default is 'H' for hourly).
-        forecast_horizon (str): Forecast horizon (default is '1h').
-        features (Optional[List[str]]): List of feature names to use for training.
-        update_freq (str): Frequency of updates (default is '1h').
-        start_split (int): Starting index for the splits (default is 0).
-        end_split (Optional[int]): Ending index for the splits (default is None, which means all splits).
+    This helper runs sequential walk-forward validation over the provided splits
+    and returns time-aggregation metrics computed on the validation parts for
+    each device.
 
-    Returns:
-        model_all_time_valid_metrics (Dict[str, Any]): Aggregated validation metrics across all devices.
+    Parameters
+    ----------
+    model : BaseEstimator | type
+        Either an initialized estimator instance or an estimator class. If a
+        class (not yet instantiated) is provided it will be constructed with
+        ``params`` for each split.
+    params : dict
+        Hyperparameters to apply when instantiating (or re-instantiating) the
+        model for batch learners or when configuring incremental learners.
+    train : list[tuple[np.ndarray, np.ndarray]]
+        List of training split tuples ``(X, y)`` across devices.
+    valid : list[tuple[np.ndarray, np.ndarray]]
+        List of validation split tuples ``(X, y)`` across devices.
+    spike_prominence : float
+        Prominence used in spike / drop detection within metric calculation.
+    data_freq : str, default 'H'
+        Base temporal frequency of the data (e.g. 'H', '15min').
+    forecast_horizon : str, default '1h'
+        Prediction horizon used to align model update timing (incremental
+        learners) and to filter horizon-specific engineered features.
+    features : list[str] or None, optional
+        Subset of feature names to keep. If ``None`` all columns are used.
+    update_freq : str, default '1h'
+        Frequency at which batch models are retrained (or incremental models
+        are allowed to update) relative to ``forecast_horizon``.
+    start_split : int, default 0
+        First split index (inclusive) to evaluate.
+    end_split : int or None, optional
+        Last split index (exclusive). If ``None`` all remaining splits are used.
+
+    Returns
+    -------
+    dict
+        Nested structure of aggregated validation metrics per device produced
+        by ``all_time_aggregation_metrics``. Keys are device identifiers; each
+        value contains aggregation levels (e.g. 'hourly', 'daily', 'weekly',
+        '28_days') with metric summaries (``mean``, ``std``).
     """
 
     incremental = True
@@ -111,41 +160,88 @@ def hyperparameter_search_tuning(
     end_split: Optional[int] = None,
     search_type: str = "grid",
     n_iter: Optional[int] = None,
-    log_dir: str = None,
-    log_prefix: str = None,
-    file_prefix: str = None,
+    log_dir: Optional[str] = None,
+    log_prefix: Optional[str] = None,
+    file_prefix: Optional[str] = None,
     save_intermediate: bool = True,
-) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    """
-    Perform hyperparameter tuning using either grid or random search.
+) -> Dict[str, Any]:
+    """Run a grid or random hyperparameter search.
 
-    Args:
-        param_grid (dict): Grid of hyperparameter values.
-        model (BaseEstimator): The model to train and evaluate.
-        train (List[Tuple[np.ndarray, np.ndarray]]): Training data as a list of tuples (X, y).
-        valid (List[Tuple[np.ndarray, np.ndarray]]): Validation data as a list of tuples (X, y).
-        aggregation (str): Aggregation method for metrics ('hourly', 'daily', etc.).
-        data_freq (str): Frequency of the data (default is 'H' for hourly).
-        forecast_horizon (str): Forecast horizon (default is '1h').
-        update_freq (str): Frequency of updates (default is '1h').
-        start_split (int): Starting index for the splits (default is 0).
-        end_split (Optional[int]): Ending index for the splits (default is None, which means all splits).
-        search_type (str): 'grid' or 'random'.
-        n_iter (int): Number of random samples (only for random search).
-        log_dir (str): Directory to save tuning results logs. If None, uses default.
-        log_prefix (str): Prefix for log directory and files. If None, uses 'tuning'.
-        file_prefix (str): Prefix for result filenames (e.g., 'dev_4_wfv'). If None, uses no prefix.
-        save_intermediate (bool): Whether to save intermediate results.
+    Combines sequential walk-forward evaluation with parameter space exploration.
+    Tracks both overall (across devices) and per-device best hyperparameters for
+    multiple metrics, logging rich checkpoints for auditability.
 
-    Returns:
-        Dict[str, Any]: Best hyperparameters found.
+    Parameters
+    ----------
+    param_grid : dict
+        Dictionary mapping parameter names to an iterable of candidate values.
+        For ``search_type='grid'`` the full Cartesian product is evaluated.
+        For ``'random'`` a fixed number of combinations is sampled uniformly.
+    model : BaseEstimator | type
+        Estimator instance or class. If a class is provided it is (re)created per
+        split for batch models. Incremental / online models can be reused.
+    train : list[tuple[np.ndarray, np.ndarray]]
+        Training splits per device ``[(X_device_i, y_device_i), ...]``.
+    valid : list[tuple[np.ndarray, np.ndarray]]
+        Validation splits per device aligned with ``train``.
+    spike_prominence : float
+        Prominence passed through to spike / drop detection in metrics.
+    aggregation : str, default 'hourly'
+        Aggregation key to select from the metric dictionary for scoring (e.g.
+        'hourly', 'daily', 'weekly').
+    data_freq : str, default 'H'
+        Native data sampling frequency (Pandas offset alias).
+    forecast_horizon : str, default '1h'
+        Prediction horizon used for feature filtering & update cadence gating.
+    features : list[str] or None, optional
+        Subset of features to retain; ``None`` keeps all provided columns.
+    update_freq : str, default '1h'
+        Frequency at which batch models are retrained or incremental models may
+        update. Typically equals the forecast horizon for pure one-step ahead.
+    start_split : int, default 0
+        First split index (inclusive) to include in tuning.
+    end_split : int or None, optional
+        Final split index (exclusive). If ``None`` uses all remaining splits.
+    search_type : {'grid', 'random'}, default 'grid'
+        Strategy for exploring ``param_grid``.
+    n_iter : int or None, optional
+        Number of random combinations when ``search_type='random'``. If ``None``
+        defaults to 1000 samples.
+    log_dir : str or None, optional
+        Root directory for log artifacts. Created if missing. If ``None`` a
+        timestamped directory under the project default is used.
+    log_prefix : str or None, optional
+        Prefix for the created log directory name. Defaults to
+        'hyperparameter_tuning'.
+    file_prefix : str or None, optional
+        Prefix inserted in saved result filenames (e.g. dataset identifier).
+    save_intermediate : bool, default True
+        If ``True`` save periodic checkpoint JSON files with both overall and
+        per-device best metrics / params.
 
+    Returns
+    -------
+    dict
+        Dictionary with two top-level keys:
+
+        ``overall``
+            Contains ``best_params`` and ``best_scores`` (each a mapping from
+            metric name to the parameter dict / best scalar value).
+        ``per_device``
+            Contains four dictionaries tracking best parameters and scores for
+            lower-better and higher-better metrics keyed by device id.
+
+    Notes
+    -----
+    Metrics tracked (overall & per device):
+
+    * Lower is better: ``rmse``, ``mae``, ``mape``
+    * Higher is better: ``dir_accuracy``, ``first_diff_corr``, ``spikes_f1``,
+      ``drops_f1``
     """
 
     # Setup logging with defaults
-    model_name = (
-        model.__name__ if hasattr(model, "__name__") else model.__class__.__name__
-    )
+    model_name = model.__name__ if hasattr(model, "__name__") else model.__class__.__name__
 
     # Setup directories with defaults
     if log_prefix is None:
@@ -162,9 +258,7 @@ def hyperparameter_search_tuning(
         # default to 1000 iterations if not specified
         if n_iter is None:
             n_iter = 1000
-        param_combinations = [
-            tuple(random.choice(vals) for vals in values) for _ in range(n_iter)
-        ]
+        param_combinations = [tuple(random.choice(vals) for vals in values) for _ in range(n_iter)]
         total_combinations = len(param_combinations)
     else:
         param_combinations = list(itertools.product(*values))
@@ -206,9 +300,7 @@ def hyperparameter_search_tuning(
         separator = "=" * 80
 
         log_and_print(log_file, f"\n{separator}")
-        log_and_print(
-            log_file, f"CHECKPOINT: Iteration {iteration}/{total_combinations}"
-        )
+        log_and_print(log_file, f"CHECKPOINT: Iteration {iteration}/{total_combinations}")
         log_and_print(log_file, f"Current Parameters: {params}")
         log_and_print(log_file, separator)
 
@@ -224,17 +316,13 @@ def hyperparameter_search_tuning(
                 ]
                 old_str = format_metric_value(old_score, is_perc)
                 new_str = format_metric_value(new_score, is_perc)
-                direction = (
-                    "decreased" if metric in ["rmse", "mae", "mape"] else "increased"
-                )
+                direction = "decreased" if metric in ["rmse", "mae", "mape"] else "increased"
                 log_and_print(
                     log_file,
                     f"   {metric.upper()}: {old_str} -> {new_str} ({direction})",
                 )
 
-        log_and_print(
-            log_file, "\nCURRENT ITERATION RESULTS (Averages across devices):"
-        )
+        log_and_print(log_file, "\nCURRENT ITERATION RESULTS (Averages across devices):")
         for metric in [
             "rmse",
             "mae",
@@ -291,26 +379,14 @@ def hyperparameter_search_tuning(
                 mape_str = format_metric_value(mape, True)
 
                 # Higher is better metrics
-                dir_acc = per_device_best_scores_higher_better[device_id][
-                    "dir_accuracy"
-                ]
-                dir_acc_params = per_device_best_params_higher_better[device_id][
-                    "dir_accuracy"
-                ]
-                first_diff_corr = per_device_best_scores_higher_better[device_id][
-                    "first_diff_corr"
-                ]
-                first_diff_corr_params = per_device_best_params_higher_better[
-                    device_id
-                ]["first_diff_corr"]
+                dir_acc = per_device_best_scores_higher_better[device_id]["dir_accuracy"]
+                dir_acc_params = per_device_best_params_higher_better[device_id]["dir_accuracy"]
+                first_diff_corr = per_device_best_scores_higher_better[device_id]["first_diff_corr"]
+                first_diff_corr_params = per_device_best_params_higher_better[device_id]["first_diff_corr"]
                 spikes_f1 = per_device_best_scores_higher_better[device_id]["spikes_f1"]
-                spikes_f1_params = per_device_best_params_higher_better[device_id][
-                    "spikes_f1"
-                ]
+                spikes_f1_params = per_device_best_params_higher_better[device_id]["spikes_f1"]
                 drops_f1 = per_device_best_scores_higher_better[device_id]["drops_f1"]
-                drops_f1_params = per_device_best_params_higher_better[device_id][
-                    "drops_f1"
-                ]
+                drops_f1_params = per_device_best_params_higher_better[device_id]["drops_f1"]
                 dir_acc_str = format_metric_value(dir_acc, True)
                 first_diff_corr_str = format_metric_value(first_diff_corr, True)
                 spikes_f1_str = format_metric_value(spikes_f1, True)
@@ -321,19 +397,13 @@ def hyperparameter_search_tuning(
                 log_and_print(log_file, f"      RMSE={rmse_str}, {rmse_params}")
                 log_and_print(log_file, f"      MAE={mae_str}, {mae_params}")
                 log_and_print(log_file, f"      MAPE={mape_str}, {mape_params}")
-                log_and_print(
-                    log_file, f"      Dir_Acc={dir_acc_str}, {dir_acc_params}"
-                )
+                log_and_print(log_file, f"      Dir_Acc={dir_acc_str}, {dir_acc_params}")
                 log_and_print(
                     log_file,
                     f"      First_Diff_Corr={first_diff_corr_str}, {first_diff_corr_params}",
                 )
-                log_and_print(
-                    log_file, f"      Spikes_F1={spikes_f1_str}, {spikes_f1_params}"
-                )
-                log_and_print(
-                    log_file, f"      Drops_F1={drops_f1_str}, {drops_f1_params}"
-                )
+                log_and_print(log_file, f"      Spikes_F1={spikes_f1_str}, {spikes_f1_params}")
+                log_and_print(log_file, f"      Drops_F1={drops_f1_str}, {drops_f1_params}")
 
         progress = (iteration / total_combinations) * 100
         log_and_print(
@@ -343,9 +413,7 @@ def hyperparameter_search_tuning(
         log_and_print(log_file, separator)
 
     # Initial log setup
-    log_and_print(
-        log_file, f"Grid Search Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-    )
+    log_and_print(log_file, f"Grid Search Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     log_and_print(log_file, f"Model: {model_name}")
     log_and_print(log_file, f"File prefix: {file_prefix or 'None'}")
     log_and_print(log_file, f"Total parameter combinations: {total_combinations}")
@@ -357,9 +425,7 @@ def hyperparameter_search_tuning(
     log_and_print(log_file, f"Log directory: {log_dir}")
     log_and_print(log_file, "")
 
-    for iteration, combination in enumerate(
-        tqdm(param_combinations, desc="Grid Search Progress"), 1
-    ):
+    for iteration, combination in enumerate(tqdm(param_combinations, desc="Grid Search Progress"), 1):
         params = dict(zip(keys, combination))
         results = train_and_evaluate(
             model,
@@ -431,20 +497,13 @@ def hyperparameter_search_tuning(
                         per_device_metrics[device_id][metric] = mean_val
 
                         # Check for improvement for this device
-                        if (
-                            mean_val
-                            < per_device_best_scores_lower_better[device_id][metric]
-                        ):
+                        if mean_val < per_device_best_scores_lower_better[device_id][metric]:
                             all_device_improvements[device_id][metric] = (
                                 per_device_best_scores_lower_better[device_id][metric],
                                 mean_val,
                             )
-                            per_device_best_scores_lower_better[device_id][metric] = (
-                                float(mean_val)
-                            )
-                            per_device_best_params_lower_better[device_id][
-                                metric
-                            ] = params.copy()
+                            per_device_best_scores_lower_better[device_id][metric] = float(mean_val)
+                            per_device_best_params_lower_better[device_id][metric] = params.copy()
 
             # Higher is better metrics
             for metric, hourly_key in [
@@ -459,20 +518,13 @@ def hyperparameter_search_tuning(
                         per_device_metrics[device_id][metric] = mean_val
 
                         # Check for improvement for this device
-                        if (
-                            mean_val
-                            > per_device_best_scores_higher_better[device_id][metric]
-                        ):
+                        if mean_val > per_device_best_scores_higher_better[device_id][metric]:
                             all_device_improvements[device_id][metric] = (
                                 per_device_best_scores_higher_better[device_id][metric],
                                 mean_val,
                             )
-                            per_device_best_scores_higher_better[device_id][metric] = (
-                                float(mean_val)
-                            )
-                            per_device_best_params_higher_better[device_id][
-                                metric
-                            ] = params.copy()
+                            per_device_best_scores_higher_better[device_id][metric] = float(mean_val)
+                            per_device_best_params_higher_better[device_id][metric] = params.copy()
 
         # For display purposes, compute aggregates across devices
         metric_names = [
@@ -496,13 +548,9 @@ def hyperparameter_search_tuning(
         # Average for display
         for metric in metric_names:
             if metric_counts[metric] > 0:
-                current_metrics[metric] = (
-                    current_metrics[metric] / metric_counts[metric]
-                )
+                current_metrics[metric] = current_metrics[metric] / metric_counts[metric]
             else:
-                current_metrics[metric] = (
-                    float("inf") if metric in ["rmse", "mae", "mape"] else float("-inf")
-                )
+                current_metrics[metric] = float("inf") if metric in ["rmse", "mae", "mape"] else float("-inf")
 
         # Track improvements for display purposes
         improvements = {}
@@ -527,9 +575,7 @@ def hyperparameter_search_tuning(
             for device_id, device_metrics in per_device_metrics.items():
                 if metric in device_metrics:
                     if device_metrics[metric] > best_scores_higher_better[metric]:
-                        best_scores_higher_better[metric] = float(
-                            device_metrics[metric]
-                        )
+                        best_scores_higher_better[metric] = float(device_metrics[metric])
                         best_params_higher_better[metric] = params.copy()
 
         # Print checkpoint every iteration
@@ -546,9 +592,7 @@ def hyperparameter_search_tuning(
         )
 
         # Save intermediate results periodically (every 10% or every 10 iterations)
-        if save_intermediate and (
-            iteration % max(1, total_combinations // 10) == 0 or iteration % 10 == 0
-        ):
+        if save_intermediate and (iteration % max(1, total_combinations // 10) == 0 or iteration % 10 == 0):
             # Save overall best metrics
             best_params_combined = {
                 **best_params_lower_better,
@@ -638,9 +682,7 @@ def hyperparameter_search_tuning(
     # Save final results
     if save_intermediate:
         # Save both overall and per-device results
-        save_checkpoint_results(
-            log_dir, model_name, best_params, best_scores, file_prefix
-        )
+        save_checkpoint_results(log_dir, model_name, best_params, best_scores, file_prefix)
 
         # Save per-device results separately
         per_device_results = {
@@ -649,9 +691,7 @@ def hyperparameter_search_tuning(
             "per_device_best_params_higher_better": per_device_best_params_higher_better,
             "per_device_best_scores_higher_better": per_device_best_scores_higher_better,
         }
-        save_checkpoint_results(
-            log_dir, f"{model_name}_per_device", per_device_results, {}, file_prefix
-        )
+        save_checkpoint_results(log_dir, f"{model_name}_per_device", per_device_results, {}, file_prefix)
 
     # Return both overall and per-device results
     return {
