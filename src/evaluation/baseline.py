@@ -14,6 +14,7 @@ All incremental models expose a light River-style interface via ``learn_one`` an
 follows the scikit-learn ``fit`` / ``predict`` API.
 """
 
+from typing import Any
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, RegressorMixin
@@ -30,10 +31,11 @@ class PreviousValueRegressor:
     * Provides River compatibility through ``learn_one`` / ``predict_one``.
     """
 
-    def __init__(self):
+    def __init__(self, is_residual: bool = False) -> None:
         self.last_value = 0.0  # Default value when no data has been seen
+        self.is_residual = is_residual  # if predicting on residuals, return 0.0
 
-    def learn_one(self, x, y: float):  # noqa: D401 - short River style docstring
+    def learn_one(self, x: Any, y: float) -> "PreviousValueRegressor":  # noqa: D401 - short River style docstring
         """Update the stored value with the new target ``y``.
 
         Parameters
@@ -51,9 +53,10 @@ class PreviousValueRegressor:
         self.last_value = y
         return self
 
-    def predict_one(self, x) -> float:  # noqa: D401 - short River style docstring
-        """Return the previously observed target value, or 0.0 if no data
-        has been seen yet or is_residual is True.
+    def predict_one(self, x: Any) -> float:  # noqa: D401 - short River style docstring
+        """Return the previously observed target value.
+
+        Return 0.0 if no data has been seen yet or is_residual is True.
 
         Parameters
         ----------
@@ -65,7 +68,7 @@ class PreviousValueRegressor:
         float
                 The last observed value (``0.0`` if no data has been seen yet).
         """
-        return self.last_value
+        return 0.0 if self.is_residual else self.last_value
 
 
 class SeasonalMeanRegressor(BaseEstimator, RegressorMixin):

@@ -51,11 +51,12 @@ def train_and_evaluate(
     params: dict,
     train: List[Tuple[np.ndarray, np.ndarray]],
     valid: List[Tuple[np.ndarray, np.ndarray]],
+    use_residuals: bool,
     spike_prominence: float,
-    data_freq="H",
-    forecast_horizon="1h",
+    data_freq: str = "H",
+    forecast_horizon: str = "1h",
     features: Optional[List[str]] = None,
-    update_freq="1h",
+    update_freq: str = "1h",
     start_split: int = 0,
     end_split: Optional[int] = None,
 ) -> Dict[str, Any]:
@@ -78,6 +79,8 @@ def train_and_evaluate(
         List of training split tuples ``(X, y)`` across devices.
     valid : list[tuple[np.ndarray, np.ndarray]]
         List of validation split tuples ``(X, y)`` across devices.
+    use_residuals : bool
+        If True, model the residuals (1-step differencing) instead of the original target.
     spike_prominence : float
         Prominence used in spike / drop detection within metric calculation.
     data_freq : str, default 'H'
@@ -103,7 +106,6 @@ def train_and_evaluate(
         value contains aggregation levels (e.g. 'hourly', 'daily', 'weekly',
         '28_days') with metric summaries (``mean``, ``std``).
     """
-
     incremental = True
     # Check if the model is a class (not instantiated) and determine if it's batch learning
     if hasattr(model, "__name__"):
@@ -125,6 +127,7 @@ def train_and_evaluate(
         model_params=params,
         train=train,
         valid=valid,
+        use_residuals=use_residuals,
         incremental=incremental,
         data_freq=data_freq,
         forecast_horizon=forecast_horizon,
@@ -150,6 +153,7 @@ def hyperparameter_search_tuning(
     model: BaseEstimator,
     train: List[Tuple[np.ndarray, np.ndarray]],
     valid: List[Tuple[np.ndarray, np.ndarray]],
+    use_residuals: bool,
     spike_prominence: float,
     aggregation: str = "hourly",
     data_freq: str = "H",
@@ -184,6 +188,8 @@ def hyperparameter_search_tuning(
         Training splits per device ``[(X_device_i, y_device_i), ...]``.
     valid : list[tuple[np.ndarray, np.ndarray]]
         Validation splits per device aligned with ``train``.
+    use_residuals : bool
+        If True, model the residuals (1-step differencing) instead of the original target.
     spike_prominence : float
         Prominence passed through to spike / drop detection in metrics.
     aggregation : str, default 'hourly'
@@ -239,7 +245,6 @@ def hyperparameter_search_tuning(
     * Higher is better: ``dir_accuracy``, ``first_diff_corr``, ``spikes_f1``,
       ``drops_f1``
     """
-
     # Setup logging with defaults
     model_name = model.__name__ if hasattr(model, "__name__") else model.__class__.__name__
 
@@ -287,16 +292,16 @@ def hyperparameter_search_tuning(
     }
 
     def print_checkpoint(
-        iteration,
-        params,
-        current_metrics,
-        improvements,
-        show_per_device=True,
-        per_device_best_scores_lower_better=None,
-        per_device_best_params_lower_better=None,
-        per_device_best_scores_higher_better=None,
-        per_device_best_params_higher_better=None,
-    ):
+        iteration: int,
+        params: dict,
+        current_metrics: dict,
+        improvements: dict,
+        show_per_device: bool = True,
+        per_device_best_scores_lower_better: dict = None,
+        per_device_best_params_lower_better: dict = None,
+        per_device_best_scores_higher_better: dict = None,
+        per_device_best_params_higher_better: dict = None,
+    ) -> None:
         separator = "=" * 80
 
         log_and_print(log_file, f"\n{separator}")
@@ -426,12 +431,13 @@ def hyperparameter_search_tuning(
     log_and_print(log_file, "")
 
     for iteration, combination in enumerate(tqdm(param_combinations, desc="Grid Search Progress"), 1):
-        params = dict(zip(keys, combination))
+        params = dict(zip(keys, combination, strict=False))
         results = train_and_evaluate(
             model,
             params,
             train=train,
             valid=valid,
+            use_residuals=use_residuals,
             spike_prominence=spike_prominence,
             data_freq=data_freq,
             forecast_horizon=forecast_horizon,
@@ -556,7 +562,7 @@ def hyperparameter_search_tuning(
         improvements = {}
 
         # Consolidate device improvements to report overall best metrics
-        for device_id, device_improvements in all_device_improvements.items():
+        for _device_id, device_improvements in all_device_improvements.items():
             for metric, (old_val, new_val) in device_improvements.items():
                 # Only track one improvement per metric for display simplicity
                 if metric not in improvements:
@@ -564,7 +570,7 @@ def hyperparameter_search_tuning(
 
         # Update best scores for lower-better metrics globally (for backward compatibility)
         for metric in ["rmse", "mae", "mape"]:
-            for device_id, device_metrics in per_device_metrics.items():
+            for _device_id, device_metrics in per_device_metrics.items():
                 if metric in device_metrics:
                     if device_metrics[metric] < best_scores_lower_better[metric]:
                         best_scores_lower_better[metric] = float(device_metrics[metric])
@@ -572,7 +578,7 @@ def hyperparameter_search_tuning(
 
         # Update best scores for higher-better metrics globally (for backward compatibility)
         for metric in ["dir_accuracy", "first_diff_corr", "spikes_f1", "drops_f1"]:
-            for device_id, device_metrics in per_device_metrics.items():
+            for _device_id, device_metrics in per_device_metrics.items():
                 if metric in device_metrics:
                     if device_metrics[metric] > best_scores_higher_better[metric]:
                         best_scores_higher_better[metric] = float(device_metrics[metric])

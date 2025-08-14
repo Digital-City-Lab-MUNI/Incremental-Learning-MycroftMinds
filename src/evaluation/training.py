@@ -70,7 +70,7 @@ def _partial_fit_model(model: BaseEstimator, X: np.ndarray, Y: pd.Series) -> Non
     else:
         # Adaptation for River or other models with learn_one method (convert each row to a dict)
         X: dict = pd.DataFrame(X).to_dict(orient="records")
-        for x, y in zip(X, Y):
+        for x, y in zip(X, Y, strict=True):
             model.learn_one(x, y)
 
 
@@ -201,7 +201,7 @@ def seq_fit_predict_batch_model(
 
         # Predict for the current chunk
         if verbose >= 1:
-            print(f"Predicting for chunk from {X_valid[current_chunk_start, 0]} to {X_valid[chunk_end-1, 0]}")
+            print(f"Predicting for chunk from {X_valid[current_chunk_start, 0]} to {X_valid[chunk_end - 1, 0]}")
             print()
             print("-" * 25)
         y_pred_valid_chunk = model.predict(X_valid[current_chunk_start:chunk_end, feature_indices])
@@ -359,6 +359,7 @@ def all_valid_splits_seq_fit_predict(
     model_params: Dict[str, Any],
     train: List[Tuple[np.ndarray, np.ndarray]],
     valid: List[Tuple[np.ndarray, np.ndarray]],
+    use_residuals: bool,
     incremental: bool,
     data_freq: str,
     forecast_horizon: str,
@@ -373,8 +374,12 @@ def all_valid_splits_seq_fit_predict(
     verbose: int = 1,
     tqdm_on: bool = True,
 ) -> Tuple[Dict[str, Any], Dict[str, Any], Dict[str, Any], Dict[str, Any]]:
-    """
-    Fit and predict for each device in the training and validation splits.
+    """Walk-forward evaluation across validation splits per device.
+
+    For each split and device the model is (re)initialised, residuals are
+    modeled via 1-step differencing, and sequential predictions are produced
+    using either batch retraining or incremental updates. Predictions and
+    metrics are stored per device & period.
 
     Parameters
     ----------
@@ -384,6 +389,8 @@ def all_valid_splits_seq_fit_predict(
         Constructor parameters for the estimator.
     train, valid : list[tuple]
         Lists of (X, y) arrays representing sequential folds.
+    use_residuals : bool
+        If True, model the residuals (1-step differencing) instead of the original target.
     incremental : bool
         If True use incremental mode, else batch mode.
     data_freq : str
@@ -443,23 +450,61 @@ def all_valid_splits_seq_fit_predict(
             if X_valid.shape[0] == 0:
                 print(f"[! WARNING !] No validation data for device {device_id} in split {split}. Skipping.")
                 continue
-            
+
+            if use_residuals:
+                # Model the residuals, not the original target
+                y_train_shifted = y_train.shift(1)  # use 1-step lag for differencing
+                d_train = y_train - y_train_shifted
+                d_train = d_train[1:]  # remove the first row to match the shifted target
+                X_train = X_train[1:]
+                y_train = y_train[1:]
+
+                # Prepend last training target value to the validation Series to align differencing
+                y_valid = pd.concat([y_train.iloc[[-1]], y_valid])
+                y_valid_shifted = y_valid.shift(1)  # use 1-step lag for differencing
+                d_valid = y_valid - y_valid_shifted
+                d_valid = d_valid[1:]  # remove the first row to match the shifted target
+                y_valid = y_valid[1:]
+                # X_valid remains unchanged as it is already aligned with y_valid
+
             model = _init_model_with_params(model_class, model_params)
 
             if incremental:
                 y_pred_train, y_pred_valid = seq_fit_predict_incremental_model(
-                    model, X_train, y_train, X_valid, y_valid, 
-                    forecast_horizon, features, predict_train, index_cols, verbose
+                    model,
+                    X_train,
+                    d_train if use_residuals else y_train,
+                    X_valid,
+                    d_valid if use_residuals else y_valid,
+                    forecast_horizon,
+                    features,
+                    predict_train,
+                    index_cols,
+                    verbose,
                 )
             else:
                 y_pred_train, y_pred_valid = seq_fit_predict_batch_model(
-                    model, X_train, y_train, X_valid, y_valid, 
-                    forecast_horizon, update_freq, features, predict_train, index_cols, verbose
+                    model,
+                    X_train,
+                    d_train if use_residuals else y_train,
+                    X_valid,
+                    d_valid if use_residuals else y_valid,
+                    forecast_horizon,
+                    update_freq,
+                    features,
+                    predict_train,
+                    index_cols,
+                    verbose,
                 )
 
             train_period = f"{X_train[0, 0]} - {X_train[-1, 0]}"
             valid_period = f"{X_valid[0, 0]} - {X_valid[-1, 0]}"
-            
+
+            if use_residuals:
+                # Adjust predictions to match the original y_train and y_valid
+                y_pred_train = y_pred_train + y_train_shifted[1:] if predict_train else None
+                y_pred_valid = y_pred_valid + y_valid_shifted[1:]
+
             device_train_predictions = {
                 "period": train_period,
                 "y_true": y_train,
@@ -521,22 +566,26 @@ def all_valid_splits_seq_fit_predict(
         for period in device_train_period_predictions[device_id]:
             if period["y_true"].isnull().any():
                 print(
-                    f"[! WARNING !] There are missing values in the y_true for device {device_id} during the training period {period['period']}!"
+                    f"[! WARNING !] There are missing values in the y_true for device {device_id} "
+                    f"during the training period {period['period']}!"
                 )
             if period["y_pred"] is not None and period["y_pred"].isnull().any():
                 print(
-                    f"[! WARNING !] There are missing values in the y_pred for device {device_id} during the training period {period['period']}!"
+                    f"[! WARNING !] There are missing values in the y_pred for device {device_id} "
+                    f"during the training period {period['period']}!"
                 )
 
     for device_id in device_valid_period_predictions:
         for period in device_valid_period_predictions[device_id]:
             if period["y_true"].isnull().any():
                 print(
-                    f"[! WARNING !] There are missing values in the y_true for device {device_id} during the validation period {period['period']}!"
+                    f"[! WARNING !] There are missing values in the y_true for device {device_id} "
+                    f"during the validation period {period['period']}!"
                 )
             if period["y_pred"].isnull().any():
                 print(
-                    f"[! WARNING !] There are missing values in the y_pred for device {device_id} during the validation period {period['period']}!"
+                    f"[! WARNING !] There are missing values in the y_pred for device {device_id} "
+                    f"during the validation period {period['period']}!"
                 )
 
     return (
@@ -553,6 +602,7 @@ def test_set_seq_fit_predict(
     train: List[Tuple[np.ndarray, np.ndarray]],
     valid: List[Tuple[np.ndarray, np.ndarray]],
     test: List[Tuple[np.ndarray, np.ndarray]],
+    use_residuals: bool,
     incremental: bool,
     data_freq: str,
     forecast_horizon: str,
@@ -576,6 +626,8 @@ def test_set_seq_fit_predict(
         Estimator class and constructor keyword args.
     train, valid, test : list[tuple]
         Data splits (arrays) with consistent formatting.
+    use_residuals : bool
+        If True, model the residuals (1-step differencing) instead of the original target.
     incremental : bool
         Incremental vs batch behavior.
     data_freq : str
@@ -589,7 +641,7 @@ def test_set_seq_fit_predict(
     spike_prominence : float, default=10.0
         Minimum prominence of spikes to detect.
     normalize_robust : bool, default=True
-        Whether to apply robust normalization to the ``y_true`` and ``y_pred`` 
+        Whether to apply robust normalization to the ``y_true`` and ``y_pred``
         for spike detection.
     predict_train : bool, default=False
         Whether to produce predictions/metrics on combined train set.
@@ -640,16 +692,32 @@ def test_set_seq_fit_predict(
         if len(X_test) == 0:
             continue
 
+        if use_residuals:
+            # Model the residuals, not the original target
+            y_combined_shifted = y_combined.shift(1)  # use 1-step lag for differencing
+            d_combined = y_combined - y_combined_shifted
+            d_combined = d_combined[1:]  # remove the first row to match the shifted target
+            X_combined = X_combined[1:]
+            y_combined = y_combined[1:]
+
+            # Prepend last combined target value to the test Series to align differencing
+            y_test = pd.concat([y_combined.iloc[[-1]], y_test])
+            y_test_shifted = y_test.shift(1)  # use 1-step lag for differencing
+            d_test = y_test - y_test_shifted
+            d_test = d_test[1:]  # remove the first row to match the shifted target
+            y_test = y_test[1:]
+            # X_test remains unchanged as it is already aligned with y_test
+
         model = _init_model_with_params(model_class, model_params)
 
         # Train model and predict on test data
         if incremental:
-            y_pred_train, y_pred_test = seq_fit_predict_incremental_model(
+            y_pred_combined, y_pred_test = seq_fit_predict_incremental_model(
                 model,
                 X_combined,
-                y_combined,
+                d_combined if use_residuals else y_combined,
                 X_test,
-                y_test,
+                d_test if use_residuals else y_test,
                 forecast_horizon,
                 features,
                 predict_train,
@@ -657,12 +725,12 @@ def test_set_seq_fit_predict(
                 verbose,
             )
         else:
-            y_pred_train, y_pred_test = seq_fit_predict_batch_model(
+            y_pred_combined, y_pred_test = seq_fit_predict_batch_model(
                 model,
                 X_combined,
-                y_combined,
+                d_combined if use_residuals else y_combined,
                 X_test,
-                y_test,
+                d_test if use_residuals else y_test,
                 forecast_horizon,
                 update_freq,
                 features,
@@ -675,11 +743,16 @@ def test_set_seq_fit_predict(
         train_period = f"{X_combined[0, 0]} - {X_combined[-1, 0]}"
         test_period = f"{X_test[0, 0]} - {X_test[-1, 0]}"
 
+        if use_residuals:
+            # Adjust predictions to match the original y_combined and y_test
+            y_pred_combined = y_pred_combined + y_combined_shifted[1:] if predict_train else None
+            y_pred_test = y_pred_test + y_test_shifted[1:]
+
         # Store predictions
         device_train_predictions = {
             "period": train_period,
             "y_true": y_combined,
-            "y_pred": y_pred_train,
+            "y_pred": y_pred_combined,
         }
 
         device_test_predictions = {
@@ -692,7 +765,7 @@ def test_set_seq_fit_predict(
         if predict_train:
             device_train_metrics = calculate_metrics(
                 y_combined,
-                y_pred_train,
+                y_pred_combined,
                 device_id,
                 train_period,
                 data_freq=data_freq,
@@ -752,11 +825,13 @@ def test_set_seq_fit_predict(
         for period in device_test_period_predictions[device_id]:
             if period["y_true"].isnull().any():
                 print(
-                    f"[! WARNING !] There are missing values in the y_true for device {device_id} during the test period {period['period']}!"
+                    f"[! WARNING !] There are missing values in the y_true for device {device_id} "
+                    f"during the test period {period['period']}!"
                 )
             if period["y_pred"].isnull().any():
                 print(
-                    f"[! WARNING !] There are missing values in the y_pred for device {device_id} during the test period {period['period']}!"
+                    f"[! WARNING !] There are missing values in the y_pred for device {device_id} "
+                    f"during the test period {period['period']}!"
                 )
 
     return (
