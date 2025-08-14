@@ -16,7 +16,7 @@ import os
 import numpy as np
 import traceback
 import pickle
-from typing import List, Tuple, Optional, Union, Any
+from typing import List, Tuple, Union, Any
 
 
 def save_data_numpy(

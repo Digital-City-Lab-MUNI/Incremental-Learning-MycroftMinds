@@ -208,7 +208,7 @@ def filter_features_for_forecast_horizon(
                         valid_features.append(feature)
                     else:
                         excluded_features.append(feature)
-                except:
+                except Exception:
                     # If we can't parse the lag period, include the feature
                     valid_features.append(feature)
             else:

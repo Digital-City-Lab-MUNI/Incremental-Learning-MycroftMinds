@@ -90,7 +90,7 @@ def variance_reduction_relative(
     return abs_gain / var_parent if var_parent > 0 else 0.0
 
 
-def get_split_criterion(name: str | None):
+def get_split_criterion(name: str | None) -> callable:
     """Return a split criterion function by name.
 
     Parameters

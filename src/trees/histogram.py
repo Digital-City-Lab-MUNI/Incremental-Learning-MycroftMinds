@@ -38,7 +38,7 @@ samples.
 
 from __future__ import annotations
 
-from typing import Sequence, Type, Union, Dict, List
+from typing import Type, Union, Dict, List
 import bisect
 
 
@@ -72,7 +72,8 @@ class AdaptiveHistogram:
           • Merge the two adjacent bins with the smallest combined count.
 
     3. Merging bins:
-       - Identify adjacent edges with the smallest counts i = argmin over j of (bin_stats[j]['count'] + bin_stats[j+1]['count']).
+       - Identify adjacent edges with the smallest counts
+            i = argmin over j of (bin_stats[j]['count'] + bin_stats[j+1]['count']).
        - Merge bin j+1 into bin j by summing counts and sums.
        - Remove bin_edges[i] and bin_stats[i+1].
 
@@ -117,7 +118,7 @@ class AdaptiveHistogram:
             New histogram with a subset of bins.
         """
         new_hist = AdaptiveHistogram(self.max_bins)
-        for edge, stat in zip(self.bin_edges, self.bin_stats):
+        for edge, stat in zip(self.bin_edges, self.bin_stats, strict=True):
             if (left and edge <= split_thr) or (not left and edge > split_thr):
                 new_hist.bin_edges.append(edge)
                 new_hist.bin_stats.append(dict(stat))
@@ -196,8 +197,9 @@ class AdaptiveHistogram:
             two bins exist.
 
         Notes
-        ----------
-        Using raw bin edges as split thresholds means you'll split exactly at one of the observed values (or cluster representatives), which can lead to:
+        -----
+        Using raw bin edges as split thresholds means you'll split exactly at
+        one of the observed values (or cluster representatives), which can lead to:
         - Imbalanced splits
             If a bin edge corresponds to an extreme outlier, you might send almost all data to one side.
         - Boundary ambiguity
@@ -241,7 +243,7 @@ class AdaptiveHistogram:
         count = 0
         sum_y = 0.0
         sum_y2 = 0.0
-        for edge, stat in zip(self.bin_edges, self.bin_stats):
+        for edge, stat in zip(self.bin_edges, self.bin_stats, strict=True):
             if (left and edge <= threshold) or (not left and edge > threshold):
                 count += int(stat["count"])
                 sum_y += float(stat["sum_y"])
@@ -331,7 +333,7 @@ class EquiWidthHistogram:
             Histogram with selected bins only.
         """
         new_hist = EquiWidthHistogram(self.max_bins, self.min_val, self.max_val)
-        for edge, stat in zip(self.bin_edges, self.bin_stats):
+        for edge, stat in zip(self.bin_edges, self.bin_stats, strict=True):
             # For equi-width, bin_edges are upper boundaries
             if (left and edge <= split_thr) or (not left and edge > split_thr):
                 new_hist.bin_edges.append(edge)

@@ -1,15 +1,21 @@
-class BaseLeaner:
-    """
-    Base class for regression tree learners.
-    """
+"""Abstract base class for regression tree learners.
 
-    def __init__(self):
-        """
-        Initialize the base learner.
-        """
+This module defines the minimal learner interface used across tree
+implementations in this project. Concrete learners should implement ``fit``
+and ``predict`` while inheriting common behavior via this base.
+"""
+
+import numpy as np
+
+
+class BaseLearner:
+    """Base class for regression tree learners."""
+
+    def __init__(self) -> None:
+        """Initialize the base learner."""
         pass
 
-    def fit(self, X, y):
+    def fit(self, X: np.ndarray, y: np.ndarray) -> None:
         """
         Fit the model to the data.
 
@@ -22,7 +28,7 @@ class BaseLeaner:
         """
         raise NotImplementedError
 
-    def predict(self, X) -> float:
+    def predict(self, X: np.ndarray) -> float:
         """
         Predict target values for X.
 

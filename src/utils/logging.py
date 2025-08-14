@@ -1,3 +1,9 @@
+"""Logging helpers for consistent project-wide logs and checkpoints.
+
+Provides convenience utilities to create log directories, write log lines,
+and save/load checkpointed tuning results and metrics.
+"""
+
 import os
 import glob
 import pickle
@@ -59,7 +65,7 @@ def create_log_file(log_dir: str, model_name: str, file_prefix: Optional[str] = 
     return log_file
 
 
-def log_and_print(log_file: str, message: str, print_console: bool = False):
+def log_and_print(log_file: str, message: str, print_console: bool = False) -> None:
     """
     Log message to file and optionally print to console.
 
@@ -84,7 +90,7 @@ def save_checkpoint_results(
     best_params: Dict[str, Any],
     best_scores: Dict[str, Any],
     file_prefix: Optional[str] = None,
-):
+) -> None:
     """
     Save checkpoint results for a model with optional prefix.
 
@@ -185,7 +191,7 @@ def list_log_files(results_dir: str) -> List[str]:
     return log_files
 
 
-def view_log_tail(log_file: str, lines: int = 20):
+def view_log_tail(log_file: str, lines: int = 20) -> None:
     """
     View the last N lines of a log file.
 
@@ -208,7 +214,7 @@ def view_log_tail(log_file: str, lines: int = 20):
         print(f"Error reading log file: {e}")
 
 
-def format_metric_value(value, is_percentage: bool = False) -> str:
+def format_metric_value(value: float, is_percentage: bool = False) -> str:
     """
     Format metric values for display.
 
@@ -227,5 +233,5 @@ def format_metric_value(value, is_percentage: bool = False) -> str:
     if value == float("inf") or value == float("-inf"):
         return "N/A"
     if is_percentage:
-        return f"{value*100:.3f}%"
+        return f"{value * 100:.3f}%"
     return f"{value:.3f}"

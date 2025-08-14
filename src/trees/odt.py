@@ -1,3 +1,9 @@
+"""Oblivious Decision Tree (ODT) implementation for regression.
+
+Applies a single (feature, threshold) split uniformly across all nodes at a
+given depth level, enabling fast traversal and compact models.
+"""
+
 from sklearn.metrics import mean_absolute_error
 from matplotlib import pyplot as plt
 from tree import BaseTree, Node
@@ -5,12 +11,12 @@ import numpy as np
 
 
 class ODTree(BaseTree):
-    """Oblivious Depth-limited regression tree (same split per level).
+    """Oblivious depth-limited regression tree (same split per level).
 
     Uses one (feature, threshold) pair per depth level applied uniformly to
     all nodes at that level (oblivious structure). Splits are chosen greedily
-    by maximizing variance reduction; a feature is not reused until all have
-    been used (unless depth exceeds feature count).
+    by maximizing variance reduction. A feature is not reused until all have
+    been used (unless ``depth`` exceeds the number of features).
 
     Parameters
     ----------
@@ -18,7 +24,7 @@ class ODTree(BaseTree):
         Maximum tree depth (number of split levels).
     """
 
-    def __init__(self, depth: int):
+    def __init__(self, depth: int) -> None:
         super().__init__(depth)
         self.splits: list[tuple] = [None] * depth
         self.already_used_features: dict[int, list] = {}
@@ -62,7 +68,7 @@ class ODTree(BaseTree):
             right=right_child,
         )
 
-    def __areAllFeaturesUsed(self, X) -> bool:
+    def __areAllFeaturesUsed(self, X: np.ndarray) -> bool:
         """Return True if each feature index appears in already-used map."""
         return all(feature in self.already_used_features for feature, _ in enumerate(X[0, :]))
 
@@ -73,14 +79,12 @@ class ODTree(BaseTree):
         __best_feature = None
 
         for feature, _ in enumerate(X[0, :]):
-
             # if all features were used, then allow for reusing feature
             if feature in self.already_used_features and not self.__areAllFeaturesUsed(X):
                 continue
 
             thresholds = X[:, feature]
             for threshold in thresholds:
-
                 if feature in self.already_used_features:
                     if threshold in self.already_used_features[feature]:
                         continue
@@ -104,7 +108,6 @@ class ODTree(BaseTree):
 
 
 if __name__ == "__main__":
-
     tree = ODTree(depth=3)
     # Generate synthetic data following a sine wave pattern
     X = np.linspace(0, 10, 100).reshape(-1, 1)  # Features: 100 points from 0 to 10

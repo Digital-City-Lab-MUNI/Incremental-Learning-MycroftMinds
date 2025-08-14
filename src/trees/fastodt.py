@@ -42,7 +42,7 @@ class FastODT(BaseTree):
     split_confidence : float, default=0.01
         Hoeffding bound confidence (smaller values -> more eager splitting).
     tie_threshold : float, default=0.05
-        Threshold below which competing split merits are considered tied.
+        Threshold below which competing splits are forced to break ties.
     max_feature : float, default=1.0
         Fraction (0,1] of features considered per split; 1.0 = all features.
     eagerness : float, default=0.0
@@ -152,7 +152,7 @@ class FastODT(BaseTree):
         if y.ndim == 0:
             y = np.array([y])
         if X.shape[0] != len(y):
-            raise ValueError(f"X and y must have the same number of samples. " f"X: {X.shape}, y: {y.shape}")
+            raise ValueError(f"X and y must have the same number of samples. X: {X.shape}, y: {y.shape}")
 
         if verbose:
             for i in tqdm.tqdm(range(len(X))):
@@ -295,7 +295,7 @@ if __name__ == "__main__":
         print(
             f"MeanSplitterHistogram model size with deepness {DEPTH} "
             f"and split confidence {split_conf}: {size_mean} MB "
-            f"(size calc time: {t1-t0:.3f}s)"
+            f"(size calc time: {t1 - t0:.3f}s)"
         )
         print(f"MeanSplitterHistogram training time: {train_time_mean:.3f}s")
         y_pred_mean = np.array([model_mean.predict(x) for x in X])
@@ -325,7 +325,7 @@ if __name__ == "__main__":
         print(
             f"AdaptiveHistogram (4 bins) model size with deepness {DEPTH} "
             f"and split confidence {split_conf}: {size_adapt4} MB "
-            f"(size calc time: {t1-t0:.3f}s)"
+            f"(size calc time: {t1 - t0:.3f}s)"
         )
         print(f"AdaptiveHistogram (4 bins) training time: {train_time_adapt4:.3f}s")
         y_pred_adapt4 = np.array([model_adapt4.predict(x) for x in X])
@@ -355,7 +355,7 @@ if __name__ == "__main__":
         print(
             f"AdaptiveHistogram (8 bins) model size with deepness {DEPTH} "
             f"and split confidence {split_conf}: {size_adapt8} MB "
-            f"(size calc time: {t1-t0:.3f}s)"
+            f"(size calc time: {t1 - t0:.3f}s)"
         )
         print(f"AdaptiveHistogram (8 bins) training time: {train_time_adapt8:.3f}s")
         y_pred_adapt8 = np.array([model_adapt8.predict(x) for x in X])
@@ -385,7 +385,7 @@ if __name__ == "__main__":
         print(
             f"AdaptiveHistogram (16 bins) model size with deepness {DEPTH} "
             f"and split confidence {split_conf}: {size_adapt16} MB "
-            f"(size calc time: {t1-t0:.3f}s)"
+            f"(size calc time: {t1 - t0:.3f}s)"
         )
         print(f"AdaptiveHistogram (16 bins) training time: {train_time_adapt16:.3f}s")
         y_pred_adapt16 = np.array([model_adapt16.predict(x) for x in X])

@@ -89,12 +89,12 @@ class SeasonalMeanRegressor(BaseEstimator, RegressorMixin):
       the module ``__main__`` block.
     """
 
-    def __init__(self):  # noqa: D401 - simple initializer
+    def __init__(self) -> None:  # noqa: D401 - simple initializer
         self.weekly_means = None  # (day_of_week, hour) -> mean value
         self.hour_means = None  # hour -> mean value (fallback)
         self.global_mean = None  # overall mean fallback
 
-    def fit(self, X, y):
+    def fit(self, X: np.ndarray, y: np.ndarray) -> "SeasonalMeanRegressor":
         """Compute mean targets for each seasonal (day, hour) slot.
 
         Parameters
@@ -124,7 +124,7 @@ class SeasonalMeanRegressor(BaseEstimator, RegressorMixin):
         self.global_mean = df["y"].mean()
         return self
 
-    def predict(self, X):  # noqa: D401 - concise prediction description
+    def predict(self, X: np.ndarray) -> np.ndarray:  # noqa: D401 - concise prediction description
         """Return seasonal mean for each sample in ``X``.
 
         Parameters
@@ -161,6 +161,15 @@ class SeasonalMeanRegressor(BaseEstimator, RegressorMixin):
 class ExponentialMovingAverageRegressor:
     """Incremental EMA forecaster with optional smoothing factor ``alpha``.
 
+    Parameters
+    ----------
+    alpha : float, default=0.3
+        Smoothing factor between 0 and 1.
+        Closer to 1: more weight on recent observations (adapts quickly)
+        Closer to 0: more weight on historical observations (more stable)
+
+    Notes
+    -----
     Maintains an exponential moving average (EMA) of the target sequence:
 
     .. math:: \text{EMA}_t = \alpha y_t + (1-\alpha) \text{EMA}_{t-1}
@@ -169,21 +178,11 @@ class ExponentialMovingAverageRegressor:
     used (univariate baseline). Implements a River-compatible interface.
     """
 
-    def __init__(self, alpha=0.3):
-        """
-        Initialize the exponential moving average regressor.
-
-        Parameters:
-        -----------
-        alpha : float, default=0.3
-            Smoothing factor between 0 and 1.
-            Closer to 1: more weight on recent observations (adapts quickly)
-            Closer to 0: more weight on historical observations (more stable)
-        """
+    def __init__(self, alpha: float = 0.3) -> None:
         self.alpha = alpha
         self.current_average = None
 
-    def learn_one(self, x, y):  # noqa: D401 - short River style docstring
+    def learn_one(self, x: Any, y: float) -> "ExponentialMovingAverageRegressor":
         """Update EMA with a new observation ``y``.
 
         Parameters
@@ -204,7 +203,7 @@ class ExponentialMovingAverageRegressor:
             self.current_average = self.alpha * y + (1 - self.alpha) * self.current_average
         return self
 
-    def predict_one(self, x):  # noqa: D401 - short River style docstring
+    def predict_one(self, x: Any) -> float:  # noqa: D401 - short River style docstring
         """Return current EMA (0.0 if uninitialized)."""
         if self.current_average is None:
             return 0.0
@@ -427,6 +426,7 @@ if __name__ == "__main__":
                 ax.set_xlabel("Hour of Day")
                 ax.set_ylabel("Day of Week")
             except ImportError:
+                print("Seaborn not available for visualization, falling back to Matplotlib")
                 plt.imshow(weekly_pattern, cmap="viridis", aspect="auto")
                 plt.colorbar(label="Mean Value")
                 plt.xlabel("Hour of Day")
@@ -439,6 +439,3 @@ if __name__ == "__main__":
 
         except Exception as e:
             print(f"Could not create heatmap: {e}")
-
-        except ImportError:
-            print("Matplotlib not available for visualization")

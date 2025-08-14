@@ -1,9 +1,31 @@
+"""Simple regression tree baseline and helpers.
+
+Defines a minimal ``BaseTree`` with greedy variance-reduction splits and its
+node structure used in examples and tests.
+"""
+
 from sklearn.model_selection import train_test_split
-from src.trees.base import BaseLeaner
+from src.trees.base import BaseLearner
 import numpy as np
 
 
 class Node:
+    """Regression tree node.
+
+    Parameters
+    ----------
+    feature : int, optional
+        Index of the feature used for splitting (``None`` for leaf).
+    threshold : float, optional
+        Threshold value for split (``None`` for leaf).
+    left : Node, optional
+        Left child.
+    right : Node, optional
+        Right child.
+    value : float, optional
+        Prediction value (mean target for the leaf / node).
+    """
+
     def __init__(
         self,
         feature: int = None,
@@ -11,22 +33,7 @@ class Node:
         left: "Node" = None,
         right: "Node" = None,
         value: float = None,
-    ):
-        """Regression tree node.
-
-        Parameters
-        ----------
-        feature : int, optional
-            Index of the feature used for splitting (``None`` for leaf).
-        threshold : float, optional
-            Threshold value for split (``None`` for leaf).
-        left : Node, optional
-            Left child.
-        right : Node, optional
-            Right child.
-        value : float, optional
-            Prediction value (mean target for the leaf / node).
-        """
+    ) -> None:
         self.feature = feature
         self.threshold = threshold
         self.left = left
@@ -40,17 +47,21 @@ class Node:
         print(f"{prefix}value: {self.value}")
 
 
-class BaseTree(BaseLeaner):
-    """
-    Base regression tree.
+class BaseTree(BaseLearner):
+    """Base regression tree with greedy variance-reduction splits.
 
     Parameters
     ----------
     depth : int
         Maximum depth allowed for the tree.
+
+    Attributes
+    ----------
+    root : Node
+        Root node of the tree.
     """
 
-    def __init__(self, depth: int):
+    def __init__(self, depth: int) -> None:
         super().__init__()
         self.root: Node = None
         self.depth: int = depth
@@ -149,9 +160,9 @@ class BaseTree(BaseLeaner):
     def _variance_reduction(self, y: np.ndarray, y_left: np.ndarray, y_right: np.ndarray) -> float:
         """Compute absolute variance reduction for given left/right splits."""
 
-        def variance(labels):
-            mean = sum(labels) / len(labels)
-            return sum((x - mean) ** 2 for x in labels) / len(labels)
+        def variance(labels: np.ndarray) -> float:
+            mean = np.mean(labels)
+            return np.mean((labels - mean) ** 2)
 
         y_variance = variance(y)
         y_left_variance = variance(y_left)
@@ -224,7 +235,6 @@ class BaseTree(BaseLeaner):
 
 
 if __name__ == "__main__":
-
     X = np.array(
         [
             [2, 3],

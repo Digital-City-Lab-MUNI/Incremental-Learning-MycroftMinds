@@ -4,7 +4,8 @@ This module provides helper functions to:
 
 * Read raw CSV batches (``first_batch`` / ``second_batch``) into pandas DataFrames.
 * Optionally aggregate time series to a coarser temporal resolution while validating lag specifications.
-* Preprocess individual device DataFrames (timezone normalization, temporal feature extraction, optional cyclical features).
+* Preprocess individual device DataFrames
+  (timezone normalization, temporal feature extraction, optional cyclical features).
 * Concatenate per-device frames while preserving temporal ordering.
 * Filter for complete (non-missing) device time series.
 * Generate supervised learning samples via sliding windows.
@@ -147,7 +148,9 @@ def read_first_batch(
                     #     df['time'] = df['time'].dt.tz_convert(None)
                     #     df = df.set_index('time')
                     #     agg_cols = df.select_dtypes(include='number').columns
-                    #     df = df.groupby([pd.Grouper(freq=aggregation), 'device_id', 'serial_number']).agg({col: 'mean' for col in agg_cols})
+                    #     df = df.groupby([pd.Grouper(freq=aggregation), 'device_id', 'serial_number']).agg(
+                    #         {col: 'mean' for col in agg_cols}
+                    #     )
                     #     df = df.reset_index()
 
                     individual_meter_data.append(df)
@@ -417,6 +420,7 @@ def preprocess_df(
 
 def concat_dataframes_by_time(dataframes: List[pd.DataFrame]) -> pd.DataFrame:
     """Concatenate multiple preprocessed DataFrames and order the rows by 'time'.
+
     Assumes that 'time' column is already in ``datetime`` format and sorted from ``preprocess_df``.
 
     Parameters

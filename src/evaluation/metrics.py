@@ -167,7 +167,8 @@ def spike_drop_match_score(
     spike_match, n_true_spikes, n_pred_spikes = match_events(true_peaks, pred_peaks, delta)
     drop_match, n_true_drops, n_pred_drops = match_events(true_drops, pred_drops, delta)
 
-    def score(n_match, n_true, n_pred):
+    def score(n_match: int, n_true: int, n_pred: int) -> Tuple[float, float, float]:
+        """Compute precision, recall and F1 score."""
         precision = n_match / n_pred if n_pred > 0 else 0
         recall = n_match / n_true if n_true > 0 else 0
         f1 = 2 * precision * recall / (precision + recall) if precision + recall > 0 else 0
@@ -230,10 +231,10 @@ def calculate_metrics(
     device_id: str,
     period: str,
     data_freq: str = "5min",
-    spike_prominence=10.0,
-    normalize_robust=True,
-    model=None,
-    verbose=True,
+    spike_prominence: float = 10.0,
+    normalize_robust: bool = True,
+    model: Any = None,
+    verbose: bool = True,
 ) -> dict:
     """Compute accuracy, directional and spike/drop metrics at multiple scales.
 
@@ -274,7 +275,7 @@ def calculate_metrics(
     """
 
     # Function to display metrics for a given period
-    def display_metrics(period_name, metrics_dict):
+    def display_metrics(period_name: str, metrics_dict: dict) -> None:
         """Pretty-print metrics for a single aggregation level.
 
         Parameters
@@ -316,7 +317,7 @@ def calculate_metrics(
                 # Spike and drop detection - immediate (delta=0)
                 print(f"\t\tRecall: {metrics_dict['drops_immediate']['recall']:.4f}")
                 print(f"\t\tF1: {metrics_dict['drops_immediate']['f1']:.4f}")
-                print("\nDelayed Detection (delta=1 => 1-sec or 1-hour, or 1-day " "detection delay):")
+                print("\nDelayed Detection (delta=1 => 1-sec or 1-hour, or 1-day detection delay):")
                 print("\tSpikes:")
                 print(f"\t\tPrecision: {metrics_dict['spikes_delayed']['precision']:.4f}")
                 print(f"\t\tRecall: {metrics_dict['spikes_delayed']['recall']:.4f}")
@@ -346,7 +347,6 @@ def calculate_metrics(
             original frequency metrics) omitting directional / spike metrics
             for weekly and longer periods.
         """
-
         freq_td = pd.Timedelta(freq)
 
         # If the frequency is higher than 1 hour, first aggregate to hourly (mean), then to the target freq (sum)
@@ -362,8 +362,9 @@ def calculate_metrics(
         else:
             # For lower frequencies (e.g., 15-min, 5-min), aggregate by mean
             print(
-                "[! WARNING !]: For frequencies lower than 1 hour, the aggregation is done by mean, which may not\
-                   represent the actual `energy` consumption in kWh, but rather the average `power` (kW) consumption over the period."
+                "[! WARNING !]: For frequencies lower than 1 hour, the aggregation is done by mean, which may not "
+                "represent the actual `energy` consumption in kWh, but rather the average `power` (kW) "
+                "consumption over the period."
             )
             y_true_agg, y_pred_agg = aggregate_values(y_true, y_pred, freq, "mean")
 
@@ -709,52 +710,78 @@ def all_time_aggregation_metrics(
                     # Directional metrics
                     print("\n\tDirectional Metrics:")
                     print(
-                        f"\t\tDirectional Accuracy: {metrics['dir_accuracy']['mean']:.4%} ± {metrics['dir_accuracy']['std']:.4%}"
+                        "\t\tDirectional Accuracy: "
+                        f"{metrics['dir_accuracy']['mean']:.4%} ± {metrics['dir_accuracy']['std']:.4%}"
                     )
                     print(
-                        f"\t\tFirst-Diff Correlation: {metrics['first_diff_corr']['mean']:.4f} ± {metrics['first_diff_corr']['std']:.4f}"
+                        "\t\tFirst-Diff Correlation: "
+                        f"{metrics['first_diff_corr']['mean']:.4f} ± {metrics['first_diff_corr']['std']:.4f}"
                     )
 
                     # Immediate detection metrics
                     print("\n\tImmediate Detection (delta=0):")
                     print(
-                        f"\t\tSpike Precision: {metrics['spikes_immediate.precision']['mean']:.4f} ± {metrics['spikes_immediate.precision']['std']:.4f}"
+                        "\t\tSpike Precision: "
+                        f"{metrics['spikes_immediate.precision']['mean']:.4f} ± "
+                        f"{metrics['spikes_immediate.precision']['std']:.4f}"
                     )
                     print(
-                        f"\t\tSpike Recall: {metrics['spikes_immediate.recall']['mean']:.4f} ± {metrics['spikes_immediate.recall']['std']:.4f}"
+                        "\t\tSpike Recall: "
+                        f"{metrics['spikes_immediate.recall']['mean']:.4f} ± "
+                        f"{metrics['spikes_immediate.recall']['std']:.4f}"
                     )
                     print(
-                        f"\t\tSpike F1: {metrics['spikes_immediate.f1']['mean']:.4f} ± {metrics['spikes_immediate.f1']['std']:.4f}"
+                        "\t\tSpike F1: "
+                        f"{metrics['spikes_immediate.f1']['mean']:.4f} ± "
+                        f"{metrics['spikes_immediate.f1']['std']:.4f}"
                     )
                     print(
-                        f"\t\tDrop Precision: {metrics['drops_immediate.precision']['mean']:.4f} ± {metrics['drops_immediate.precision']['std']:.4f}"
+                        "\t\tDrop Precision: "
+                        f"{metrics['drops_immediate.precision']['mean']:.4f} ± "
+                        f"{metrics['drops_immediate.precision']['std']:.4f}"
                     )
                     print(
-                        f"\t\tDrop Recall: {metrics['drops_immediate.recall']['mean']:.4f} ± {metrics['drops_immediate.recall']['std']:.4f}"
+                        "\t\tDrop Recall: "
+                        f"{metrics['drops_immediate.recall']['mean']:.4f} ± "
+                        f"{metrics['drops_immediate.recall']['std']:.4f}"
                     )
                     print(
-                        f"\t\tDrop F1: {metrics['drops_immediate.f1']['mean']:.4f} ± {metrics['drops_immediate.f1']['std']:.4f}"
+                        "\t\tDrop F1: "
+                        f"{metrics['drops_immediate.f1']['mean']:.4f} ± "
+                        f"{metrics['drops_immediate.f1']['std']:.4f}"
                     )
 
                     # Delayed detection metrics
                     print("\n\t1-Hour Delayed Detection (delta=1):")
                     print(
-                        f"\t\tSpike Precision: {metrics['spikes_delayed.precision']['mean']:.4f} ± {metrics['spikes_delayed.precision']['std']:.4f}"
+                        "\t\tSpike Precision: "
+                        f"{metrics['spikes_delayed.precision']['mean']:.4f} ± "
+                        f"{metrics['spikes_delayed.precision']['std']:.4f}"
                     )
                     print(
-                        f"\t\tSpike Recall: {metrics['spikes_delayed.recall']['mean']:.4f} ± {metrics['spikes_delayed.recall']['std']:.4f}"
+                        "\t\tSpike Recall: "
+                        f"{metrics['spikes_delayed.recall']['mean']:.4f} ± "
+                        f"{metrics['spikes_delayed.recall']['std']:.4f}"
                     )
                     print(
-                        f"\t\tSpike F1: {metrics['spikes_delayed.f1']['mean']:.4f} ± {metrics['spikes_delayed.f1']['std']:.4f}"
+                        "\t\tSpike F1: "
+                        f"{metrics['spikes_delayed.f1']['mean']:.4f} ± "
+                        f"{metrics['spikes_delayed.f1']['std']:.4f}"
                     )
                     print(
-                        f"\t\tDrop Precision: {metrics['drops_delayed.precision']['mean']:.4f} ± {metrics['drops_delayed.precision']['std']:.4f}"
+                        "\t\tDrop Precision: "
+                        f"{metrics['drops_delayed.precision']['mean']:.4f} ± "
+                        f"{metrics['drops_delayed.precision']['std']:.4f}"
                     )
                     print(
-                        f"\t\tDrop Recall: {metrics['drops_delayed.recall']['mean']:.4f} ± {metrics['drops_delayed.recall']['std']:.4f}"
+                        "\t\tDrop Recall: "
+                        f"{metrics['drops_delayed.recall']['mean']:.4f} ± "
+                        f"{metrics['drops_delayed.recall']['std']:.4f}"
                     )
                     print(
-                        f"\t\tDrop F1: {metrics['drops_delayed.f1']['mean']:.4f} ± {metrics['drops_delayed.f1']['std']:.4f}"
+                        "\t\tDrop F1: "
+                        f"{metrics['drops_delayed.f1']['mean']:.4f} ± "
+                        f"{metrics['drops_delayed.f1']['std']:.4f}"
                     )
 
             print("=" * 50)

@@ -182,7 +182,7 @@ def plot_date_range(
             "ro",
             markersize=10,
             markerfacecolor="none",
-            label=f"Outliers (>{outlier_threshold*100}% diff)",
+            label=f"Outliers (>{outlier_threshold * 100}% diff)",
         )
 
     # Add spike and drop annotations if requested
@@ -221,15 +221,15 @@ def plot_date_range(
     # Add metrics to legend (metrics for filtered period only)
     if metrics_key in metrics:
         metrics_text = (
-            f'Metrics for selected period:\nRMSE: {metrics[metrics_key]["rmse"]:.2f}, '
-            f'MAE: {metrics[metrics_key]["mae"]:.2f}, '
-            f'MAPE: {metrics[metrics_key]["mape"]:.2%}'
+            f"Metrics for selected period:\nRMSE: {metrics[metrics_key]['rmse']:.2f}, "
+            f"MAE: {metrics[metrics_key]['mae']:.2f}, "
+            f"MAPE: {metrics[metrics_key]['mape']:.2%}"
         )
     else:
         metrics_text = (
-            f'Metrics for selected period:\nRMSE: {metrics["5_min"]["rmse"]:.2f}, '
-            f'MAE: {metrics["5_min"]["mae"]:.2f}, '
-            f'MAPE: {metrics["5_min"]["mape"]:.2%}'
+            f"Metrics for selected period:\nRMSE: {metrics['5_min']['rmse']:.2f}, "
+            f"MAE: {metrics['5_min']['mae']:.2f}, "
+            f"MAPE: {metrics['5_min']['mape']:.2%}"
         )
     plt.plot([], [], " ", label=metrics_text)
 
@@ -283,7 +283,6 @@ def plot_part_predictions(
     normalize_robust : bool, optional
         If True, use robust (median & MAD) normalization for spike detection.
     """
-
     # Get period information for title
     start_time = (
         y_true.index.min().strftime("%Y-%m-%d %H:%M:%S")
@@ -357,9 +356,9 @@ def plot_part_predictions(
 
     # Add metrics to graph titles
     metrics_text = (
-        f'RMSE: {metrics["5_min"]["rmse"]:.2f}, '
-        f'\nMAE: {metrics["5_min"]["mae"]:.2f}, '
-        f'\nMAPE: {metrics["5_min"]["mape"]:.2%}'
+        f"RMSE: {metrics['5_min']['rmse']:.2f}, "
+        f"\nMAE: {metrics['5_min']['mae']:.2f}, "
+        f"\nMAPE: {metrics['5_min']['mape']:.2%}"
     )
 
     # Title prefix
@@ -387,7 +386,7 @@ def plot_part_predictions(
             "ro",
             markersize=10,
             markerfacecolor="none",
-            label=f"Outliers (>{outlier_threshold*100}% diff)",
+            label=f"Outliers (>{outlier_threshold * 100}% diff)",
         )
 
     # Add spike and drop annotations for beginning section
@@ -442,7 +441,7 @@ def plot_part_predictions(
             "ro",
             markersize=10,
             markerfacecolor="none",
-            label=f"Outliers (>{outlier_threshold*100}% diff)",
+            label=f"Outliers (>{outlier_threshold * 100}% diff)",
         )
 
     # Add spike and drop annotations for middle section
@@ -487,7 +486,7 @@ def plot_part_predictions(
             "ro",
             markersize=10,
             markerfacecolor="none",
-            label=f"Outliers (>{outlier_threshold*100}% diff)",
+            label=f"Outliers (>{outlier_threshold * 100}% diff)",
         )
 
     # Add spike and drop annotations for end section
@@ -624,7 +623,7 @@ def plot_hourly_predictions(
             "ro",
             markersize=10,
             markerfacecolor="none",
-            label=f"Outliers (>{outlier_threshold*100}% diff)",
+            label=f"Outliers (>{outlier_threshold * 100}% diff)",
         )
 
     # Add spike and drop marks if requested

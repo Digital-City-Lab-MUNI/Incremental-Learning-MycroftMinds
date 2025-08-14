@@ -1,18 +1,44 @@
+"""ADWIN change-detection utilities for data streams.
+
+Implements Adaptive Windowing (ADWIN) to detect distribution shifts by
+maintaining a variable-length window and statistically testing for changes as
+new samples arrive.
+"""
+
 from collections import deque
 import numpy as np
 import math
 
 
 class ADWIN:
+    """Adaptive Windowing (ADWIN) change detector.
 
-    def __init__(self, delta=0.0002):
+    Parameters
+    ----------
+    delta : float, default=0.0002
+        Confidence parameter controlling false positives. Smaller values make
+        the detector less sensitive to changes.
+
+    Attributes
+    ----------
+    window : deque
+        Internal window of recent samples.
+    n : int
+        Total number of processed samples.
+    change_detected : bool
+        Whether a change was detected upon the last update.
+    max_windows : int
+        Maximum number of elements retained in the window (cap).
+    """
+
+    def __init__(self, delta: float = 0.0002) -> None:
         self.delta = delta
         self.window = deque()
         self.n = 0
         self.change_detected = False
         self.max_windows = 100
 
-    def add_sample(self, sample: float):
+    def add_sample(self, sample: float) -> None:
         """
         Add a sample to the ADWIN window and check for change detection.
 
@@ -50,7 +76,7 @@ class ADWIN:
             self.window.popleft()
             self.n -= 1
 
-    def bound(self, n_left, n_right):
+    def bound(self, n_left: int, n_right: int) -> float:
         """
         Calculate the statistical bound for change detection.
 
@@ -69,7 +95,7 @@ class ADWIN:
         harmonic_mean_n = 1 / ((1 / n_left) + (1 / n_right))
         return math.sqrt(1 / (2 * harmonic_mean_n) / self.delta)
 
-    def isDrift(self):
+    def isDrift(self) -> bool:
         """
         Check if a change (drift) has been detected.
 

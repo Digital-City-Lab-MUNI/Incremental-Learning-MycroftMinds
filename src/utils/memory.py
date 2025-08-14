@@ -1,3 +1,9 @@
+"""Memory introspection and optimization helpers.
+
+Functions to estimate object memory usage, downcast arrays to reduce footprint,
+and print dataset memory summaries for debugging and monitoring.
+"""
+
 import sys
 import numpy as np
 import pandas as pd
@@ -25,7 +31,8 @@ def calculate_memory_usage(obj: Any) -> float:
         return size_bytes / (1024 * 1024)
     except ImportError:
 
-        def _sizeof(obj):
+        def _sizeof(obj: Any) -> float:
+            """Recursively calculate size of various object types."""
             if isinstance(obj, (np.ndarray)):
                 return obj.nbytes
             elif isinstance(obj, (pd.DataFrame, pd.Series)):
@@ -65,7 +72,7 @@ def optimize_memory_usage(
         return X, y
 
     # Optimize numeric data
-    def optimize_array(arr):
+    def optimize_array(arr: np.ndarray) -> np.ndarray:
         # For floating point arrays
         if np.issubdtype(arr.dtype, np.floating):
             # If the range fits in float32, use that
@@ -102,7 +109,7 @@ def optimize_memory_usage(
         return X, y
 
 
-def print_memory_stats(train, valid, test):
+def print_memory_stats(train: Any, valid: Any, test: Any) -> None:
     """
     Print detailed memory usage statistics for datasets.
 

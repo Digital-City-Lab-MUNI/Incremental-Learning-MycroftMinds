@@ -48,7 +48,7 @@ SampleSet = Tuple[Array2D, TargetArray]
 SampleSetList = List[SampleSet]
 
 
-def handle_dst_transitions(timestamps) -> pd.Series:
+def handle_dst_transitions(timestamps: pd.Series) -> pd.Series:
     """Resolve daylight saving time (DST) ambiguities in timestamp data.
 
     Strategy
@@ -305,7 +305,7 @@ def get_train_test_sets(
     # Now process train/valid/test splits while keeping sites separate
     train_sets, valid_sets, test_sets = [], [], []
 
-    for site_id, site_data in site_processed_data.items():
+    for _site_id, site_data in site_processed_data.items():
         ts_lagged = site_data["data"]
         train_end_idx = site_data["train_end_idx"]
         valid_end_idx = site_data["valid_end_idx"]
@@ -506,7 +506,8 @@ def get_train_test_sets(
                 test_mem = calculate_memory_usage(final_test)
 
                 print(
-                    f"Memory usage after optimization: Train={train_mem:.2f}MB, Valid={valid_mem:.2f}MB, Test={test_mem:.2f}MB"
+                    "Memory usage after optimization: "
+                    f"Train={train_mem:.2f}MB, Valid={valid_mem:.2f}MB, Test={test_mem:.2f}MB"
                 )
 
                 # Save the processed data if requested
@@ -540,7 +541,8 @@ def get_train_test_sets(
                 test_mem = calculate_memory_usage(test_opt)
 
                 print(
-                    f"Memory usage after optimization: Train={train_mem:.2f}MB, Valid={valid_mem:.2f}MB, Test={test_mem:.2f}MB"
+                    "Memory usage after optimization: "
+                    f"Train={train_mem:.2f}MB, Valid={valid_mem:.2f}MB, Test={test_mem:.2f}MB"
                 )
 
                 # Save the processed data if requested

@@ -1,3 +1,10 @@
+"""Hoeffding-bound node used by FastODT for streaming regression trees.
+
+Maintains per-feature histograms to propose split thresholds, evaluates them
+with a variance-reduction criterion, and applies a Hoeffding test to decide
+when a split is statistically justified under streaming constraints.
+"""
+
 import numpy as np
 from src.utils.utils import get_unique_random_numbers
 from src.trees.histogram import AdaptiveHistogram
@@ -116,16 +123,16 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
 
     def __init__(
         self,
-        split_confidence,
-        tie_threshold=0.05,
-        max_feature=1.0,
-        eagerness=0.0,
-        grace_period=0,
-        bin_type=AdaptiveHistogram,
-        max_bins=32,
-        inherit_bins=False,
-        split_criterion=None,
-    ):
+        split_confidence: float,
+        tie_threshold: float = 0.05,
+        max_feature: float = 1.0,
+        eagerness: float = 0.0,
+        grace_period: int = 0,
+        bin_type: type = AdaptiveHistogram,
+        max_bins: int = 32,
+        inherit_bins: bool = False,
+        split_criterion: callable = None,
+    ) -> None:
         self.tie_threshold: float = tie_threshold
         self.delta: float = split_confidence
         self.samples_seen: int = 0
@@ -147,9 +154,9 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         self.split_period_counter: int = 0
         self.split_ideal_period: int = 10
         self.grace_period: int = grace_period
-        self.grace_period_offset: int = (
-            0  # this is the offset from the parent's `samples_seen` that's passed to child for proper grace period calculation
-        )
+        # Offset from the parent's `samples_seen` that's passed to child
+        # for proper grace period calculation
+        self.grace_period_offset: int = 0
         self.prev_splitting_period: int = self.split_ideal_period
 
         self.max_feature: float = max_feature
@@ -162,7 +169,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         self.split_criterion: callable = split_criterion if split_criterion is not None else variance_reduction
         self.inherit_bins: bool = inherit_bins
 
-    def check_grace_period(self):
+    def check_grace_period(self) -> bool:
         """Check if the grace period has expired."""
         return self.grace_period_offset + self.grace_period < self.samples_seen
 
@@ -177,7 +184,6 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         y : float
             Target value for the new sample.
         """
-
         # Generate random feature indices based on max_feature if not already set
         if self.feature_indices is None:
             max_feature_length = int(x.shape[0] * self.max_feature)
@@ -201,7 +207,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
                 self.histograms[feature] = self.bin_type(max_bins=self.max_bins)
 
         # Update histograms for each feature
-        for feature, val in zip(self.feature_indices, x_shortlisted):
+        for feature, val in zip(self.feature_indices, x_shortlisted, strict=True):
             self.histograms[feature].insert(val, y)
 
     def update_from_parent_node(self, parent: "NodeHoeffdingBound") -> None:
@@ -219,9 +225,9 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         Calculate the Hoeffding bound ``R`` value based on the variance reduction used.
 
         Notes
-        ----------
+        -----
         - For relative reduction, ``R`` is fixed to 1.0 (as the range is normalized).
-        - For absolute reduction, ``R`` is calculated as ``0.25 * (y_max - y_min) ** 2``, 
+        - For absolute reduction, ``R`` is calculated as ``0.25 * (y_max - y_min) ** 2``,
           which is the Popoviciu upper bound.
         """
         # fixed range
@@ -270,7 +276,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
 
         return (None, None), 0
 
-    def split(self, split_info: tuple, split_confidence: float):
+    def split(self, split_info: tuple, split_confidence: float) -> None:
         """
         Instantiate left/right children according to split_info.
 
@@ -320,7 +326,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         """Return True if grace period satisfied for attempting a split."""
         return self.grace_period_offset + self.grace_period < self.samples_seen
 
-    def show(self, prefix=""):
+    def show(self, prefix: str = "") -> None:
         """Show the details of the node."""
         print(f"{prefix}feature: {self.feature}")
         print(f"{prefix}threshold: {self.threshold}")
