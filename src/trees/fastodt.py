@@ -77,11 +77,7 @@ class FastODT(BaseTree):
         self.grace_period = grace_period  # Number of samples before checking for a split
         self.split_confidence = split_confidence  # Confidence level for splitting
         self.depth = depth
-        self.current_depth = 0
-        self.splits_values = [None] * depth
-        self.splits_features = [None] * depth
-        self.depths_containers = []
-        self.mature_tree = False
+        self.splits = [None] * depth
 
         self.error_rates = np.zeros(20).tolist() 
 
@@ -96,22 +92,18 @@ class FastODT(BaseTree):
 
         if isinstance(split_criterion, str):
             split_criterion = get_split_criterion(split_criterion)
-
         # create the root node
-        for d in range(self.depth):
-            self.depths_containers.append([None] * (2**(d+1)))
-
-        self.depths_containers[0][0] = NodeHoeffdingBound(
-                split_confidence=self.split_confidence,
-                tie_threshold=self.tie_threshold,
-                max_feature=self.max_feature,
-                eagerness=eagerness,
-                grace_period=grace_period,
-                bin_type=bin_type,
-                max_bins=max_bins,
-                inherit_bins=inherit_bins,
-                split_criterion=split_criterion
-            )
+        self.root = NodeHoeffdingBound(
+            split_confidence=self.split_confidence,
+            tie_threshold=self.tie_threshold,
+            max_feature=self.max_feature,
+            eagerness=eagerness,
+            grace_period=grace_period,
+            bin_type=bin_type,
+            max_bins=max_bins,
+            inherit_bins=inherit_bins,
+            split_criterion=split_criterion
+        )
 
     def measure_error(self, y_baseline, y_predicted):
         self.error_rates.pop(0)
@@ -128,10 +120,10 @@ class FastODT(BaseTree):
 
         if verbose:
             for i in tqdm.tqdm(range(len(X))):
-                self._update_tree_v(None, X[i], y[i], depth=0)
+                self._update_tree(self.root, X[i], y[i], depth=0)
         else:
             for i in range(len(X)):
-                self._update_tree_v(None, X[i], y[i], depth=0)
+                self._update_tree(self.root, X[i], y[i], depth=0)
 
     def learn_one(self, x, y: float):
         """
@@ -159,94 +151,19 @@ class FastODT(BaseTree):
             x = np.asarray(x)
         if x.ndim == 2 and x.shape[0] == 1:
             x = x[0]
-        return self.predict_v(x)
-
-    def predict(self, X: np.ndarray):
-        return_vector = []
-        for x in X:
-            # Check if we reached the maximum depth
-            active_splits_features = self.splits_features[:self.current_depth]
-            active_splits_values = self.splits_values[:self.current_depth]
-            x_split_values = x[active_splits_features]
-            decision_vector = x_split_values > active_splits_values
-
-            node_index = sum((1 << i) for i, decision in enumerate(reversed(decision_vector)) if decision)
-            node_depth = len(active_splits_features)
-
-            node = self.depths_containers[node_depth][node_index]
-            if node is None:
-                node = self.__find_node(node_depth, node_index)
-            return_vector.append(node.value)
-        return return_vector
-
-    def _update_tree_v(self, node, x: np.ndarray, y: float, depth=0):
-        # Check if we reached the maximum depth
-        active_splits_features = self.splits_features[:self.current_depth]
-        active_splits_values = self.splits_values[:self.current_depth]
-
-        if len(active_splits_features) >= self.depth or self.mature_tree:
-            return
-
-        x_split_values = x[active_splits_features]
-        decision_vector = x_split_values > active_splits_values
-
-        if len(decision_vector) == 0:
-            node_index = 0
-            node_depth = 0
-        else:
-            # Convert to integer
-            node_index = sum((1 << i) for i, decision in enumerate(reversed(decision_vector)) if decision)
-            node_depth = len(active_splits_features)
-
-
-        node = self.depths_containers[node_depth][node_index]
-        if node is None:
-            node = self.__find_node(node_depth, node_index)
-        # print(f"node_depth: {node_depth}, node_index: {node_index}, node.index {node.index}")
-
-        node.update_stats(x, y)
-        best_split, _ = node.find_best_split() # here happens hf bound calculation
-        if best_split[0] is not None:
-            depth = len(decision_vector)
-
-            self.splits_features[depth] = best_split[0]
-            self.splits_values[depth] = best_split[1]
-
-            if depth+1 < self.depth:
-                left, right = node.produce_split(best_split, self.split_confidence)
-                self.depths_containers[depth+1][left.index] = left
-                self.depths_containers[depth+1][right.index] = right
-                self.current_depth += 1
-            else:
-                self.mature_tree = True
-
-    def __find_node(self, depth, index):
-        node = self.depths_containers[depth][index]
-        # print(f"looking for index: {index}")
-        if node is None:
-            parent_node = None
-            # check if we are in left or right node
-            parent_depth = depth - 1
-            if index % 2 == 0:
-                parent_node_index = int(index/2)
-            else:
-                parent_node_index = int(index/2 - 1)
-            node = self.__find_node(parent_depth,parent_node_index)
-            node.index = index
-            self.depths_containers[depth][index] = node
-            # this is cheap trick and needs to check if we initialize nodes correclty in this case
-        return node
+        return self.predict(x)
 
     def _update_tree(self, node, x: np.ndarray, y: float, depth=0):
         # Check if we reached the maximum depth
         if depth >= self.depth:
             return
+        
         # if node is a leaf, update its stats and check for split
         if node.left is None and node.right is None:
             node.update_stats(x, y)
             if node.reached_grace_period() or self.grace_period_depth < depth:  # check if grace period is over
                 self._attempt_split(node, depth)
-
+        
         # traverse the tree to reach the correct leaf
         elif node.feature is not None:
             if x[node.feature] <= node.threshold:
@@ -256,16 +173,18 @@ class FastODT(BaseTree):
 
     def _attempt_split(self, node, depth: int):
         best_split, _ = node.find_best_split() # here happens hf bound calculation
-        if self.splits_features[depth] is not None:
-            node.split(self.splits_features[depth], self.split_confidence)
+        if self.splits[depth] is not None:
+            node.split(self.splits[depth], self.split_confidence)
             node.left.update_from_parent_node(node)
             node.right.update_from_parent_node(node)
         
         elif best_split[0] is not None:
-            self.splits_features[depth] = best_split 
+            self.splits[depth] = best_split 
             node.split(best_split, self.split_confidence)
             node.left.update_from_parent_node(node)
             node.right.update_from_parent_node(node)
+
+
 
 if __name__ == "__main__":
 
@@ -273,155 +192,112 @@ if __name__ == "__main__":
     Y = np.load('./smoke_data/y.npy', allow_pickle=True)
     print(X.shape, Y.shape)
     X = X[:,2:]
-    # print(type(X), type(Y), X[0])
+    print(type(X), type(Y), X[0])
 
     # Test if model will be partially filled after receiving only one sample
-    start = time.time()
     model_hf = FastODT(
         depth=20, 
         grace_period=10,
-        split_confidence=0.0001
+        split_confidence=0.0001,
     )
-    start = time.time()
-    model_hf.partial_fit(X[:,:], Y, verbose=True)
-    print(f"It took: {time.time() - start}s")
-
-    Y_pred_hf = model_hf.predict(X)
-    mae_hf = mean_absolute_error(Y, Y_pred_hf)
-    print(f"MAE: {mae_hf:.4f}")
-
+    model_hf.partial_fit(X[0,:], Y[0], verbose=True)
     # only one depth split at most should be created
-    # assert(False == model_hf.is_filled())
+    assert(False == model_hf.is_filled())
 
-    # start = time.time()
-    # PRINT_BUFFOR_START = 3000
-    # PRINT_BUFFOR_END = 3500
-    # SAMPLES = X.shape[0]
+    start = time.time()
+    PRINT_BUFFOR_START = 3000
+    PRINT_BUFFOR_END = 3500
+    SAMPLES = X.shape[0]
 
-    # # Generate synthetic data following a sine wave pattern
-    # # T = np.linspace(0, 5, SAMPLES).reshape(-1, 1)  # Features: 100 points from 0 to 5
-    # # Y = np.sin(T).ravel() + np.random.normal(0, 0.1, T.shape[0])  # Sine wave with noise
-    # # X = - np.sin(T).ravel() + np.random.normal(0, 0.1, T.shape[0])  # Sine wave with noise
-    # print(f"Working with: {SAMPLES} SAMPLES")
-    # print(len(X),len(Y))
-    # # depth = 20
+    # Generate synthetic data following a sine wave pattern
+    # T = np.linspace(0, 5, SAMPLES).reshape(-1, 1)  # Features: 100 points from 0 to 5
+    # Y = np.sin(T).ravel() + np.random.normal(0, 0.1, T.shape[0])  # Sine wave with noise
+    # X = - np.sin(T).ravel() + np.random.normal(0, 0.1, T.shape[0])  # Sine wave with noise
+    print(f"Working with: {SAMPLES} SAMPLES")
+    print(len(X),len(Y))
+    # depth = 20
 
-    # # Train and predict with different depths
-    # depths = [100]
-    # predictions_cb = {}
-    # predictions_hf = {}
+    # Train and predict with different depths
+    depths = [100]
+    predictions_hf = {}
 
-    # for d in depths:
-    #     split_confidence_cb = 0.0001
-    #     split_confidence_hf = 0.0001Y_pred_hf = model_hf.predict(X)
-    #     grace_period = 1
-    #     grace_period_depth = 1
+    for d in depths:
+        split_confidence_hf = 0.0001
+        grace_period = 1
+        grace_period_depth = 1
 
-    #     model_cb = FastODT(
-    #         depth=d, 
-    #         grace_period=grace_period,
-    #         split_confidence=split_confidence_cb,
-    #         max_feature=1.0,
-    #         option="cb",
-    #         grace_period_depth=grace_period_depth
-    #     )
-    #     model_hf = FastODT(
-    #         depth=d, 
-    #         grace_period=grace_period,
-    #         split_confidence=split_confidence_hf,
-    #         max_feature=1.0,
-    #         option="hf",
-    #         grace_period_depth=grace_period_depth
-    #     )
-    #     model_cb.partial_fit(X, Y, verbose=True)
-    #     model_hf.partial_fit(X, Y, verbose=True)
-    #     Y_pred_cb = model_cb.predict(X)
-    #     Y_pred_hf = model_hf.predict(X)
-    #     predictions_cb[d] = Y_pred_cb
-    #     predictions_hf[d] = Y_pred_hf
-    #     mae_cb = mean_absolute_error(Y, Y_pred_cb)
-    #     mae_hf = mean_absolute_error(Y, Y_pred_hf)
-    #     print(f"Depth {d} split confidence: {split_confidence_cb} - MAE: {mae_cb:.4f}")
-    #     print(f"Depth {d} split confidence: {split_confidence_hf} - MAE: {mae_hf:.4f}")
+        model_hf = FastODT(
+            depth=d, 
+            grace_period=grace_period,
+            split_confidence=split_confidence_hf,
+            max_feature=1.0,
+            grace_period_depth=grace_period_depth
+        )
+        model_hf.partial_fit(X, Y, verbose=True)
+        Y_pred_hf = model_hf.predict(X)
+        predictions_hf[d] = Y_pred_hf
+        mae_hf = mean_absolute_error(Y, Y_pred_hf)
+        print(f"Depth {d} split confidence: {split_confidence_hf} - MAE: {mae_hf:.4f}")
 
-    # print(f"Training for 1 label data (1D) took: {time.time()-start}s")
-    # # Plot predicted values (vs true Y)
-    # plt.figure(figsize=(12, 6))
-    # plt.plot(Y[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Actual Y", color="black", linewidth=2)
+    print(f"Training for 1 label data (1D) took: {time.time()-start}s")
+    # Plot predicted values (vs true Y)
+    plt.figure(figsize=(12, 6))
+    plt.plot(Y[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Actual Y", color="black", linewidth=2)
 
-    # for d in depths:
-    #     plt.plot(predictions_hf[d][PRINT_BUFFOR_START:PRINT_BUFFOR_END], label=f"Depth {d} Prediction HF")
-    #     plt.plot(predictions_cb[d][PRINT_BUFFOR_START:PRINT_BUFFOR_END], label=f"Depth {d} Prediction CB")
+    for d in depths:
+        plt.plot(predictions_hf[d][PRINT_BUFFOR_START:PRINT_BUFFOR_END], label=f"Depth {d} Prediction HF")
 
-    # plt.xlabel(f"Samples")
-    # plt.ylabel("Target Y")
-    # plt.title(f"FastODT Regression on smoke data. HF {split_confidence_hf} CB: {split_confidence_cb}")
-    # plt.ylim(0, 300)
-    # plt.legend()
-    # plt.grid(True)
-    # plt.tight_layout()
-    # plt.show()
+    plt.xlabel(f"Samples")
+    plt.ylabel("Target Y")
+    plt.ylim(0, 300)
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
 
-    # Y = np.clip(Y, 0, 200)
+    Y = np.clip(Y, 0, 200)
 
-    # start = time.time()
-    # # # 2nd example - multifeature classification
-    # # Generate Features
-    # n_samples = Y.shape[0]
+    start = time.time()
+    # # 2nd example - multifeature classification
+    # Generate Features
+    n_samples = Y.shape[0]
     
-    # # Train and predict with different depths
-    # depths = depths
-    # predictions_cb = {}
-    # predictions_hf = {}
+    # Train and predict with different depths
+    depths = depths
+    predictions_hf = {}
 
-    # for d in depths:
-    #     split_confidence_cb = 0.001
-    #     split_confidence_hf = 0.001
-    #     grace_period = 10
-    #     grace_period_depth=1
+    for d in depths:
+        split_confidence_hf = 0.001
+        grace_period = 10
+        grace_period_depth=1
 
-    #     model_cb = FastODT(
-    #         depth=d, 
-    #         grace_period=grace_period,
-    #         split_confidence=split_confidence_cb,
-    #         max_feature=1.0,
-    #         option="cb",
-    #         grace_period_depth = grace_period_depth
-    #     )
-    #     model_hf = FastODT(
-    #         depth=d, 
-    #         grace_period=grace_period,
-    #         split_confidence=split_confidence_hf,
-    #         max_feature=1.0,
-    #         option="hf",
-    #         grace_period_depth = grace_period_depth
-    #     )
-    #     model_cb.partial_fit(X, Y, verbose=True)
-    #     model_hf.partial_fit(X, Y, verbose=True)
-    #     Y_pred_cb = np.array([model_cb.predict(x) for x in X])
-    #     Y_pred_hf = np.array([model_hf.predict(x) for x in X])
-    #     predictions_cb[d] = Y_pred_cb
-    #     predictions_hf[d] = Y_pred_hf
-    #     mae_cb = mean_absolute_error(Y, Y_pred_cb)
-    #     mae_hf = mean_absolute_error(Y, Y_pred_hf)
-    #     print(f"Depth {d} split confidence: {split_confidence_cb} - MAE: {mae_cb:.4f}")
-    #     print(f"Depth {d} split confidence: {split_confidence_hf} - MAE: {mae_hf:.4f}")
+        model_hf = FastODT(
+            depth=d, 
+            grace_period=grace_period,
+            split_confidence=split_confidence_hf,
+            max_feature=1.0,
+            grace_period_depth = grace_period_depth
+        )
+        model_hf.partial_fit(X, Y, verbose=True)
+        Y_pred_hf = np.array([model_hf.predict(x) for x in X])
+        predictions_hf[d] = Y_pred_hf
+        mae_hf = mean_absolute_error(Y, Y_pred_hf)
+        print(f"Depth {d} split confidence: {split_confidence_hf} - MAE: {mae_hf:.4f}")
 
-    # print(f"Training for 3 label data (1D) took: {time.time()-start}s")
+    print(f"Training for 3 label data (1D) took: {time.time()-start}s")
 
-    # # Plot predicted values (vs true Y)
-    # plt.figure(figsize=(12, 6))
-    # plt.plot(Y[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Actual Y", color="black", linewidth=2)
+    # Plot predicted values (vs true Y)
+    plt.figure(figsize=(12, 6))
+    plt.plot(Y[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Actual Y", color="black", linewidth=2)
 
-    # for d in depths:
-    #     plt.plot(predictions_hf[d][PRINT_BUFFOR_START:PRINT_BUFFOR_END], label=f"Depth {d} Prediction HF")
-    #     plt.plot(predictions_cb[d][PRINT_BUFFOR_START:PRINT_BUFFOR_END], label=f"Depth {d} Prediction CB")
+    for d in depths:
+        plt.plot(predictions_hf[d][PRINT_BUFFOR_START:PRINT_BUFFOR_END], label=f"Depth {d} Prediction HF")
 
-    # plt.xlabel("T (synthetic time)")
-    # plt.ylabel("Target Y")
-    # plt.title(f"FastODT Regression on clipped smoke data. HF {split_confidence_hf} CB: {split_confidence_cb}")
-    # plt.ylim(0, 300)
-    # plt.legend()
-    # plt.grid(True)
-    # plt.tight_layout()
-    # plt.show()
+    plt.xlabel("T (synthetic time)")
+    plt.ylabel("Target Y")
+    plt.title(f"FastODT Regression on clipped smoke data. HF {split_confidence_hf}")
+    plt.ylim(0, 300)
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()

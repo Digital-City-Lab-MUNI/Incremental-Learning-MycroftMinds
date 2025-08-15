@@ -92,11 +92,8 @@ class NodeHoeffdingBound: # one leaf of the FastODT
     # reduction of memory footprint
 
 
-    def __init__(self, split_confidence, tie_threshold=0.05, max_feature=1.0, eagerness=0.0, grace_period=0, index = 0, parent_index = None,
+    def __init__(self, split_confidence, tie_threshold=0.05, max_feature=1.0, eagerness=0.0, grace_period=0,
                  bin_type=AdaptiveHistogram, max_bins=32, inherit_bins=False, split_criterion=None):
-        self.index: int = index
-        self.parent_index: int = parent_index
-
         self.tie_threshold: float = tie_threshold
         self.delta: float = split_confidence
         self.samples_seen: int = 0
@@ -225,53 +222,40 @@ class NodeHoeffdingBound: # one leaf of the FastODT
 
     def split(self, split_info, split_confidence):
         """Split the node based on the best split found."""
-        left, right = self.produce_split(split_info, split_confidence)
-        self.left = left
-        self.right = right
-        # If not inheriting, children will initialize new empty histograms on first update_stats
-
-    def produce_split(self, split_info, split_confidence):
-        """Split the node based on the best split found."""
         self.feature, self.threshold = split_info
-        left = NodeHoeffdingBound(
+        self.left = NodeHoeffdingBound(
             split_confidence=split_confidence,
             tie_threshold=self.tie_threshold,
             max_feature=self.max_feature,
             eagerness=self.eagerness,
             grace_period=self.grace_period,
-            index=2*self.index, # left should have index same as parent 
-            parent_index=self.index, # left should have index same as parent 
             bin_type=self.bin_type,
             max_bins=self.max_bins,
             inherit_bins=self.inherit_bins,
             split_criterion=self.split_criterion
         )
-        right = NodeHoeffdingBound(
+        self.right = NodeHoeffdingBound(
             split_confidence=split_confidence,
             tie_threshold=self.tie_threshold,
             max_feature=self.max_feature,
             eagerness=self.eagerness,
             grace_period=self.grace_period,
-            index=2*self.index + 1, # right should have index same as parent + 1
-            parent_index=self.index, # left should have index same as parent 
             bin_type=self.bin_type,
             max_bins=self.max_bins,
             inherit_bins=self.inherit_bins,
             split_criterion=self.split_criterion
         )
-
-        # TODO: this should be done inside histogram splitter class
         if self.inherit_bins and self.histograms is not None:
-            left.histograms = {}
-            right.histograms = {}
+            self.left.histograms = {}
+            self.right.histograms = {}
             for feature, hist in self.histograms.items():
                 if feature == self.feature:
-                    left.histograms[feature] = hist.partition_bins(self.threshold, left=True)
-                    right.histograms[feature] = hist.partition_bins(self.threshold, left=False)
+                    self.left.histograms[feature] = hist.partition_bins(self.threshold, left=True)
+                    self.right.histograms[feature] = hist.partition_bins(self.threshold, left=False)
                 else:
-                    left.histograms[feature] = hist.copy_bins()
-                    right.histograms[feature] = hist.copy_bins()
-        return left, right
+                    self.left.histograms[feature] = hist.copy_bins()
+                    self.right.histograms[feature] = hist.copy_bins()
+        # If not inheriting, children will initialize new empty histograms on first update_stats
 
     def reached_grace_period(self) -> bool:
         """Check if the node has seen enough samples to consider splitting."""
@@ -284,6 +268,9 @@ class NodeHoeffdingBound: # one leaf of the FastODT
 
 
 if __name__ == "__main__":
+    import numpy as np
+    from src.trees.histogram import AdaptiveHistogram, EquiWidthHistogram
+
     print("Testing NodeHoeffdingBound with AdaptiveHistogram...")
     np.random.seed(42)
     X = np.random.uniform(0, 10, (100, 2))
