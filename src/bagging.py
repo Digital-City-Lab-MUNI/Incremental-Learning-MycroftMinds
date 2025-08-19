@@ -599,7 +599,8 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
             self.aggregation_method = aggregation_method
         else:
             raise ValueError(
-                f"Invalid aggregation_method: {aggregation_method}.\nValid values are: {self._VALID_AGGREGATION_METHOD}"
+                f"Invalid aggregation_method: {aggregation_method}."
+                f"\nValid values are: {self._VALID_AGGREGATION_METHOD}."
             )
 
         # Used to normalize the input for the drift trackers
