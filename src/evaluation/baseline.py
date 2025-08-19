@@ -23,17 +23,30 @@ from sklearn.base import BaseEstimator, RegressorMixin
 class PreviousValueRegressor:
     """Persistence baseline that always returns the last observed value.
 
+    Parameters
+    ----------
+    is_residual : bool
+        Use True when predicting on residuals (i.e., the difference between the target and its previous value).
+
+    Attributes
+    ----------
+    last_value : float
+        The last observed target value.
+
+
     Notes
     -----
     * Requires only O(1) memory: it keeps a single floating point value.
     * For the very first prediction (before any observation) the default
         ``last_value`` is ``0.0``.
+    * If is_residual is True, always returns ``0``, because the data is already
+        differenced and the influence of the last observed value is removed.
     * Provides River compatibility through ``learn_one`` / ``predict_one``.
     """
 
     def __init__(self, is_residual: bool = False) -> None:
-        self.last_value = 0.0  # Default value when no data has been seen
-        self.is_residual = is_residual  # if predicting on residuals, return 0.0
+        self.last_value = 0.0
+        self.is_residual = is_residual
 
     def learn_one(self, x: Any, y: float) -> "PreviousValueRegressor":  # noqa: D401 - short River style docstring
         """Update the stored value with the new target ``y``.
@@ -80,6 +93,15 @@ class SeasonalMeanRegressor(BaseEstimator, RegressorMixin):
     been seen, the model falls back to the *hour-only* mean, and ultimately to the
     *global* mean of all observed targets.
 
+    Attributes
+    ----------
+    weekly_hour_means : pd.Series
+        Mean target values for each (day_of_week, hour -> 24x7) combination.
+    hour_means : pd.Series
+        Mean target values for each hour (0-23). Acts as a first fallback.
+    global_mean : float
+        Overall mean target value. The final fallback.
+
     Notes
     -----
     * Seasonality granularity: 7 days x 24 hours = 168 cells.
@@ -89,10 +111,10 @@ class SeasonalMeanRegressor(BaseEstimator, RegressorMixin):
       the module ``__main__`` block.
     """
 
-    def __init__(self) -> None:  # noqa: D401 - simple initializer
-        self.weekly_means = None  # (day_of_week, hour) -> mean value
-        self.hour_means = None  # hour -> mean value (fallback)
-        self.global_mean = None  # overall mean fallback
+    def __init__(self) -> None:
+        self.weekly_hour_means = None
+        self.hour_means = None
+        self.global_mean = None
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> "SeasonalMeanRegressor":
         """Compute mean targets for each seasonal (day, hour) slot.
@@ -120,7 +142,7 @@ class SeasonalMeanRegressor(BaseEstimator, RegressorMixin):
 
         # Calculate means for different seasonality patterns
         self.hour_means = df.groupby("hour")["y"].mean()
-        self.weekly_means = df.groupby(["day_of_week", "hour"])["y"].mean()
+        self.weekly_hour_means = df.groupby(["day_of_week", "hour"])["y"].mean()
         self.global_mean = df["y"].mean()
         return self
 
@@ -145,7 +167,7 @@ class SeasonalMeanRegressor(BaseEstimator, RegressorMixin):
             hour = row["hour"]
             try:
                 # Try to get the specific day+hour mean
-                val = self.weekly_means.loc[(day, hour)]
+                val = self.weekly_hour_means.loc[(day, hour)]
             except KeyError:
                 print(f"Warning: No data for day {day}, hour {hour}. Using fallback...")
                 # If not found, fall back to hour-only mean
@@ -167,6 +189,11 @@ class ExponentialMovingAverageRegressor:
         Smoothing factor between 0 and 1.
         Closer to 1: more weight on recent observations (adapts quickly)
         Closer to 0: more weight on historical observations (more stable)
+
+    Attributes
+    ----------
+    current_average : float
+        The current EMA value.
 
     Notes
     -----
@@ -357,7 +384,7 @@ if __name__ == "__main__":
                     weekly_pattern = pd.DataFrame(index=range(7), columns=range(24))  # days  # hours
 
                     # Fill with values
-                    for (day, hour), value in seasonal_model.weekly_means.items():
+                    for (day, hour), value in seasonal_model.weekly_hour_means.items():
                         weekly_pattern.loc[day, hour] = value
 
                     # Replace day numbers with names
