@@ -1,8 +1,8 @@
 .PHONY: install format lint all clean
 
-# Install ruff (formatter + linter)
+# Install Python dependencies (including dev dependencies for now)
 install:
-	pip install ruff
+	pip install -r requirements.txt
 
 # Format code with Ruff (uses parameters from pyproject.toml)
 format:
