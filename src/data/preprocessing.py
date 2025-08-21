@@ -20,10 +20,13 @@ import traceback
 from pandas.tseries.frequencies import to_offset
 from typing import List, Optional, Dict, Tuple
 
+LOCATION_INDUSTRIAL = "industrial"
+LOCATION_COMMERCIAL = "commercial"
+
 
 def read_second_batch(
     extract_path: str,
-    location: str = "industrial",
+    location: str = LOCATION_INDUSTRIAL,
     site_ids: Optional[List[str]] = None,
 ) -> List[pd.DataFrame]:
     """Read site CSV files from the ``second_batch`` directory.
@@ -50,10 +53,10 @@ def read_second_batch(
     ValueError
         If the expected location directory does not exist.
     """
-    if location == "industrial":
-        second_batch_path = os.path.join(extract_path, "industrial")
+    if location == LOCATION_INDUSTRIAL:
+        second_batch_path = os.path.join(extract_path, LOCATION_INDUSTRIAL)
     else:
-        second_batch_path = os.path.join(extract_path, "commercial")
+        second_batch_path = os.path.join(extract_path, LOCATION_COMMERCIAL)
     if not os.path.isdir(second_batch_path):
         raise ValueError(f"Directory not found: {second_batch_path}")
 
@@ -73,9 +76,9 @@ def read_second_batch(
             df["device_id"] = site_name
             df["serial_number"] = site_name
             df = df.sort_values(by=["time"])
-            if location == "industrial":
+            if location == LOCATION_INDUSTRIAL:
                 df.drop(columns={"Q+ total", "min", "max"}, errors="ignore", inplace=True)
-            elif location == "commercial":
+            elif location == LOCATION_COMMERCIAL:
                 df.drop(columns={"seriesId"}, inplace=True)
                 df["consumption"] = df["consumption"].diff()
                 # df = df.iloc[1:]
