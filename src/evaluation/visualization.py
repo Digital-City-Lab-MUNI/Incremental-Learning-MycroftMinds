@@ -30,6 +30,7 @@ from typing import Optional, Union, Tuple
 
 from src.utils.utils import aggregate_values
 from src.evaluation.metrics import calculate_metrics, detect_spikes_and_drops
+import src.evaluation.constants as C
 
 
 def plot_date_range(
@@ -101,7 +102,7 @@ def plot_date_range(
         raise ValueError("No data found in the specified date range")
 
     # Parse aggregation string to a standard format if needed
-    metrics_key = "5_min"  # Default metrics key
+    metrics_key = "5_min"  # Default metrics key (original frequency bucket if present)
     agg_label = "Raw"  # Default label for plot
 
     # Apply aggregation if specified
@@ -125,10 +126,10 @@ def plot_date_range(
             metrics_key = "5_min" if agg_norm == "5min" else "5_min"  # Fallback to 5min metrics
         elif "h" in agg_norm.lower():
             agg_label = f"{agg_norm.replace('H', ' Hour').replace('h', ' Hour')}"
-            metrics_key = "hourly"
+            metrics_key = C.Agg.HOURLY
         elif agg_norm == "d":
             agg_label = "Daily"
-            metrics_key = "daily"
+            metrics_key = C.Agg.DAILY
         elif agg_norm == "w":
             agg_label = "Weekly"
         elif agg_norm == "m":
@@ -144,7 +145,7 @@ def plot_date_range(
     outliers = pct_diff > outlier_threshold
 
     # Get period information for title
-    period = f"{start_date.strftime('%Y-%m-%d %H:%M:%S')} - {end_date.strftime('%Y-%m-%d %H:%M:%S')}"
+    period = f"{start_date.strftime(C.Format.DATETIME)} - {end_date.strftime(C.Format.DATETIME)}"
 
     # Calculate metrics for legend (metrics are for the filtered period only)
     metrics = calculate_metrics(
@@ -164,14 +165,14 @@ def plot_date_range(
     plt.plot(
         y_true_filtered.index,
         y_true_filtered.values,
-        label="Original Values",
-        marker="o",
+        label=C.Labels.ORIGINAL,
+        marker=C.Markers.ORIGINAL,
     )
     plt.plot(
         y_pred_filtered.index,
         y_pred_filtered.values,
-        label="Predicted Values",
-        marker="x",
+        label=C.Labels.PREDICTED,
+        marker=C.Markers.PREDICTED,
     )
 
     # Highlight outliers
@@ -179,10 +180,10 @@ def plot_date_range(
         plt.plot(
             y_pred_filtered[outliers].index,
             y_pred_filtered[outliers].values,
-            "ro",
-            markersize=10,
+            C.Markers.OUTLIERS,
+            markersize=C.MarkerSize.LARGE,
             markerfacecolor="none",
-            label=f"Outliers (>{outlier_threshold * 100}% diff)",
+            label=C.Labels.OUTLIERS_TMPL.format(percent=outlier_threshold * 100),
         )
 
     # Add spike and drop annotations if requested
@@ -203,9 +204,9 @@ def plot_date_range(
             plt.plot(
                 y_true_filtered.index[true_peaks],
                 y_true_filtered.values[true_peaks] + offset,
-                "^r",
-                markersize=6,
-                label="Spikes",
+                C.Markers.SPIKES,
+                markersize=C.MarkerSize.SMALL,
+                label=C.Labels.SPIKES,
             )
 
         # Plot true drops with blue triangle markers (positioned lower)
@@ -213,23 +214,23 @@ def plot_date_range(
             plt.plot(
                 y_true_filtered.index[true_drops],
                 y_true_filtered.values[true_drops] - offset,
-                "vb",
-                markersize=6,
-                label="Drops",
+                C.Markers.DROPS,
+                markersize=C.MarkerSize.SMALL,
+                label=C.Labels.DROPS,
             )
 
     # Add metrics to legend (metrics for filtered period only)
     if metrics_key in metrics:
         metrics_text = (
-            f"Metrics for selected period:\nRMSE: {metrics[metrics_key]['rmse']:.2f}, "
-            f"MAE: {metrics[metrics_key]['mae']:.2f}, "
-            f"MAPE: {metrics[metrics_key]['mape']:.2%}"
+            f"Metrics for selected period:\nRMSE: {metrics[metrics_key][C.Metric.RMSE]:.2f}, "
+            f"MAE: {metrics[metrics_key][C.Metric.MAE]:.2f}, "
+            f"MAPE: {metrics[metrics_key][C.Metric.MAPE]:.2%}"
         )
     else:
         metrics_text = (
-            f"Metrics for selected period:\nRMSE: {metrics['5_min']['rmse']:.2f}, "
-            f"MAE: {metrics['5_min']['mae']:.2f}, "
-            f"MAPE: {metrics['5_min']['mape']:.2%}"
+            f"Metrics for selected period:\nRMSE: {metrics['5_min'][C.Metric.RMSE]:.2f}, "
+            f"MAE: {metrics['5_min'][C.Metric.MAE]:.2f}, "
+            f"MAPE: {metrics['5_min'][C.Metric.MAPE]:.2%}"
         )
     plt.plot([], [], " ", label=metrics_text)
 
@@ -239,8 +240,8 @@ def plot_date_range(
         title = f"{title}\nDevice: {device_id}"
     title = f"{title}\nPeriod: {period}"
     plt.title(title)
-    plt.xlabel("Time")
-    plt.ylabel("Total Power Active")
+    plt.xlabel(C.Axis.TIME)
+    plt.ylabel(C.Axis.TOTAL_POWER_ACTIVE)
 
     # Format x-axis for better readability
     plt.gcf().autofmt_xdate()
@@ -285,12 +286,12 @@ def plot_part_predictions(
     """
     # Get period information for title
     start_time = (
-        y_true.index.min().strftime("%Y-%m-%d %H:%M:%S")
+        y_true.index.min().strftime(C.Format.DATETIME)
         if hasattr(y_true.index.min(), "strftime")
         else str(y_true.index.min())
     )
     end_time = (
-        y_true.index.max().strftime("%Y-%m-%d %H:%M:%S")
+        y_true.index.max().strftime(C.Format.DATETIME)
         if hasattr(y_true.index.max(), "strftime")
         else str(y_true.index.max())
     )
@@ -356,9 +357,9 @@ def plot_part_predictions(
 
     # Add metrics to graph titles
     metrics_text = (
-        f"RMSE: {metrics['5_min']['rmse']:.2f}, "
-        f"\nMAE: {metrics['5_min']['mae']:.2f}, "
-        f"\nMAPE: {metrics['5_min']['mape']:.2%}"
+        f"RMSE: {metrics['5_min'][C.Metric.RMSE]:.2f}, "
+        f"\nMAE: {metrics['5_min'][C.Metric.MAE]:.2f}, "
+        f"\nMAPE: {metrics['5_min'][C.Metric.MAPE]:.2%}"
     )
 
     # Title prefix
@@ -370,23 +371,23 @@ def plot_part_predictions(
     axes[0].plot(
         y_true_beginning.index,
         y_true_beginning.values,
-        label="Original Values",
-        marker="o",
+        label=C.Labels.ORIGINAL,
+        marker=C.Markers.ORIGINAL,
     )
     axes[0].plot(
         y_pred_beginning.index,
         y_pred_beginning.values,
-        label="Predicted Values",
-        marker="x",
+        label=C.Labels.PREDICTED,
+        marker=C.Markers.PREDICTED,
     )
     if outliers_beginning.any():
         axes[0].plot(
             y_pred_beginning[outliers_beginning].index,
             y_pred_beginning[outliers_beginning].values,
-            "ro",
-            markersize=10,
+            C.Markers.OUTLIERS,
+            markersize=C.MarkerSize.LARGE,
             markerfacecolor="none",
-            label=f"Outliers (>{outlier_threshold * 100}% diff)",
+            label=C.Labels.OUTLIERS_TMPL.format(percent=outlier_threshold * 100),
         )
 
     # Add spike and drop annotations for beginning section
@@ -406,42 +407,42 @@ def plot_part_predictions(
             axes[0].plot(
                 y_true_beginning.index[beginning_true_peaks],
                 y_true_beginning.values[beginning_true_peaks] + offset_begin,
-                "^r",
-                markersize=6,
-                label="Spikes",
+                C.Markers.SPIKES,
+                markersize=C.MarkerSize.SMALL,
+                label=C.Labels.SPIKES,
             )
 
         if len(beginning_true_drops) > 0:
             axes[0].plot(
                 y_true_beginning.index[beginning_true_drops],
                 y_true_beginning.values[beginning_true_drops] - offset_begin,
-                "vb",
-                markersize=6,
-                label="Drops",
+                C.Markers.DROPS,
+                markersize=C.MarkerSize.SMALL,
+                label=C.Labels.DROPS,
             )
 
     axes[0].plot([], [], " ", label=metrics_text)  # Add metrics to legend
     if show_spikes:
-        axes[0].plot([], [], " ", marker="^", markersize=10, color="red", label="Spikes")
-        axes[0].plot([], [], " ", marker="v", markersize=10, color="blue", label="Drops")
+        axes[0].plot([], [], " ", marker=C.Markers.SPIKES, markersize=10, label=C.Labels.SPIKES)
+        axes[0].plot([], [], " ", marker=C.Markers.DROPS, markersize=10, label=C.Labels.DROPS)
 
     axes[0].set_title(f"{title_prefix}\nBeginning: {y_true_beginning.index.min()} - {y_true_beginning.index.max()}")
-    axes[0].set_xlabel("Time")
-    axes[0].set_ylabel("Total Power Active")
+    axes[0].set_xlabel(C.Axis.TIME)
+    axes[0].set_ylabel(C.Axis.TOTAL_POWER_ACTIVE)
     axes[0].legend()
     axes[0].grid(True)
 
     # Middle plot
-    axes[1].plot(y_true_middle.index, y_true_middle.values, label="Original Values", marker="o")
-    axes[1].plot(y_pred_middle.index, y_pred_middle.values, label="Predicted Values", marker="x")
+    axes[1].plot(y_true_middle.index, y_true_middle.values, label=C.Labels.ORIGINAL, marker=C.Markers.ORIGINAL)
+    axes[1].plot(y_pred_middle.index, y_pred_middle.values, label=C.Labels.PREDICTED, marker=C.Markers.PREDICTED)
     if outliers_middle.any():
         axes[1].plot(
             y_pred_middle[outliers_middle].index,
             y_pred_middle[outliers_middle].values,
-            "ro",
-            markersize=10,
+            C.Markers.OUTLIERS,
+            markersize=C.MarkerSize.LARGE,
             markerfacecolor="none",
-            label=f"Outliers (>{outlier_threshold * 100}% diff)",
+            label=C.Labels.OUTLIERS_TMPL.format(percent=outlier_threshold * 100),
         )
 
     # Add spike and drop annotations for middle section
@@ -451,42 +452,42 @@ def plot_part_predictions(
             axes[1].plot(
                 y_true_middle.index[middle_true_peaks],
                 y_true_middle.values[middle_true_peaks] + offset_middle,
-                "^r",
-                markersize=6,
-                label="Spikes",
+                C.Markers.SPIKES,
+                markersize=C.MarkerSize.SMALL,
+                label=C.Labels.SPIKES,
             )
 
         if len(middle_true_drops) > 0:
             axes[1].plot(
                 y_true_middle.index[middle_true_drops],
                 y_true_middle.values[middle_true_drops] - offset_middle,
-                "vb",
-                markersize=6,
-                label="Drops",
+                C.Markers.DROPS,
+                markersize=C.MarkerSize.SMALL,
+                label=C.Labels.DROPS,
             )
 
     axes[1].plot([], [], " ", label=metrics_text)  # Add metrics to legend
     if show_spikes:
-        axes[1].plot([], [], " ", marker="^", markersize=10, color="red", label="Spikes")
-        axes[1].plot([], [], " ", marker="v", markersize=10, color="blue", label="Drops")
+        axes[1].plot([], [], " ", marker=C.Markers.SPIKES, markersize=10, label=C.Labels.SPIKES)
+        axes[1].plot([], [], " ", marker=C.Markers.DROPS, markersize=10, label=C.Labels.DROPS)
 
     axes[1].set_title(f"{title_prefix}\nMiddle: {y_true_middle.index.min()} - {y_true_middle.index.max()}")
-    axes[1].set_xlabel("Time")
-    axes[1].set_ylabel("Total Power Active")
+    axes[1].set_xlabel(C.Axis.TIME)
+    axes[1].set_ylabel(C.Axis.TOTAL_POWER_ACTIVE)
     axes[1].legend()
     axes[1].grid(True)
 
     # End plot
-    axes[2].plot(y_true_end.index, y_true_end.values, label="Original Values", marker="o")
-    axes[2].plot(y_pred_end.index, y_pred_end.values, label="Predicted Values", marker="x")
+    axes[2].plot(y_true_end.index, y_true_end.values, label=C.Labels.ORIGINAL, marker=C.Markers.ORIGINAL)
+    axes[2].plot(y_pred_end.index, y_pred_end.values, label=C.Labels.PREDICTED, marker=C.Markers.PREDICTED)
     if outliers_end.any():
         axes[2].plot(
             y_pred_end[outliers_end].index,
             y_pred_end[outliers_end].values,
-            "ro",
-            markersize=10,
+            C.Markers.OUTLIERS,
+            markersize=C.MarkerSize.LARGE,
             markerfacecolor="none",
-            label=f"Outliers (>{outlier_threshold * 100}% diff)",
+            label=C.Labels.OUTLIERS_TMPL.format(percent=outlier_threshold * 100),
         )
 
     # Add spike and drop annotations for end section
@@ -496,28 +497,28 @@ def plot_part_predictions(
             axes[2].plot(
                 y_true_end.index[end_true_peaks],
                 y_true_end.values[end_true_peaks] + offset_end,
-                "^r",
-                markersize=6,
-                label="Spikes",
+                C.Markers.SPIKES,
+                markersize=C.MarkerSize.SMALL,
+                label=C.Labels.SPIKES,
             )
 
         if len(end_true_drops) > 0:
             axes[2].plot(
                 y_true_end.index[end_true_drops],
                 y_true_end.values[end_true_drops] - offset_end,
-                "vb",
-                markersize=6,
-                label="Drops",
+                C.Markers.DROPS,
+                markersize=C.MarkerSize.SMALL,
+                label=C.Labels.DROPS,
             )
 
     axes[2].plot([], [], " ", label=metrics_text)  # Add metrics to legend
     if show_spikes:
-        axes[2].plot([], [], " ", marker="^", markersize=10, color="red", label="Spikes")
-        axes[2].plot([], [], " ", marker="v", markersize=10, color="blue", label="Drops")
+        axes[2].plot([], [], " ", marker=C.Markers.SPIKES, markersize=10, label=C.Labels.SPIKES)
+        axes[2].plot([], [], " ", marker=C.Markers.DROPS, markersize=10, label=C.Labels.DROPS)
 
     axes[2].set_title(f"{title_prefix}\nEnd: {y_true_end.index.min()} - {y_true_end.index.max()}")
-    axes[2].set_xlabel("Time")
-    axes[2].set_ylabel("Total Power Active")
+    axes[2].set_xlabel(C.Axis.TIME)
+    axes[2].set_ylabel(C.Axis.TOTAL_POWER_ACTIVE)
     axes[2].legend()
     axes[2].grid(True)
 
@@ -591,8 +592,8 @@ def plot_hourly_predictions(
             outliers = outliers[-data_show:]
 
     # Get period information
-    start_time = y_true_hourly.index.min().strftime("%Y-%m-%d %H:%M:%S")
-    end_time = y_true_hourly.index.max().strftime("%Y-%m-%d %H:%M:%S")
+    start_time = y_true_hourly.index.min().strftime(C.Format.DATETIME)
+    end_time = y_true_hourly.index.max().strftime(C.Format.DATETIME)
     period = f"{start_time} - {end_time}"
 
     # Calculate metrics for display after the plot
@@ -606,24 +607,24 @@ def plot_hourly_predictions(
         spike_prominence=spike_prominence,
         normalize_robust=normalize_robust,
     )
-    hourly_metrics = metrics["hourly"]
+    hourly_metrics = metrics[C.Agg.HOURLY]
 
     # Create the plot
     fig, ax = plt.subplots(figsize=(14, 8))
 
     # Plot regular points
-    ax.plot(y_true_hourly.index, y_true_hourly.values, label="Original Values", marker="o")
-    ax.plot(y_pred_hourly.index, y_pred_hourly.values, label="Predicted Values", marker="x")
+    ax.plot(y_true_hourly.index, y_true_hourly.values, label=C.Labels.ORIGINAL, marker=C.Markers.ORIGINAL)
+    ax.plot(y_pred_hourly.index, y_pred_hourly.values, label=C.Labels.PREDICTED, marker=C.Markers.PREDICTED)
 
     # Highlight outliers
     if outliers.any():
         ax.plot(
             y_pred_hourly[outliers].index,
             y_pred_hourly[outliers],
-            "ro",
-            markersize=10,
+            C.Markers.OUTLIERS,
+            markersize=C.MarkerSize.LARGE,
             markerfacecolor="none",
-            label=f"Outliers (>{outlier_threshold * 100}% diff)",
+            label=C.Labels.OUTLIERS_TMPL.format(percent=outlier_threshold * 100),
         )
 
     # Add spike and drop marks if requested
@@ -646,9 +647,9 @@ def plot_hourly_predictions(
             ax.plot(
                 y_true_hourly.index[true_peaks],
                 peak_y_values,
-                "^r",
-                markersize=6,
-                label="Spikes",
+                C.Markers.SPIKES,
+                markersize=C.MarkerSize.SMALL,
+                label=C.Labels.SPIKES,
             )
 
         # Plot drops with blue triangle markers (positioned lower)
@@ -658,9 +659,9 @@ def plot_hourly_predictions(
             ax.plot(
                 y_true_hourly.index[true_drops],
                 drop_y_values,
-                "vb",
-                markersize=6,
-                label="Drops",
+                C.Markers.DROPS,
+                markersize=C.MarkerSize.SMALL,
+                label=C.Labels.DROPS,
             )
 
     # Set title and labels
@@ -669,8 +670,8 @@ def plot_hourly_predictions(
         title = f"{title}\nDevice: {device_id}"
     title = f"{title}\nPeriod: {period}"
     ax.set_title(title)
-    ax.set_xlabel("Time")
-    ax.set_ylabel("Total Power Active")
+    ax.set_xlabel(C.Axis.TIME)
+    ax.set_ylabel(C.Axis.TOTAL_POWER_ACTIVE)
 
     # Format x-axis for better readability
     fig.autofmt_xdate()
@@ -687,36 +688,36 @@ def plot_hourly_predictions(
 
     # Basic prediction metrics
     print("Basic Prediction Metrics:")
-    print(f"RMSE: {hourly_metrics['rmse']:.4f}")
-    print(f"MAE: {hourly_metrics['mae']:.4f}")
-    print(f"MAPE: {hourly_metrics['mape']:.4%}")
+    print(f"RMSE: {hourly_metrics[C.Metric.RMSE]:.4f}")
+    print(f"MAE: {hourly_metrics[C.Metric.MAE]:.4f}")
+    print(f"MAPE: {hourly_metrics[C.Metric.MAPE]:.4%}")
 
     # Directional metrics
     print("\nDirectional Metrics:")
-    print(f"Directional Accuracy: {hourly_metrics['dir_accuracy']:.4%}")
-    print(f"First-Diff Correlation: {hourly_metrics['first_diff_corr']:.4f}")
+    print(f"Directional Accuracy: {hourly_metrics[C.Metric.DIR_ACCURACY]:.4%}")
+    print(f"First-Diff Correlation: {hourly_metrics[C.Metric.FIRST_DIFF_CORR]:.4f}")
 
     if show_spikes:
         # Immediate detection metrics
         print("\nImmediate Detection (delta=0):")
         print("Spikes:")
-        print(f"  Precision: {hourly_metrics['spikes_immediate']['precision']:.4f}")
-        print(f"  Recall: {hourly_metrics['spikes_immediate']['recall']:.4f}")
-        print(f"  F1 Score: {hourly_metrics['spikes_immediate']['f1']:.4f}")
+        print(f"  Precision: {hourly_metrics[C.Event.SPIKES_IMMEDIATE][C.Metric.PRECISION]:.4f}")
+        print(f"  Recall: {hourly_metrics[C.Event.SPIKES_IMMEDIATE][C.Metric.RECALL]:.4f}")
+        print(f"  F1 Score: {hourly_metrics[C.Event.SPIKES_IMMEDIATE][C.Metric.F1]:.4f}")
         print("Drops:")
-        print(f"  Precision: {hourly_metrics['drops_immediate']['precision']:.4f}")
-        print(f"  Recall: {hourly_metrics['drops_immediate']['recall']:.4f}")
-        print(f"  F1 Score: {hourly_metrics['drops_immediate']['f1']:.4f}")
+        print(f"  Precision: {hourly_metrics[C.Event.DROPS_IMMEDIATE][C.Metric.PRECISION]:.4f}")
+        print(f"  Recall: {hourly_metrics[C.Event.DROPS_IMMEDIATE][C.Metric.RECALL]:.4f}")
+        print(f"  F1 Score: {hourly_metrics[C.Event.DROPS_IMMEDIATE][C.Metric.F1]:.4f}")
 
         # Delayed detection metrics
         print("\n1-Hour Delayed Detection (delta=1):")
         print("Spikes:")
-        print(f"  Precision: {hourly_metrics['spikes_delayed']['precision']:.4f}")
-        print(f"  Recall: {hourly_metrics['spikes_delayed']['recall']:.4f}")
-        print(f"  F1 Score: {hourly_metrics['spikes_delayed']['f1']:.4f}")
+        print(f"  Precision: {hourly_metrics[C.Event.SPIKES_DELAYED][C.Metric.PRECISION]:.4f}")
+        print(f"  Recall: {hourly_metrics[C.Event.SPIKES_DELAYED][C.Metric.RECALL]:.4f}")
+        print(f"  F1 Score: {hourly_metrics[C.Event.SPIKES_DELAYED][C.Metric.F1]:.4f}")
         print("Drops:")
-        print(f"  Precision: {hourly_metrics['drops_delayed']['precision']:.4f}")
-        print(f"  Recall: {hourly_metrics['drops_delayed']['recall']:.4f}")
-        print(f"  F1 Score: {hourly_metrics['drops_delayed']['f1']:.4f}")
+        print(f"  Precision: {hourly_metrics[C.Event.DROPS_DELAYED][C.Metric.PRECISION]:.4f}")
+        print(f"  Recall: {hourly_metrics[C.Event.DROPS_DELAYED][C.Metric.RECALL]:.4f}")
+        print(f"  F1 Score: {hourly_metrics[C.Event.DROPS_DELAYED][C.Metric.F1]:.4f}")
 
     print("=" * 50)

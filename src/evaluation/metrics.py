@@ -27,21 +27,11 @@ from scipy.stats import pearsonr
 from scipy.signal import find_peaks
 
 from src.utils.utils import aggregate_values  # Removed unused memory import
+import src.evaluation.constants as C
 
 
 def normalize_zscore(y: np.ndarray) -> np.ndarray:
-    """Return standard z-score normalized array.
-
-    Parameters
-    ----------
-    y : array-like
-        Input numeric sequence.
-
-    Returns
-    -------
-    numpy.ndarray
-        Element-wise z-score (mean 0, std 1) of ``y``.
-    """
+    """Return standard z-score normalized array (mean 0, std 1)."""
     return (y - np.mean(y)) / np.std(y)
 
 
@@ -281,7 +271,7 @@ def calculate_metrics(
         Parameters
         ----------
         period_name : str
-            Aggregation key label.
+            Aggregation key label (e.g. 'hourly', 'weekly').
         metrics_dict : dict
             Metric dictionary for that aggregation level.
         """
@@ -291,45 +281,48 @@ def calculate_metrics(
 
             # Basic accuracy metrics
             print("Basic Prediction Metrics:")
-            print(f"\tRMSE: {metrics_dict['rmse']:.4f}")
-            print(f"\tMAE: {metrics_dict['mae']:.4f}")
-            print(f"\tMAPE: {metrics_dict['mape']:.4%}")
+            print(f"\tRMSE: {metrics_dict[C.Metric.RMSE]:.4f}")
+            print(f"\tMAE: {metrics_dict[C.Metric.MAE]:.4f}")
+            print(f"\tMAPE: {metrics_dict[C.Metric.MAPE]:.4%}")
 
             # Memory usage metric
             # if 'memory' in metrics_dict and metrics_dict['memory'] is not None:
             #     print(f"\tModel Memory: {metrics_dict['memory']:.5f} MB")
 
             # Only show directional and spike metrics for sub-weekly aggregations
-            if period_name not in ["weekly", "28_days"]:
+            if period_name not in [C.Agg.WEEKLY, C.Agg.DAYS_28]:
                 # Directional metrics
                 print("\nDirectional Metrics:")
-                print(f"\tDirectional Accuracy: {metrics_dict['dir_accuracy']:.4%}")
-                print(f"\tFirst-Diff Correlation: {metrics_dict['first_diff_corr']:.4f}")
+                print(f"\tDirectional Accuracy: {metrics_dict[C.Metric.DIR_ACCURACY]:.4%}")
+                print(f"\tFirst-Diff Correlation: {metrics_dict[C.Metric.FIRST_DIFF_CORR]:.4f}")
 
                 # Spike and drop detection - immediate (delta=0)
                 print("\nImmediate Detection (delta=0):")
                 print("\tSpikes:")
-                print(f"\t\tPrecision: {metrics_dict['spikes_immediate']['precision']:.4f}")
-                print(f"\t\tRecall: {metrics_dict['spikes_immediate']['recall']:.4f}")
-                print(f"\t\tF1: {metrics_dict['spikes_immediate']['f1']:.4f}")
+                print(f"\t\tPrecision: {metrics_dict[C.Event.SPIKES_IMMEDIATE][C.Metric.PRECISION]:.4f}")
+                print(f"\t\tRecall: {metrics_dict[C.Event.SPIKES_IMMEDIATE][C.Metric.RECALL]:.4f}")
+                print(f"\t\tF1: {metrics_dict[C.Event.SPIKES_IMMEDIATE][C.Metric.F1]:.4f}")
                 print("\tDrops:")
-                print(f"\t\tPrecision: {metrics_dict['drops_immediate']['precision']:.4f}")
+                print(f"\t\tPrecision: {metrics_dict[C.Event.DROPS_IMMEDIATE][C.Metric.PRECISION]:.4f}")
                 # Spike and drop detection - immediate (delta=0)
-                print(f"\t\tRecall: {metrics_dict['drops_immediate']['recall']:.4f}")
-                print(f"\t\tF1: {metrics_dict['drops_immediate']['f1']:.4f}")
+                print(f"\t\tRecall: {metrics_dict[C.Event.DROPS_IMMEDIATE][C.Metric.RECALL]:.4f}")
+                print(f"\t\tF1: {metrics_dict[C.Event.DROPS_IMMEDIATE][C.Metric.F1]:.4f}")
                 print("\nDelayed Detection (delta=1 => 1-sec or 1-hour, or 1-day detection delay):")
                 print("\tSpikes:")
-                print(f"\t\tPrecision: {metrics_dict['spikes_delayed']['precision']:.4f}")
-                print(f"\t\tRecall: {metrics_dict['spikes_delayed']['recall']:.4f}")
-                print(f"\t\tF1: {metrics_dict['spikes_delayed']['f1']:.4f}")
+                print(f"\t\tPrecision: {metrics_dict[C.Event.SPIKES_DELAYED][C.Metric.PRECISION]:.4f}")
+                print(f"\t\tRecall: {metrics_dict[C.Event.SPIKES_DELAYED][C.Metric.RECALL]:.4f}")
+                print(f"\t\tF1: {metrics_dict[C.Event.SPIKES_DELAYED][C.Metric.F1]:.4f}")
                 print("\tDrops:")
-                print(f"\t\tPrecision: {metrics_dict['drops_delayed']['precision']:.4f}")
-                print(f"\t\tRecall: {metrics_dict['drops_delayed']['recall']:.4f}")
-                print(f"\t\tF1: {metrics_dict['drops_delayed']['f1']:.4f}")
+                print(f"\t\tPrecision: {metrics_dict[C.Event.DROPS_DELAYED][C.Metric.PRECISION]:.4f}")
+                print(f"\t\tRecall: {metrics_dict[C.Event.DROPS_DELAYED][C.Metric.RECALL]:.4f}")
+                print(f"\t\tF1: {metrics_dict[C.Event.DROPS_DELAYED][C.Metric.F1]:.4f}")
 
     # Function to calculate metrics for aggregated data
     def aggregate_metrics(y_true: pd.Series, y_pred: pd.Series, freq: str) -> dict:
         """Aggregate series to ``freq`` then compute metrics.
+
+        This function handles the conversion between power (kW) and energy (kWh) by
+        appropriately aggregating the data. The values should be given in kW.
 
         Parameters
         ----------
@@ -346,17 +339,26 @@ def calculate_metrics(
             Metric dictionary for the aggregated series (similar schema as
             original frequency metrics) omitting directional / spike metrics
             for weekly and longer periods.
+
+        Notes
+        -----
+        To properly represent energy consumption in kWh for aggregations higher than 1 hour,
+        the function first aggregates to hourly (mean) and then to the target frequency (sum).
+        This is done because the data is given in kW which is rate of power. It automatically
+        assumes hours as the time unit: :math:`Energy (kWh) = Power (kW) x Time (h)`. If the original data
+        frequency is lower than 1 hour (like 15-minute kW readings) we assume that it was constant
+        throughout the 15-min period, so finding the energy in kWh will give us
+        :math:`Energy (kWh) = sum(Power_i x 0.25) for i = 1 to 4`, which is the same as taking an average.
+
         """
         freq_td = pd.Timedelta(freq)
 
-        # If the frequency is higher than 1 hour, first aggregate to hourly (mean), then to the target freq (sum)
-        # This is done to get the correct kWh (energy) values from kW (power) data
-        if freq_td > pd.Timedelta("1H"):
+        if freq_td > pd.Timedelta(C.Freq.H1):
             # First aggregate to hourly by mean
-            y_true_hourly, y_pred_hourly = aggregate_values(y_true, y_pred, "H", "mean")
+            y_true_hourly, y_pred_hourly = aggregate_values(y_true, y_pred, C.Freq.H, "mean")
             # Then aggregate to the target frequency by sum
             y_true_agg, y_pred_agg = aggregate_values(y_true_hourly, y_pred_hourly, freq, "sum")
-        elif freq_td == pd.Timedelta("1H"):
+        elif freq_td == pd.Timedelta(C.Freq.H1):
             # Convert from kW to kWh by aggregating to hourly (mean)
             y_true_agg, y_pred_agg = aggregate_values(y_true, y_pred, freq, "mean")
         else:
@@ -370,9 +372,9 @@ def calculate_metrics(
 
         # Create basic result dictionary with accuracy metrics
         result = {
-            "rmse": np.sqrt(mean_squared_error(y_true_agg, y_pred_agg)),
-            "mae": mean_absolute_error(y_true_agg, y_pred_agg),
-            "mape": mean_absolute_percentage_error(y_true_agg, y_pred_agg),
+            C.Metric.RMSE: np.sqrt(mean_squared_error(y_true_agg, y_pred_agg)),
+            C.Metric.MAE: mean_absolute_error(y_true_agg, y_pred_agg),
+            C.Metric.MAPE: mean_absolute_percentage_error(y_true_agg, y_pred_agg),
             # 'memory': None,  # Placeholder for memory, will be set only for original frequency
         }
 
@@ -401,12 +403,12 @@ def calculate_metrics(
             # Add directional and spike detection metrics
             result.update(
                 {
-                    "dir_accuracy": da,
-                    "first_diff_corr": corr,
-                    "spikes_immediate": spike_metrics_immediate["spikes"],
-                    "drops_immediate": spike_metrics_immediate["drops"],
-                    "spikes_delayed": spike_metrics_delayed["spikes"],
-                    "drops_delayed": spike_metrics_delayed["drops"],
+                    C.Metric.DIR_ACCURACY: da,
+                    C.Metric.FIRST_DIFF_CORR: corr,
+                    C.Event.SPIKES_IMMEDIATE: spike_metrics_immediate["spikes"],
+                    C.Event.DROPS_IMMEDIATE: spike_metrics_immediate["drops"],
+                    C.Event.SPIKES_DELAYED: spike_metrics_delayed["spikes"],
+                    C.Event.DROPS_DELAYED: spike_metrics_delayed["drops"],
                 }
             )
         else:
@@ -414,12 +416,12 @@ def calculate_metrics(
             # This ensures the dictionary has all keys but with None values for weekly+ metrics
             result.update(
                 {
-                    "dir_accuracy": None,
-                    "first_diff_corr": None,
-                    "spikes_immediate": {"precision": None, "recall": None, "f1": None},
-                    "drops_immediate": {"precision": None, "recall": None, "f1": None},
-                    "spikes_delayed": {"precision": None, "recall": None, "f1": None},
-                    "drops_delayed": {"precision": None, "recall": None, "f1": None},
+                    C.Metric.DIR_ACCURACY: None,
+                    C.Metric.FIRST_DIFF_CORR: None,
+                    C.Event.SPIKES_IMMEDIATE: {C.Metric.PRECISION: None, C.Metric.RECALL: None, C.Metric.F1: None},
+                    C.Event.DROPS_IMMEDIATE: {C.Metric.PRECISION: None, C.Metric.RECALL: None, C.Metric.F1: None},
+                    C.Event.SPIKES_DELAYED: {C.Metric.PRECISION: None, C.Metric.RECALL: None, C.Metric.F1: None},
+                    C.Event.DROPS_DELAYED: {C.Metric.PRECISION: None, C.Metric.RECALL: None, C.Metric.F1: None},
                 }
             )
 
@@ -461,29 +463,29 @@ def calculate_metrics(
 
     # Initialize original metrics with all values
     original_metrics = {
-        "rmse": np.sqrt(mean_squared_error(y_true, y_pred)),
-        "mae": mean_absolute_error(y_true, y_pred),
-        "mape": mean_absolute_percentage_error(y_true, y_pred),
-        "dir_accuracy": da_orig,
-        "first_diff_corr": corr_orig,
-        "spikes_immediate": spike_metrics_immediate["spikes"],
-        "drops_immediate": spike_metrics_immediate["drops"],
-        "spikes_delayed": spike_metrics_delayed["spikes"],
-        "drops_delayed": spike_metrics_delayed["drops"],
+        C.Metric.RMSE: np.sqrt(mean_squared_error(y_true, y_pred)),
+        C.Metric.MAE: mean_absolute_error(y_true, y_pred),
+        C.Metric.MAPE: mean_absolute_percentage_error(y_true, y_pred),
+        C.Metric.DIR_ACCURACY: da_orig,
+        C.Metric.FIRST_DIFF_CORR: corr_orig,
+        C.Event.SPIKES_IMMEDIATE: spike_metrics_immediate["spikes"],
+        C.Event.DROPS_IMMEDIATE: spike_metrics_immediate["drops"],
+        C.Event.SPIKES_DELAYED: spike_metrics_delayed["spikes"],
+        C.Event.DROPS_DELAYED: spike_metrics_delayed["drops"],
         # 'memory': memory_usage,  # Add memory usage to metrics
     }
 
     # Add metrics for original data
-    if data_freq not in ["1H", "H", "D", "W", "28D"]:
+    if data_freq not in [C.Freq.H1, C.Freq.H, C.Freq.D, C.Freq.W, C.Freq.D28]:
         metrics[data_freq] = original_metrics
 
     # Add hourly metrics (either from original data if data_freq is 'H' or by aggregation)
-    metrics["hourly"] = original_metrics if data_freq == "H" else aggregate_metrics(y_true, y_pred, "1H")
+    metrics[C.Agg.HOURLY] = original_metrics if data_freq == C.Freq.H else aggregate_metrics(y_true, y_pred, C.Freq.H1)
 
     # Add other aggregation metrics
-    metrics["daily"] = aggregate_metrics(y_true, y_pred, "1D")
-    metrics["weekly"] = aggregate_metrics(y_true, y_pred, "1W")
-    metrics["28_days"] = aggregate_metrics(y_true, y_pred, "28D")
+    metrics[C.Agg.DAILY] = aggregate_metrics(y_true, y_pred, C.Freq.D1)
+    metrics[C.Agg.WEEKLY] = aggregate_metrics(y_true, y_pred, C.Freq.W1)
+    metrics[C.Agg.DAYS_28] = aggregate_metrics(y_true, y_pred, C.Freq.D28)
 
     if verbose:
         print("=" * 50)
@@ -491,11 +493,11 @@ def calculate_metrics(
         print("=" * 50)
 
         # Display metrics for original frequency if available
-        if data_freq not in ["1H", "H", "D", "W", "28D"]:
+        if data_freq not in [C.Freq.H1, C.Freq.H, C.Freq.D, C.Freq.W, C.Freq.D28]:
             display_metrics(data_freq, metrics[data_freq])
 
         # Display metrics for each aggregation period
-        for agg_period in ["hourly", "daily", "weekly", "28_days"]:
+        for agg_period in [C.Agg.HOURLY, C.Agg.DAILY, C.Agg.WEEKLY, C.Agg.DAYS_28]:
             if agg_period != data_freq:
                 print("-" * 50)
                 display_metrics(agg_period, metrics[agg_period])
@@ -557,44 +559,44 @@ def all_time_aggregation_metrics(
         ],
     ] = {}
     metric_names = [
-        "rmse",
-        "mae",
-        "mape",
-        "dir_accuracy",
-        "first_diff_corr",
+        C.Metric.RMSE,
+        C.Metric.MAE,
+        C.Metric.MAPE,
+        C.Metric.DIR_ACCURACY,
+        C.Metric.FIRST_DIFF_CORR,
         # 'memory'
     ]
 
     # Immediate spike detection metrics (delta=0)
     immediate_metrics = [
-        "spikes_immediate.precision",
-        "spikes_immediate.recall",
-        "spikes_immediate.f1",
-        "drops_immediate.precision",
-        "drops_immediate.recall",
-        "drops_immediate.f1",
+        C.EventMetric.SPIKES_IMMEDIATE_PRECISION,
+        C.EventMetric.SPIKES_IMMEDIATE_RECALL,
+        C.EventMetric.SPIKES_IMMEDIATE_F1,
+        C.EventMetric.DROPS_IMMEDIATE_PRECISION,
+        C.EventMetric.DROPS_IMMEDIATE_RECALL,
+        C.EventMetric.DROPS_IMMEDIATE_F1,
     ]
 
     # 1-Hour delayed spike metrics (delta=1)
     delayed_metrics = [
-        "spikes_delayed.precision",
-        "spikes_delayed.recall",
-        "spikes_delayed.f1",
-        "drops_delayed.precision",
-        "drops_delayed.recall",
-        "drops_delayed.f1",
+        C.EventMetric.SPIKES_DELAYED_PRECISION,
+        C.EventMetric.SPIKES_DELAYED_RECALL,
+        C.EventMetric.SPIKES_DELAYED_F1,
+        C.EventMetric.DROPS_DELAYED_PRECISION,
+        C.EventMetric.DROPS_DELAYED_RECALL,
+        C.EventMetric.DROPS_DELAYED_F1,
     ]
 
     for device_id, all_period_list in period_metrics.items():
         if device_id not in aggregated_metrics:
             aggregated_metrics[device_id] = {}
-            if data_freq not in ["1H", "H", "D", "W", "28D"]:
+            if data_freq not in [C.Freq.H1, C.Freq.H, C.Freq.D, C.Freq.W, C.Freq.D28]:
                 aggregated_metrics[device_id][data_freq] = {k: [] for k in metric_names}
                 # Add all spike metrics
                 for sm in immediate_metrics + delayed_metrics:
                     aggregated_metrics[device_id][data_freq][sm] = []
 
-            for agg_level in ["hourly", "daily", "weekly", "28_days"]:
+            for agg_level in [C.Agg.HOURLY, C.Agg.DAILY, C.Agg.WEEKLY, C.Agg.DAYS_28]:
                 aggregated_metrics[device_id][agg_level] = {k: [] for k in metric_names}
                 # Add all spike metrics
                 for sm in immediate_metrics + delayed_metrics:
@@ -607,45 +609,45 @@ def all_time_aggregation_metrics(
                     aggregated_metrics[device_id][agg_name][metric].append(value)
 
                 # Handle immediate spike metrics (delta=0)
-                aggregated_metrics[device_id][agg_name]["spikes_immediate.precision"].append(
-                    period_dict[agg_name]["spikes_immediate"]["precision"]
+                aggregated_metrics[device_id][agg_name][C.EventMetric.SPIKES_IMMEDIATE_PRECISION].append(
+                    period_dict[agg_name][C.Event.SPIKES_IMMEDIATE][C.Metric.PRECISION]
                 )
-                aggregated_metrics[device_id][agg_name]["spikes_immediate.recall"].append(
-                    period_dict[agg_name]["spikes_immediate"]["recall"]
+                aggregated_metrics[device_id][agg_name][C.EventMetric.SPIKES_IMMEDIATE_RECALL].append(
+                    period_dict[agg_name][C.Event.SPIKES_IMMEDIATE][C.Metric.RECALL]
                 )
-                aggregated_metrics[device_id][agg_name]["spikes_immediate.f1"].append(
-                    period_dict[agg_name]["spikes_immediate"]["f1"]
+                aggregated_metrics[device_id][agg_name][C.EventMetric.SPIKES_IMMEDIATE_F1].append(
+                    period_dict[agg_name][C.Event.SPIKES_IMMEDIATE][C.Metric.F1]
                 )
 
-                aggregated_metrics[device_id][agg_name]["drops_immediate.precision"].append(
-                    period_dict[agg_name]["drops_immediate"]["precision"]
+                aggregated_metrics[device_id][agg_name][C.EventMetric.DROPS_IMMEDIATE_PRECISION].append(
+                    period_dict[agg_name][C.Event.DROPS_IMMEDIATE][C.Metric.PRECISION]
                 )
-                aggregated_metrics[device_id][agg_name]["drops_immediate.recall"].append(
-                    period_dict[agg_name]["drops_immediate"]["recall"]
+                aggregated_metrics[device_id][agg_name][C.EventMetric.DROPS_IMMEDIATE_RECALL].append(
+                    period_dict[agg_name][C.Event.DROPS_IMMEDIATE][C.Metric.RECALL]
                 )
-                aggregated_metrics[device_id][agg_name]["drops_immediate.f1"].append(
-                    period_dict[agg_name]["drops_immediate"]["f1"]
+                aggregated_metrics[device_id][agg_name][C.EventMetric.DROPS_IMMEDIATE_F1].append(
+                    period_dict[agg_name][C.Event.DROPS_IMMEDIATE][C.Metric.F1]
                 )
 
                 # Handle delayed spike metrics (delta=1)
-                aggregated_metrics[device_id][agg_name]["spikes_delayed.precision"].append(
-                    period_dict[agg_name]["spikes_delayed"]["precision"]
+                aggregated_metrics[device_id][agg_name][C.EventMetric.SPIKES_DELAYED_PRECISION].append(
+                    period_dict[agg_name][C.Event.SPIKES_DELAYED][C.Metric.PRECISION]
                 )
-                aggregated_metrics[device_id][agg_name]["spikes_delayed.recall"].append(
-                    period_dict[agg_name]["spikes_delayed"]["recall"]
+                aggregated_metrics[device_id][agg_name][C.EventMetric.SPIKES_DELAYED_RECALL].append(
+                    period_dict[agg_name][C.Event.SPIKES_DELAYED][C.Metric.RECALL]
                 )
-                aggregated_metrics[device_id][agg_name]["spikes_delayed.f1"].append(
-                    period_dict[agg_name]["spikes_delayed"]["f1"]
+                aggregated_metrics[device_id][agg_name][C.EventMetric.SPIKES_DELAYED_F1].append(
+                    period_dict[agg_name][C.Event.SPIKES_DELAYED][C.Metric.F1]
                 )
 
-                aggregated_metrics[device_id][agg_name]["drops_delayed.precision"].append(
-                    period_dict[agg_name]["drops_delayed"]["precision"]
+                aggregated_metrics[device_id][agg_name][C.EventMetric.DROPS_DELAYED_PRECISION].append(
+                    period_dict[agg_name][C.Event.DROPS_DELAYED][C.Metric.PRECISION]
                 )
-                aggregated_metrics[device_id][agg_name]["drops_delayed.recall"].append(
-                    period_dict[agg_name]["drops_delayed"]["recall"]
+                aggregated_metrics[device_id][agg_name][C.EventMetric.DROPS_DELAYED_RECALL].append(
+                    period_dict[agg_name][C.Event.DROPS_DELAYED][C.Metric.RECALL]
                 )
-                aggregated_metrics[device_id][agg_name]["drops_delayed.f1"].append(
-                    period_dict[agg_name]["drops_delayed"]["f1"]
+                aggregated_metrics[device_id][agg_name][C.EventMetric.DROPS_DELAYED_F1].append(
+                    period_dict[agg_name][C.Event.DROPS_DELAYED][C.Metric.F1]
                 )
 
     # Calculate mean and std for each metric
@@ -653,10 +655,10 @@ def all_time_aggregation_metrics(
         for agg_name, metrics in agg_dict.items():
             for metric, values in metrics.items():
                 # Handle None values for weekly+ aggregations
-                if agg_name in ["weekly", "28_days"] and metric not in [
-                    "rmse",
-                    "mae",
-                    "mape",
+                if agg_name in [C.Agg.WEEKLY, C.Agg.DAYS_28] and metric not in [
+                    C.Metric.RMSE,
+                    C.Metric.MAE,
+                    C.Metric.MAPE,
                 ]:
                     # For directional and spike/drop metrics in weekly+ aggregations, store None
                     aggregated_metrics[device_id][agg_name][metric] = {
@@ -690,13 +692,13 @@ def all_time_aggregation_metrics(
 
                 # Basic accuracy metrics
                 for metric in [
-                    "rmse",
-                    "mae",
-                    "mape",
+                    C.Metric.RMSE,
+                    C.Metric.MAE,
+                    C.Metric.MAPE,
                     #    'memory'
                 ]:
                     if metrics[metric]["mean"] is not None:
-                        if metric == "mape":
+                        if metric == C.Metric.MAPE:
                             print(f"\t{metric.upper()}: {metrics[metric]['mean']:.4%} ± {metrics[metric]['std']:.4%}")
                         # elif metric == 'memory':
                         #     print(f"\tMEMORY: {metrics[metric]['mean']:.5f} MB ± {metrics[metric]['std']:.5f} MB")
@@ -706,82 +708,83 @@ def all_time_aggregation_metrics(
                         print(f"\t{metric.upper()}: N/A")
 
                 # Only show directional and spike metrics for sub-weekly aggregations
-                if agg_name not in ["weekly", "28_days"]:
+                if agg_name not in [C.Agg.WEEKLY, C.Agg.DAYS_28]:
                     # Directional metrics
                     print("\n\tDirectional Metrics:")
                     print(
                         "\t\tDirectional Accuracy: "
-                        f"{metrics['dir_accuracy']['mean']:.4%} ± {metrics['dir_accuracy']['std']:.4%}"
+                        f"{metrics[C.Metric.DIR_ACCURACY]['mean']:.4%} ± {metrics[C.Metric.DIR_ACCURACY]['std']:.4%}"
                     )
                     print(
                         "\t\tFirst-Diff Correlation: "
-                        f"{metrics['first_diff_corr']['mean']:.4f} ± {metrics['first_diff_corr']['std']:.4f}"
+                        f"{metrics[C.Metric.FIRST_DIFF_CORR]['mean']:.4f} ± "
+                        f"{metrics[C.Metric.FIRST_DIFF_CORR]['std']:.4f}"
                     )
 
                     # Immediate detection metrics
                     print("\n\tImmediate Detection (delta=0):")
                     print(
                         "\t\tSpike Precision: "
-                        f"{metrics['spikes_immediate.precision']['mean']:.4f} ± "
-                        f"{metrics['spikes_immediate.precision']['std']:.4f}"
+                        f"{metrics[C.EventMetric.SPIKES_IMMEDIATE_PRECISION]['mean']:.4f} ± "
+                        f"{metrics[C.EventMetric.SPIKES_IMMEDIATE_PRECISION]['std']:.4f}"
                     )
                     print(
                         "\t\tSpike Recall: "
-                        f"{metrics['spikes_immediate.recall']['mean']:.4f} ± "
-                        f"{metrics['spikes_immediate.recall']['std']:.4f}"
+                        f"{metrics[C.EventMetric.SPIKES_IMMEDIATE_RECALL]['mean']:.4f} ± "
+                        f"{metrics[C.EventMetric.SPIKES_IMMEDIATE_RECALL]['std']:.4f}"
                     )
                     print(
                         "\t\tSpike F1: "
-                        f"{metrics['spikes_immediate.f1']['mean']:.4f} ± "
-                        f"{metrics['spikes_immediate.f1']['std']:.4f}"
+                        f"{metrics[C.EventMetric.SPIKES_IMMEDIATE_F1]['mean']:.4f} ± "
+                        f"{metrics[C.EventMetric.SPIKES_IMMEDIATE_F1]['std']:.4f}"
                     )
                     print(
                         "\t\tDrop Precision: "
-                        f"{metrics['drops_immediate.precision']['mean']:.4f} ± "
-                        f"{metrics['drops_immediate.precision']['std']:.4f}"
+                        f"{metrics[C.EventMetric.DROPS_IMMEDIATE_PRECISION]['mean']:.4f} ± "
+                        f"{metrics[C.EventMetric.DROPS_IMMEDIATE_PRECISION]['std']:.4f}"
                     )
                     print(
                         "\t\tDrop Recall: "
-                        f"{metrics['drops_immediate.recall']['mean']:.4f} ± "
-                        f"{metrics['drops_immediate.recall']['std']:.4f}"
+                        f"{metrics[C.EventMetric.DROPS_IMMEDIATE_RECALL]['mean']:.4f} ± "
+                        f"{metrics[C.EventMetric.DROPS_IMMEDIATE_RECALL]['std']:.4f}"
                     )
                     print(
                         "\t\tDrop F1: "
-                        f"{metrics['drops_immediate.f1']['mean']:.4f} ± "
-                        f"{metrics['drops_immediate.f1']['std']:.4f}"
+                        f"{metrics[C.EventMetric.DROPS_IMMEDIATE_F1]['mean']:.4f} ± "
+                        f"{metrics[C.EventMetric.DROPS_IMMEDIATE_F1]['std']:.4f}"
                     )
 
                     # Delayed detection metrics
                     print("\n\t1-Hour Delayed Detection (delta=1):")
                     print(
                         "\t\tSpike Precision: "
-                        f"{metrics['spikes_delayed.precision']['mean']:.4f} ± "
-                        f"{metrics['spikes_delayed.precision']['std']:.4f}"
+                        f"{metrics[C.EventMetric.SPIKES_DELAYED_PRECISION]['mean']:.4f} ± "
+                        f"{metrics[C.EventMetric.SPIKES_DELAYED_PRECISION]['std']:.4f}"
                     )
                     print(
                         "\t\tSpike Recall: "
-                        f"{metrics['spikes_delayed.recall']['mean']:.4f} ± "
-                        f"{metrics['spikes_delayed.recall']['std']:.4f}"
+                        f"{metrics[C.EventMetric.SPIKES_DELAYED_RECALL]['mean']:.4f} ± "
+                        f"{metrics[C.EventMetric.SPIKES_DELAYED_RECALL]['std']:.4f}"
                     )
                     print(
                         "\t\tSpike F1: "
-                        f"{metrics['spikes_delayed.f1']['mean']:.4f} ± "
-                        f"{metrics['spikes_delayed.f1']['std']:.4f}"
+                        f"{metrics[C.EventMetric.SPIKES_DELAYED_F1]['mean']:.4f} ± "
+                        f"{metrics[C.EventMetric.SPIKES_DELAYED_F1]['std']:.4f}"
                     )
                     print(
                         "\t\tDrop Precision: "
-                        f"{metrics['drops_delayed.precision']['mean']:.4f} ± "
-                        f"{metrics['drops_delayed.precision']['std']:.4f}"
+                        f"{metrics[C.EventMetric.DROPS_DELAYED_PRECISION]['mean']:.4f} ± "
+                        f"{metrics[C.EventMetric.DROPS_DELAYED_PRECISION]['std']:.4f}"
                     )
                     print(
                         "\t\tDrop Recall: "
-                        f"{metrics['drops_delayed.recall']['mean']:.4f} ± "
-                        f"{metrics['drops_delayed.recall']['std']:.4f}"
+                        f"{metrics[C.EventMetric.DROPS_DELAYED_RECALL]['mean']:.4f} ± "
+                        f"{metrics[C.EventMetric.DROPS_DELAYED_RECALL]['std']:.4f}"
                     )
                     print(
                         "\t\tDrop F1: "
-                        f"{metrics['drops_delayed.f1']['mean']:.4f} ± "
-                        f"{metrics['drops_delayed.f1']['std']:.4f}"
+                        f"{metrics[C.EventMetric.DROPS_DELAYED_F1]['mean']:.4f} ± "
+                        f"{metrics[C.EventMetric.DROPS_DELAYED_F1]['std']:.4f}"
                     )
 
             print("=" * 50)

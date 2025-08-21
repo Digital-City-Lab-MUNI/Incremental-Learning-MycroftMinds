@@ -19,7 +19,7 @@ For each parameter combination we first obtain the per-split per-device metrics
 and then aggregate them using ``all_time_aggregation_metrics``. During tuning we
 track best parameters for both *lower-is-better* metrics (``rmse``, ``mae``,
 ``mape``) and *higher-is-better* metrics (``dir_accuracy``, ``first_diff_corr``,
-``spikes_f1``, ``drops_f1``).
+``spikes_immediate.f1``, ``drops_immediate.f1``).
 
 Notes
 -----
@@ -44,6 +44,7 @@ from src.utils.logging import (
     save_checkpoint_results,
     format_metric_value,
 )
+import src.evaluation.constants as C
 
 
 def train_and_evaluate(
@@ -53,12 +54,12 @@ def train_and_evaluate(
     valid: List[Tuple[np.ndarray, np.ndarray]],
     use_residuals: bool,
     spike_prominence: float,
-    data_freq: str = "H",
-    forecast_horizon: str = "1h",
-    features: Optional[List[str]] = None,
-    update_freq: str = "1h",
-    start_split: int = 0,
-    end_split: Optional[int] = None,
+    data_freq: str,
+    forecast_horizon: str,
+    features: List[str],
+    update_freq: str,
+    start_split: int,
+    end_split: int,
 ) -> Dict[str, Any]:
     """Train and evaluate a single parameter configuration.
 
@@ -83,19 +84,19 @@ def train_and_evaluate(
         If True, model the residuals (1-step differencing) instead of the original target.
     spike_prominence : float
         Prominence used in spike / drop detection within metric calculation.
-    data_freq : str, default 'H'
+    data_freq : str
         Base temporal frequency of the data (e.g. 'H', '15min').
-    forecast_horizon : str, default '1h'
+    forecast_horizon : str
         Prediction horizon used to align model update timing (incremental
         learners) and to filter horizon-specific engineered features.
-    features : list[str] or None, optional
+    features : list[str]
         Subset of feature names to keep. If ``None`` all columns are used.
-    update_freq : str, default '1h'
+    update_freq : str
         Frequency at which batch models are retrained (or incremental models
         are allowed to update) relative to ``forecast_horizon``.
-    start_split : int, default 0
+    start_split : int
         First split index (inclusive) to evaluate.
-    end_split : int or None, optional
+    end_split : int
         Last split index (exclusive). If ``None`` all remaining splits are used.
 
     Returns
@@ -155,11 +156,11 @@ def hyperparameter_search_tuning(
     valid: List[Tuple[np.ndarray, np.ndarray]],
     use_residuals: bool,
     spike_prominence: float,
-    aggregation: str = "hourly",
-    data_freq: str = "H",
-    forecast_horizon: str = "1h",
+    aggregation: str,
+    data_freq: str,
+    forecast_horizon: str,
     features: Optional[List[str]] = None,
-    update_freq: str = "1h",
+    update_freq: str = "14D",
     start_split: int = 0,
     end_split: Optional[int] = None,
     search_type: str = "grid",
@@ -242,8 +243,8 @@ def hyperparameter_search_tuning(
     Metrics tracked (overall & per device):
 
     * Lower is better: ``rmse``, ``mae``, ``mape``
-    * Higher is better: ``dir_accuracy``, ``first_diff_corr``, ``spikes_f1``,
-      ``drops_f1``
+    * Higher is better: ``dir_accuracy``, ``first_diff_corr``, ``spikes_immediate.f1``,
+      ``drops_immediate.f1``
     """
     # Setup logging with defaults
     model_name = model.__name__ if hasattr(model, "__name__") else model.__class__.__name__
@@ -271,24 +272,28 @@ def hyperparameter_search_tuning(
 
     # Initialize metrics that are better when lower
     best_scores_lower_better = {
-        "rmse": float("inf"),
-        "mae": float("inf"),
-        "mape": float("inf"),
+        C.Metric.RMSE: float("inf"),
+        C.Metric.MAE: float("inf"),
+        C.Metric.MAPE: float("inf"),
     }
-    best_params_lower_better = {"rmse": None, "mae": None, "mape": None}
+    best_params_lower_better = {
+        C.Metric.RMSE: None,
+        C.Metric.MAE: None,
+        C.Metric.MAPE: None,
+    }
 
     # Initialize metrics that are better when higher
     best_scores_higher_better = {
-        "dir_accuracy": float("-inf"),
-        "first_diff_corr": float("-inf"),
-        "spikes_f1": float("-inf"),
-        "drops_f1": float("-inf"),
+        C.Metric.DIR_ACCURACY: float("-inf"),
+        C.Metric.FIRST_DIFF_CORR: float("-inf"),
+        C.EventMetric.SPIKES_IMMEDIATE_F1: float("-inf"),
+        C.EventMetric.DROPS_IMMEDIATE_F1: float("-inf"),
     }
     best_params_higher_better = {
-        "dir_accuracy": None,
-        "first_diff_corr": None,
-        "spikes_f1": None,
-        "drops_f1": None,
+        C.Metric.DIR_ACCURACY: None,
+        C.Metric.FIRST_DIFF_CORR: None,
+        C.EventMetric.SPIKES_IMMEDIATE_F1: None,
+        C.EventMetric.DROPS_IMMEDIATE_F1: None,
     }
 
     def print_checkpoint(
@@ -313,15 +318,15 @@ def hyperparameter_search_tuning(
             log_and_print(log_file, "NEW BEST SCORES FOUND!")
             for metric, (old_score, new_score) in improvements.items():
                 is_perc = metric in [
-                    "mape",
-                    "dir_accuracy",
-                    "first_diff_corr",
-                    "spikes_f1",
-                    "drops_f1",
+                    C.Metric.MAPE,
+                    C.Metric.DIR_ACCURACY,
+                    C.Metric.FIRST_DIFF_CORR,
+                    C.EventMetric.SPIKES_IMMEDIATE_F1,
+                    C.EventMetric.DROPS_IMMEDIATE_F1,
                 ]
                 old_str = format_metric_value(old_score, is_perc)
                 new_str = format_metric_value(new_score, is_perc)
-                direction = "decreased" if metric in ["rmse", "mae", "mape"] else "increased"
+                direction = "decreased" if metric in [C.Metric.RMSE, C.Metric.MAE, C.Metric.MAPE] else "increased"
                 log_and_print(
                     log_file,
                     f"   {metric.upper()}: {old_str} -> {new_str} ({direction})",
@@ -329,37 +334,42 @@ def hyperparameter_search_tuning(
 
         log_and_print(log_file, "\nCURRENT ITERATION RESULTS (Averages across devices):")
         for metric in [
-            "rmse",
-            "mae",
-            "mape",
-            "dir_accuracy",
-            "first_diff_corr",
-            "spikes_f1",
-            "drops_f1",
+            C.Metric.RMSE,
+            C.Metric.MAE,
+            C.Metric.MAPE,
+            C.Metric.DIR_ACCURACY,
+            C.Metric.FIRST_DIFF_CORR,
+            C.EventMetric.SPIKES_IMMEDIATE_F1,
+            C.EventMetric.DROPS_IMMEDIATE_F1,
         ]:
             if metric in current_metrics:
                 is_perc = metric in [
-                    "mape",
-                    "dir_accuracy",
-                    "first_diff_corr",
-                    "spikes_f1",
-                    "drops_f1",
+                    C.Metric.MAPE,
+                    C.Metric.DIR_ACCURACY,
+                    C.Metric.FIRST_DIFF_CORR,
+                    C.EventMetric.SPIKES_IMMEDIATE_F1,
+                    C.EventMetric.DROPS_IMMEDIATE_F1,
                 ]
                 value_str = format_metric_value(current_metrics[metric], is_perc)
                 log_and_print(log_file, f"   {metric.upper()}: {value_str}")
 
         log_and_print(log_file, "\nCURRENT BEST SCORES (OVERALL):")
         # Lower is better metrics
-        for metric in ["rmse", "mae", "mape"]:
+        for metric in [C.Metric.RMSE, C.Metric.MAE, C.Metric.MAPE]:
             best_score = best_scores_lower_better[metric]
             best_params = best_params_lower_better[metric]
-            score_str = format_metric_value(best_score, metric == "mape")
+            score_str = format_metric_value(best_score, metric == C.Metric.MAPE)
             log_and_print(log_file, f"   {metric.upper()} (best: {score_str})")
             if best_params:
                 log_and_print(log_file, f"     Parameters: {best_params}")
 
         # Higher is better metrics
-        for metric in ["dir_accuracy", "first_diff_corr", "spikes_f1", "drops_f1"]:
+        for metric in [
+            C.Metric.DIR_ACCURACY,
+            C.Metric.FIRST_DIFF_CORR,
+            C.EventMetric.SPIKES_IMMEDIATE_F1,
+            C.EventMetric.DROPS_IMMEDIATE_F1,
+        ]:
             best_score = best_scores_higher_better[metric]
             best_params = best_params_higher_better[metric]
             score_str = format_metric_value(best_score, True)
@@ -373,29 +383,29 @@ def hyperparameter_search_tuning(
             # Display a summary of best scores per device for each metric
             for device_id in sorted(per_device_best_scores_lower_better.keys()):
                 # Lower is better metrics
-                rmse = per_device_best_scores_lower_better[device_id]["rmse"]
-                rmse_params = per_device_best_params_lower_better[device_id]["rmse"]
-                mae = per_device_best_scores_lower_better[device_id]["mae"]
-                mae_params = per_device_best_params_lower_better[device_id]["mae"]
-                mape = per_device_best_scores_lower_better[device_id]["mape"]
-                mape_params = per_device_best_params_lower_better[device_id]["mape"]
+                rmse = per_device_best_scores_lower_better[device_id][C.Metric.RMSE]
+                rmse_params = per_device_best_params_lower_better[device_id][C.Metric.RMSE]
+                mae = per_device_best_scores_lower_better[device_id][C.Metric.MAE]
+                mae_params = per_device_best_params_lower_better[device_id][C.Metric.MAE]
+                mape = per_device_best_scores_lower_better[device_id][C.Metric.MAPE]
+                mape_params = per_device_best_params_lower_better[device_id][C.Metric.MAPE]
                 rmse_str = format_metric_value(rmse, False)
                 mae_str = format_metric_value(mae, False)
                 mape_str = format_metric_value(mape, True)
 
                 # Higher is better metrics
-                dir_acc = per_device_best_scores_higher_better[device_id]["dir_accuracy"]
-                dir_acc_params = per_device_best_params_higher_better[device_id]["dir_accuracy"]
-                first_diff_corr = per_device_best_scores_higher_better[device_id]["first_diff_corr"]
-                first_diff_corr_params = per_device_best_params_higher_better[device_id]["first_diff_corr"]
-                spikes_f1 = per_device_best_scores_higher_better[device_id]["spikes_f1"]
-                spikes_f1_params = per_device_best_params_higher_better[device_id]["spikes_f1"]
-                drops_f1 = per_device_best_scores_higher_better[device_id]["drops_f1"]
-                drops_f1_params = per_device_best_params_higher_better[device_id]["drops_f1"]
+                dir_acc = per_device_best_scores_higher_better[device_id][C.Metric.DIR_ACCURACY]
+                dir_acc_params = per_device_best_params_higher_better[device_id][C.Metric.DIR_ACCURACY]
+                first_diff_corr = per_device_best_scores_higher_better[device_id][C.Metric.FIRST_DIFF_CORR]
+                first_diff_corr_params = per_device_best_params_higher_better[device_id][C.Metric.FIRST_DIFF_CORR]
+                spikes_f1_val = per_device_best_scores_higher_better[device_id][C.EventMetric.SPIKES_IMMEDIATE_F1]
+                spikes_f1_params = per_device_best_params_higher_better[device_id][C.EventMetric.SPIKES_IMMEDIATE_F1]
+                drops_f1_val = per_device_best_scores_higher_better[device_id][C.EventMetric.DROPS_IMMEDIATE_F1]
+                drops_f1_params = per_device_best_params_higher_better[device_id][C.EventMetric.DROPS_IMMEDIATE_F1]
                 dir_acc_str = format_metric_value(dir_acc, True)
                 first_diff_corr_str = format_metric_value(first_diff_corr, True)
-                spikes_f1_str = format_metric_value(spikes_f1, True)
-                drops_f1_str = format_metric_value(drops_f1, True)
+                spikes_f1_str = format_metric_value(spikes_f1_val, True)
+                drops_f1_str = format_metric_value(drops_f1_val, True)
 
                 # Log per-device best scores
                 log_and_print(log_file, f"   Device {device_id}: ")
@@ -418,7 +428,7 @@ def hyperparameter_search_tuning(
         log_and_print(log_file, separator)
 
     # Initial log setup
-    log_and_print(log_file, f"Grid Search Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    log_and_print(log_file, f"Grid Search Started: {datetime.now().strftime(C.Format.DATETIME)}")
     log_and_print(log_file, f"Model: {model_name}")
     log_and_print(log_file, f"File prefix: {file_prefix or 'None'}")
     log_and_print(log_file, f"Total parameter combinations: {total_combinations}")
@@ -461,14 +471,14 @@ def hyperparameter_search_tuning(
                     per_device_best_params_lower_better = {}
 
                 per_device_best_scores_lower_better[device_id] = {
-                    "rmse": float("inf"),
-                    "mae": float("inf"),
-                    "mape": float("inf"),
+                    C.Metric.RMSE: float("inf"),
+                    C.Metric.MAE: float("inf"),
+                    C.Metric.MAPE: float("inf"),
                 }
                 per_device_best_params_lower_better[device_id] = {
-                    "rmse": None,
-                    "mae": None,
-                    "mape": None,
+                    C.Metric.RMSE: None,
+                    C.Metric.MAE: None,
+                    C.Metric.MAPE: None,
                 }
 
                 # For higher-better metrics
@@ -477,16 +487,16 @@ def hyperparameter_search_tuning(
                     per_device_best_params_higher_better = {}
 
                 per_device_best_scores_higher_better[device_id] = {
-                    "dir_accuracy": float("-inf"),
-                    "first_diff_corr": float("-inf"),
-                    "spikes_f1": float("-inf"),
-                    "drops_f1": float("-inf"),
+                    C.Metric.DIR_ACCURACY: float("-inf"),
+                    C.Metric.FIRST_DIFF_CORR: float("-inf"),
+                    C.EventMetric.SPIKES_IMMEDIATE_F1: float("-inf"),
+                    C.EventMetric.DROPS_IMMEDIATE_F1: float("-inf"),
                 }
                 per_device_best_params_higher_better[device_id] = {
-                    "dir_accuracy": None,
-                    "first_diff_corr": None,
-                    "spikes_f1": None,
-                    "drops_f1": None,
+                    C.Metric.DIR_ACCURACY: None,
+                    C.Metric.FIRST_DIFF_CORR: None,
+                    C.EventMetric.SPIKES_IMMEDIATE_F1: None,
+                    C.EventMetric.DROPS_IMMEDIATE_F1: None,
                 }
 
         # Process metrics for each device
@@ -496,7 +506,7 @@ def hyperparameter_search_tuning(
             all_device_improvements[device_id] = {}
 
             # Basic metrics (lower is better)
-            for metric in ["rmse", "mae", "mape"]:
+            for metric in [C.Metric.RMSE, C.Metric.MAE, C.Metric.MAPE]:
                 if metric in hourly_metrics:
                     mean_val = hourly_metrics[metric]["mean"]
                     if np.isfinite(mean_val):  # skip NaNs/Infs
@@ -512,14 +522,14 @@ def hyperparameter_search_tuning(
                             per_device_best_params_lower_better[device_id][metric] = params.copy()
 
             # Higher is better metrics
-            for metric, hourly_key in [
-                ("dir_accuracy", "dir_accuracy"),
-                ("first_diff_corr", "first_diff_corr"),
-                ("spikes_f1", "spikes_immediate.f1"),
-                ("drops_f1", "drops_immediate.f1"),
+            for metric in [
+                C.Metric.DIR_ACCURACY,
+                C.Metric.FIRST_DIFF_CORR,
+                C.EventMetric.SPIKES_IMMEDIATE_F1,
+                C.EventMetric.DROPS_IMMEDIATE_F1,
             ]:
-                if hourly_key in hourly_metrics:
-                    mean_val = hourly_metrics[hourly_key]["mean"]
+                if metric in hourly_metrics:
+                    mean_val = hourly_metrics[metric]["mean"]
                     if np.isfinite(mean_val):
                         per_device_metrics[device_id][metric] = mean_val
 
@@ -534,13 +544,13 @@ def hyperparameter_search_tuning(
 
         # For display purposes, compute aggregates across devices
         metric_names = [
-            "rmse",
-            "mae",
-            "mape",
-            "dir_accuracy",
-            "first_diff_corr",
-            "spikes_f1",
-            "drops_f1",
+            C.Metric.RMSE,
+            C.Metric.MAE,
+            C.Metric.MAPE,
+            C.Metric.DIR_ACCURACY,
+            C.Metric.FIRST_DIFF_CORR,
+            C.EventMetric.SPIKES_IMMEDIATE_F1,
+            C.EventMetric.DROPS_IMMEDIATE_F1,
         ]
         current_metrics = {metric: 0.0 for metric in metric_names}
         metric_counts = {metric: 0 for metric in metric_names}
@@ -556,7 +566,9 @@ def hyperparameter_search_tuning(
             if metric_counts[metric] > 0:
                 current_metrics[metric] = current_metrics[metric] / metric_counts[metric]
             else:
-                current_metrics[metric] = float("inf") if metric in ["rmse", "mae", "mape"] else float("-inf")
+                current_metrics[metric] = (
+                    float("inf") if metric in [C.Metric.RMSE, C.Metric.MAE, C.Metric.MAPE] else float("-inf")
+                )
 
         # Track improvements for display purposes
         improvements = {}
@@ -569,7 +581,7 @@ def hyperparameter_search_tuning(
                     improvements[metric] = (old_val, new_val)
 
         # Update best scores for lower-better metrics globally (for backward compatibility)
-        for metric in ["rmse", "mae", "mape"]:
+        for metric in [C.Metric.RMSE, C.Metric.MAE, C.Metric.MAPE]:
             for _device_id, device_metrics in per_device_metrics.items():
                 if metric in device_metrics:
                     if device_metrics[metric] < best_scores_lower_better[metric]:
@@ -577,7 +589,12 @@ def hyperparameter_search_tuning(
                         best_params_lower_better[metric] = params.copy()
 
         # Update best scores for higher-better metrics globally (for backward compatibility)
-        for metric in ["dir_accuracy", "first_diff_corr", "spikes_f1", "drops_f1"]:
+        for metric in [
+            C.Metric.DIR_ACCURACY,
+            C.Metric.FIRST_DIFF_CORR,
+            C.EventMetric.SPIKES_IMMEDIATE_F1,
+            C.EventMetric.DROPS_IMMEDIATE_F1,
+        ]:
             for _device_id, device_metrics in per_device_metrics.items():
                 if metric in device_metrics:
                     if device_metrics[metric] > best_scores_higher_better[metric]:
@@ -641,13 +658,18 @@ def hyperparameter_search_tuning(
     best_params = {**best_params_lower_better, **best_params_higher_better}
     best_scores = {**best_scores_lower_better, **best_scores_higher_better}
 
-    for metric in ["rmse", "mae", "mape"]:
-        score_str = format_metric_value(best_scores[metric], metric == "mape")
+    for metric in [C.Metric.RMSE, C.Metric.MAE, C.Metric.MAPE]:
+        score_str = format_metric_value(best_scores[metric], metric == C.Metric.MAPE)
         log_and_print(log_file, f"BEST {metric.upper()}: {score_str}")
         log_and_print(log_file, f"   Best Parameters: {best_params[metric]}")
         log_and_print(log_file, "")
 
-    for metric in ["dir_accuracy", "first_diff_corr", "spikes_f1", "drops_f1"]:
+    for metric in [
+        C.Metric.DIR_ACCURACY,
+        C.Metric.FIRST_DIFF_CORR,
+        C.EventMetric.SPIKES_IMMEDIATE_F1,
+        C.EventMetric.DROPS_IMMEDIATE_F1,
+    ]:
         score_str = format_metric_value(best_scores[metric], True)
         log_and_print(log_file, f"BEST {metric.upper()}: {score_str}")
         log_and_print(log_file, f"   Best Parameters: {best_params[metric]}")
@@ -656,7 +678,7 @@ def hyperparameter_search_tuning(
     log_and_print(log_file, "=" * 80)
     log_and_print(
         log_file,
-        f"Grid Search Completed: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+        f"Grid Search Completed: {datetime.now().strftime(C.Format.DATETIME)}",
     )
 
     # Log per-device results
@@ -668,16 +690,21 @@ def hyperparameter_search_tuning(
         log_and_print(log_file, "-" * 40)
 
         # Lower is better metrics
-        for metric in ["rmse", "mae", "mape"]:
+        for metric in [C.Metric.RMSE, C.Metric.MAE, C.Metric.MAPE]:
             score = per_device_best_scores_lower_better[device_id][metric]
             params = per_device_best_params_lower_better[device_id][metric]
-            score_str = format_metric_value(score, metric == "mape")
+            score_str = format_metric_value(score, metric == C.Metric.MAPE)
             log_and_print(log_file, f"BEST {metric.upper()}: {score_str}")
             if params:
                 log_and_print(log_file, f"   Best Parameters: {params}")
 
         # Higher is better metrics
-        for metric in ["dir_accuracy", "first_diff_corr", "spikes_f1", "drops_f1"]:
+        for metric in [
+            C.Metric.DIR_ACCURACY,
+            C.Metric.FIRST_DIFF_CORR,
+            C.EventMetric.SPIKES_IMMEDIATE_F1,
+            C.EventMetric.DROPS_IMMEDIATE_F1,
+        ]:
             score = per_device_best_scores_higher_better[device_id][metric]
             params = per_device_best_params_higher_better[device_id][metric]
             score_str = format_metric_value(score, True)
