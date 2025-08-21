@@ -23,6 +23,7 @@ from __future__ import annotations
 from typing import List, Optional, Sequence, Type
 
 from src.trees.fastodt import FastODT
+import src.trees.constants as C
 from sklearn.base import BaseEstimator
 import tqdm
 
@@ -100,9 +101,9 @@ class IncubationBoost:
         max_feature: float = 1.0,
         grace_period_depth: int = -1,
         eagerness: float = 0.0,
-        bin_type: str = "adaptive",
+        bin_type: str = C.HistogramType.ADAPTIVE,
         max_bins: int = 32,
-        split_criterion: str = "vr_rel",
+        split_criterion: str = C.SplitCriterion.VR_REL,
         verbose: bool = True,
     ) -> None:
         self.chain: List[FastODT] = []

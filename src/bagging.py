@@ -12,6 +12,7 @@ if parent_dir not in sys.path:
 
 
 from src.trees.fastodt import FastODT
+import src.trees.constants as C
 
 import abc
 import collections
@@ -463,13 +464,15 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
         [*Tree parameter*] The minimum number of samples every branch resulting from a split
         candidate must have to be considered valid.
     bin_type
-        [*Tree parameter*] The binning strategy used for numeric features.
+        [*FastODT parameter*] The binning strategy used for numeric features.
         - 'mean' - Bins are created based on the mean of the feature values.
         - 'adaptive' - Bins are created dynamically based on the data distribution. Defaults to 'adaptive'.z
     max_bins
-        [*Tree parameter*] The maximum number of bins to use for numeric features. Defaults to 32.
+        [*FastODT parameter*] The maximum number of bins to use for numeric features. Defaults to 32.
     inherit_bins
-        [*Tree parameter*] If True, inherit the binning strategy from the parent node. Defaults to False.
+        [*FastODT parameter*] If True, inherit the binning strategy from the parent node. Defaults to False.
+    split_criterion
+        [*FastODT parameter*] The criterion used to evaluate splits. Defaults to 'vr_rel'.
     binary_split
         [*Tree parameter*] If True, only allow binary splits.
     max_size
@@ -554,10 +557,10 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
         max_feature: float = 1.0,
         eagerness: float = 0.0,
         grace_period_depth: int = -1,
-        bin_type: str = "adaptive",
+        bin_type: str = C.HistogramType.ADAPTIVE,
         max_bins: int = 32,
         inherit_bins: bool = False,
-        split_criterion: str = "vr_rel",
+        split_criterion: str = C.SplitCriterion.VR_REL,
     ):
         super().__init__(
             n_models=n_models,

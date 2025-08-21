@@ -1,5 +1,7 @@
 """Split criteria functions for incremental decision trees."""
 
+import src.trees.constants as C
+
 
 def variance_reduction(
     left_stats: dict,
@@ -40,8 +42,8 @@ def variance_reduction(
         Absolute variance reduction (non-negative, can be 0 if no split or one
         side empty).
     """
-    left_n = left_stats["count"]
-    right_n = right_stats["count"]
+    left_n = left_stats[C.StatKey.COUNT]
+    right_n = right_stats[C.StatKey.COUNT]
     if left_n == 0 or right_n == 0:
         return 0
 
@@ -49,8 +51,8 @@ def variance_reduction(
     var_parent = (total_sum_y2 / total_n) - (total_sum_y / total_n) ** 2
 
     # Left and right variances
-    var_left = (left_stats["sum_y2"] / left_n) - (left_stats["sum_y"] / left_n) ** 2
-    var_right = (right_stats["sum_y2"] / right_n) - (right_stats["sum_y"] / right_n) ** 2
+    var_left = (left_stats[C.StatKey.SUM_Y2] / left_n) - (left_stats[C.StatKey.SUM_Y] / left_n) ** 2
+    var_right = (right_stats[C.StatKey.SUM_Y2] / right_n) - (right_stats[C.StatKey.SUM_Y] / right_n) ** 2
 
     # Weighted variance after split
     var_children = (left_n / total_n) * var_left + (right_n / total_n) * var_right
@@ -109,9 +111,9 @@ def get_split_criterion(name: str | None) -> callable:
     ValueError
         If the name is not recognized.
     """
-    if name in ["vr", "vr_abs", "reduction_abs"]:
+    if name in C.SplitCriterion.ABS_ALIASES:
         return variance_reduction
-    elif name in ["vr_rel", "vr_relative", "reduction_rel"] or name is None:
+    elif name in C.SplitCriterion.REL_ALIASES or name is None:
         return variance_reduction_relative
     else:
         raise ValueError(f"[ERROR]: Unknown split criterion: {name}")

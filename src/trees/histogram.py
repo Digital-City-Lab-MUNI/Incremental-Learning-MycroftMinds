@@ -40,6 +40,7 @@ from __future__ import annotations
 
 from typing import Type, Union, Dict, List
 import bisect
+import src.trees.constants as C
 
 
 class AdaptiveHistogram:
@@ -89,13 +90,7 @@ class AdaptiveHistogram:
         self.bin_stats: List[Dict[str, float | int]] = []  # per-bin aggregates
 
     def copy_bins(self) -> "AdaptiveHistogram":
-        """Return a deep copy of the histogram state.
-
-        Returns
-        -------
-        AdaptiveHistogram
-            Independent copy of this histogram.
-        """
+        """Return a deep copy of the histogram state."""
         new_hist = AdaptiveHistogram(self.max_bins)
         new_hist.bin_edges = list(self.bin_edges)
         new_hist.bin_stats = [dict(s) for s in self.bin_stats]
@@ -125,7 +120,11 @@ class AdaptiveHistogram:
         return new_hist
 
     def insert(self, x: float, y: float) -> None:
-        """Insert a new sample.
+        """Insert a new sample into one of the bins.
+
+        * If the value falls into an existing bin, update that bin's statistics.
+        * If the value exceeds the current bin limits, create a new bin.
+        * If the number of bins exceeds the maximum, merge the two least populated bins.
 
         Parameters
         ----------
@@ -137,7 +136,7 @@ class AdaptiveHistogram:
         # if empty: create first bin
         if not self.bin_edges:
             self.bin_edges.append(x)
-            self.bin_stats.append({"count": 1, "sum_y": y, "sum_y2": y * y})
+            self.bin_stats.append({C.StatKey.COUNT: 1, C.StatKey.SUM_Y: y, C.StatKey.SUM_Y2: y * y})
             return
 
         # find insertion index
@@ -146,44 +145,37 @@ class AdaptiveHistogram:
         # new extreme on the left → create new left‐most bin
         if idx == 0 and x < self.bin_edges[0]:
             self.bin_edges.insert(0, x)
-            self.bin_stats.insert(0, {"count": 1, "sum_y": y, "sum_y2": y * y})
+            self.bin_stats.insert(0, {C.StatKey.COUNT: 1, C.StatKey.SUM_Y: y, C.StatKey.SUM_Y2: y * y})
 
         # new extreme on the right → create new right‐most bin
         elif idx == len(self.bin_edges) and x > self.bin_edges[-1]:
             self.bin_edges.append(x)
-            self.bin_stats.append({"count": 1, "sum_y": y, "sum_y2": y * y})
+            self.bin_stats.append({C.StatKey.COUNT: 1, C.StatKey.SUM_Y: y, C.StatKey.SUM_Y2: y * y})
 
         else:
             # falls into existing bin at idx (or between idx-1 and idx)
             # we choose to aggregate into bin idx
             st = self.bin_stats[idx]
-            st["count"] += 1
-            st["sum_y"] += y
-            st["sum_y2"] += y * y
+            st[C.StatKey.COUNT] += 1
+            st[C.StatKey.SUM_Y] += y
+            st[C.StatKey.SUM_Y2] += y * y
 
         # merge if we exceeded max_bins
         if len(self.bin_stats) > self.max_bins:
             self._merge_bins()
 
     def _merge_bins(self) -> None:
-        """Merge the least-populated adjacent pair of bins.
-
-        Notes
-        -----
-        Uses a greedy heuristic selecting the pair with minimal combined
-        ``count`` to reduce total bins while attempting to minimize information
-        loss.
-        """
-        # find the smallest‐count adjacent pair
+        """Merge the least-populated adjacent pair of bins."""
+        # find the smallest-count adjacent pair
         i = min(
             range(len(self.bin_stats) - 1),
-            key=lambda j: self.bin_stats[j]["count"] + self.bin_stats[j + 1]["count"],
+            key=lambda j: self.bin_stats[j][C.StatKey.COUNT] + self.bin_stats[j + 1][C.StatKey.COUNT],
         )
         # merge bin i+1 into bin i
         a, b = self.bin_stats[i], self.bin_stats[i + 1]
-        a["count"] += b["count"]
-        a["sum_y"] += b["sum_y"]
-        a["sum_y2"] += b["sum_y2"]
+        a[C.StatKey.COUNT] += b[C.StatKey.COUNT]
+        a[C.StatKey.SUM_Y] += b[C.StatKey.SUM_Y]
+        a[C.StatKey.SUM_Y2] += b[C.StatKey.SUM_Y2]
         del self.bin_stats[i + 1]
         del self.bin_edges[i]
 
@@ -226,29 +218,16 @@ class AdaptiveHistogram:
         return mids
 
     def aggregate_stats(self, threshold: float, left: bool = True) -> Dict[str, float | int]:
-        """Aggregate statistics on one side of a threshold.
-
-        Parameters
-        ----------
-        threshold : float
-            Threshold dividing the histogram.
-        left : bool, default=True
-            If True aggregate edges ``<= threshold`` else edges ``> threshold``.
-
-        Returns
-        -------
-        dict
-            Keys: ``count`` (int), ``sum_y`` (float), ``sum_y2`` (float).
-        """
+        """Aggregate statistics on one side of a threshold."""
         count = 0
         sum_y = 0.0
         sum_y2 = 0.0
         for edge, stat in zip(self.bin_edges, self.bin_stats, strict=True):
             if (left and edge <= threshold) or (not left and edge > threshold):
-                count += int(stat["count"])
-                sum_y += float(stat["sum_y"])
-                sum_y2 += float(stat["sum_y2"])
-        return {"count": count, "sum_y": sum_y, "sum_y2": sum_y2}
+                count += int(stat[C.StatKey.COUNT])
+                sum_y += float(stat[C.StatKey.SUM_Y])
+                sum_y2 += float(stat[C.StatKey.SUM_Y2])
+        return {C.StatKey.COUNT: count, C.StatKey.SUM_Y: sum_y, C.StatKey.SUM_Y2: sum_y2}
 
 
 class EquiWidthHistogram:
@@ -307,7 +286,9 @@ class EquiWidthHistogram:
         width = (self.max_val - self.min_val) / self.max_bins
         # build bin boundaries and zeroed stats
         self.bin_edges = [self.min_val + width * (i + 1) for i in range(self.max_bins)]
-        self.bin_stats = [{"count": 0, "sum_y": 0.0, "sum_y2": 0.0} for _ in range(self.max_bins)]
+        self.bin_stats = [
+            {C.StatKey.COUNT: 0, C.StatKey.SUM_Y: 0.0, C.StatKey.SUM_Y2: 0.0} for _ in range(self.max_bins)
+        ]
 
     def copy_bins(self) -> "EquiWidthHistogram":
         """Return a deep copy of the histogram state."""
@@ -386,9 +367,9 @@ class EquiWidthHistogram:
             idx = int(ratio * self.max_bins)
             idx = max(0, min(self.max_bins - 1, idx))
         st = self.bin_stats[idx]
-        st["count"] += 1
-        st["sum_y"] += y
-        st["sum_y2"] += y * y
+        st[C.StatKey.COUNT] += 1
+        st[C.StatKey.SUM_Y] += y
+        st[C.StatKey.SUM_Y2] += y * y
 
     def get_candidates(self) -> List[float]:
         """Return midpoint split candidates between successive boundaries.
@@ -436,15 +417,7 @@ class MeanSplitterHistogram:
         self.right_sum_y2: float = 0.0
 
     def insert(self, x: float, y: float) -> None:
-        """Insert a new sample updating left/right aggregates.
-
-        Parameters
-        ----------
-        x : float
-            Feature value.
-        y : float
-            Target value.
-        """
+        """Insert a new sample updating left/right aggregates."""
         self.count += 1
         self.sum_x += x
         self.sum_y += y
@@ -467,13 +440,7 @@ class MeanSplitterHistogram:
                 self.right_sum_y2 += y * y
 
     def get_candidates(self) -> List[float]:
-        """Return the current running mean as the sole split candidate.
-
-        Returns
-        -------
-        list[float]
-            Single-element list containing the mean, or empty if no samples.
-        """
+        """Return a single-element list with the current running mean as the sole split candidate."""
         if self.count == 0:
             return []
         return [self.sum_x / self.count]
@@ -489,8 +456,8 @@ class MeanSplitterHistogram:
     def bin_stats(self) -> List[Dict[str, float | int]]:
         """Synthetic two-bin statistics (left ``<=`` mean, right ``>`` mean)."""
         return [
-            {"count": self.left_count, "sum_y": self.left_sum_y, "sum_y2": self.left_sum_y2},
-            {"count": self.right_count, "sum_y": self.right_sum_y, "sum_y2": self.right_sum_y2},
+            {C.StatKey.COUNT: self.left_count, C.StatKey.SUM_Y: self.left_sum_y, C.StatKey.SUM_Y2: self.left_sum_y2},
+            {C.StatKey.COUNT: self.right_count, C.StatKey.SUM_Y: self.right_sum_y, C.StatKey.SUM_Y2: self.right_sum_y2},
         ]
 
     def copy_bins(self) -> "MeanSplitterHistogram":
@@ -564,14 +531,14 @@ class MeanSplitterHistogram:
         """
         if left:
             return {
-                "count": self.left_count,
-                "sum_y": self.left_sum_y,
-                "sum_y2": self.left_sum_y2,
+                C.StatKey.COUNT: self.left_count,
+                C.StatKey.SUM_Y: self.left_sum_y,
+                C.StatKey.SUM_Y2: self.left_sum_y2,
             }
         return {
-            "count": self.right_count,
-            "sum_y": self.right_sum_y,
-            "sum_y2": self.right_sum_y2,
+            C.StatKey.COUNT: self.right_count,
+            C.StatKey.SUM_Y: self.right_sum_y,
+            C.StatKey.SUM_Y2: self.right_sum_y2,
         }
 
 
@@ -594,10 +561,10 @@ def get_histogram_type(name: str | None) -> Type[Union[AdaptiveHistogram, EquiWi
     ValueError
         If ``name`` is unrecognized.
     """
-    if name is None or name == "adaptive":
+    if name is None or name == C.HistogramType.ADAPTIVE:
         return AdaptiveHistogram
-    if name == "equiwidth":
+    if name == C.HistogramType.EQUIWIDTH:
         return EquiWidthHistogram
-    if name in ("mean", "average"):
+    if name in (C.HistogramType.MEAN, C.HistogramType.AVERAGE):
         return MeanSplitterHistogram
     raise ValueError(f"Unknown histogram type: {name}")

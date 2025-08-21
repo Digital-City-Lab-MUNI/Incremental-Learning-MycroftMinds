@@ -22,11 +22,12 @@ from src.trees.node_hf import NodeHoeffdingBound
 from src.utils.utils import ensure_2d_array
 from src.trees.split_criteria import get_split_criterion
 from src.trees.histogram import get_histogram_type
+import src.trees.constants as C
 import numpy as np
 import pandas as pd
 import tqdm
 import time
-from typing import Sequence, Union, Any
+from typing import Sequence, Union
 
 
 class FastODT(BaseTree):
@@ -79,10 +80,10 @@ class FastODT(BaseTree):
         max_feature: float = 1.0,
         eagerness: float = 0.0,
         grace_period_depth: int = -1,
-        bin_type: Union[str, Any] = "adaptive",
+        bin_type: Union[str, callable] = C.HistogramType.ADAPTIVE,
         max_bins: int = 16,
         inherit_bins: bool = False,
-        split_criterion: Union[str, Any] = "vr_rel",
+        split_criterion: Union[str, callable] = C.SplitCriterion.VR_REL,
     ) -> None:
         self.grace_period = grace_period  # Number of samples before checking for a split
         self.split_confidence = split_confidence  # Confidence level for splitting
