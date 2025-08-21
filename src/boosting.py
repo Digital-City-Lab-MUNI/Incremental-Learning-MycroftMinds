@@ -146,7 +146,7 @@ class IncubationBoost:
         pruning_index: Optional[int] = None
         prev_pruning_error_rate = float("inf")
 
-        if not self.chain:
+        if len(self.chain) == 0:
             new_node = self.base_learner(
                 depth=self.depth,
                 grace_period=self.grace_period,
@@ -298,7 +298,7 @@ class IncubationBoost:
 #         pruning_index: Optional[int] = None
 #         prev_pruning_error_rate = float("inf")
 
-#         if not self.chain:
+#         if len(self.chain) == 0:
 #             new_node = self.base_learner(**self.base_learner_params)
 #             self.chain.append(new_node)
 
