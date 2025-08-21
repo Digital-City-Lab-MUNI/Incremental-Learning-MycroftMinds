@@ -163,16 +163,7 @@ class FastODT(BaseTree):
                 self._update_tree(self.root, X[i], y[i], depth=0)
 
     def learn_one(self, x: Union[np.ndarray, Sequence[float], dict, pd.DataFrame], y: float) -> None:
-        """Update the model with a single observation.
-
-        Parameters
-        ----------
-        x : array-like or dict or pd.DataFrame
-            Single sample features. A dictionary will use its values in
-            insertion order; a DataFrame must be 1 row.
-        y : float
-            Target value.
-        """
+        """Update the model with a single observation."""
         if isinstance(x, dict):
             x = np.asarray(list(x.values()))
         elif isinstance(x, pd.DataFrame):
@@ -184,18 +175,7 @@ class FastODT(BaseTree):
         self._update_tree(self.root, x, y, depth=0)
 
     def predict_one(self, x: Union[np.ndarray, Sequence[float], dict]) -> float:
-        """Predict target for a single sample.
-
-        Parameters
-        ----------
-        x : array-like or dict
-            Feature vector.
-
-        Returns
-        -------
-        float
-            Predicted target value.
-        """
+        """Predict target for a single sample."""
         if isinstance(x, dict):
             x = np.asarray(list(x.values()))
         else:
@@ -205,6 +185,7 @@ class FastODT(BaseTree):
         return self.predict(x)
 
     def _update_tree(self, node: NodeHoeffdingBound, x: np.ndarray, y: float, depth: int = 0) -> None:
+        """Update the tree with a new sample."""
         # Check if we reached the maximum depth
         if depth >= self.depth:
             return
@@ -223,6 +204,7 @@ class FastODT(BaseTree):
                 self._update_tree(node.right, x, y, depth + 1)
 
     def _attempt_split(self, node: NodeHoeffdingBound, depth: int) -> None:
+        """Attempt to split the node when the Hoeffding Bound indicates a split is warranted."""
         best_split, _ = node.find_best_split()  # here happens hf bound calculation
         if self.splits[depth] is not None:
             node.split(self.splits[depth], self.split_confidence)

@@ -163,23 +163,8 @@ def load_checkpoint_results(results_dir: str) -> Dict[str, Any]:
 
 
 def list_log_files(results_dir: str) -> List[str]:
-    """
-    List all log files in the results directory.
-
-    Parameters
-    ----------
-    results_dir : str
-        Directory containing log files.
-
-    Returns
-    -------
-    List[str]
-        List of log file paths.
-    """
-    if not os.path.exists(results_dir):
-        print(f"Results directory {results_dir} does not exist.")
-        return []
-
+    """List all log files in the results directory."""
+    try:
     log_files = glob.glob(f"{results_dir}/*.txt")
     log_files.sort()
 
@@ -192,16 +177,7 @@ def list_log_files(results_dir: str) -> List[str]:
 
 
 def view_log_tail(log_file: str, lines: int = 20) -> None:
-    """
-    View the last N lines of a log file.
-
-    Parameters
-    ----------
-    log_file : str
-        Path to the log file.
-    lines : int, optional
-        Number of lines to show from the end.
-    """
+    """View the last N lines of a log file."""
     try:
         with open(log_file, "r", encoding="utf-8") as f:
             all_lines = f.readlines()
@@ -215,8 +191,10 @@ def view_log_tail(log_file: str, lines: int = 20) -> None:
 
 
 def format_metric_value(value: float, is_percentage: bool = False) -> str:
-    """
-    Format metric values for display.
+    """Format the numeric value based on its type.
+
+    * For percentage metrics, the value is formatted as a percentage (e.g., ``75.00%``).
+    * For other metrics, the value is formatted as a float with three decimal places (e.g., ``123.456``).
 
     Parameters
     ----------

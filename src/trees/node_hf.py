@@ -226,8 +226,8 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
 
         Notes
         -----
-        - For relative reduction, ``R`` is fixed to 1.0 (as the range is normalized).
-        - For absolute reduction, ``R`` is calculated as ``0.25 * (y_max - y_min) ** 2``,
+        * For relative reduction, ``R`` is fixed to 1.0 (as the range is normalized).
+        * For absolute reduction, ``R`` is calculated as ``0.25 * (y_max - y_min) ** 2``,
           which is the Popoviciu upper bound.
         """
         # fixed range
@@ -239,7 +239,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
             return 0.25 * (self.y_max - self.y_min) ** 2  # Popoviciu upper bound
 
     def find_best_split(self) -> tuple:
-        """Return best split if Hoeffding test passes, else ``(None,None)``."""
+        """Return best split if Hoeffding Bound criterion is met, else ``(None, None)``."""
         self.eager_splitting_counter += self.prev_splitting_period / self.split_ideal_period * self.eagerness
         self.split_period_counter += 1
 

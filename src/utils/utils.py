@@ -23,49 +23,15 @@ import random
 from typing import Tuple, Sequence
 
 
-def get_unique_random_numbers(N: int, M: int) -> list[int]:
-    """Return ``N`` distinct random integers from ``range(M)``.
-
-    Parameters
-    ----------
-    N : int
-        Number of unique integers to draw.
-    M : int
-        Upper bound (exclusive) of the sampling range. Must satisfy ``N <= M``.
-
-    Returns
-    -------
-    list[int]
-        List of length ``N`` containing unique integers in ``[0, M)``.
-
-    Raises
-    ------
-    ValueError
-        If ``N > M``.
-    """
-    if N > M:
-        raise ValueError("N must be less than or equal to M")
-    return random.sample(range(M), N)
+def get_unique_random_numbers(N: int, upper_bound: int) -> list[int]:
+    """Sample ``N`` distinct random integers from ``range(upper_bound)``."""
+    if N > upper_bound:
+        raise ValueError("N must be less than or equal to upper_bound")
+    return random.sample(range(upper_bound), N)
 
 
 def ensure_2d_array(X: np.ndarray | Sequence[float]) -> np.ndarray:
-    """Ensure that input is 2D.
-
-    Converts the input to a NumPy array and reshapes 1D arrays to shape
-    ``(1, n_features)`` so that downstream code expecting 2D matrices (e.g.
-    scikit-learn) can operate uniformly.
-
-    Parameters
-    ----------
-    X : array-like
-        Input data; any array-like convertible to ``np.ndarray``.
-
-    Returns
-    -------
-    numpy.ndarray
-        2D array. If input was already 2D it is returned unchanged (aside from
-        ``np.asarray`` coercion). If 1D it becomes a single-row 2D array.
-    """
+    """Ensure that input is 2D. Converts the input to a NumPy array and reshapes 1D arrays to ``(1, n_features)``."""
     X = np.asarray(X)
     if X.ndim == 1:
         X = X.reshape(1, -1)

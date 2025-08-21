@@ -96,12 +96,5 @@ class ADWIN:
         return math.sqrt(1 / (2 * harmonic_mean_n) / self.delta)
 
     def isDrift(self) -> bool:
-        """
-        Check if a change (drift) has been detected.
-
-        Returns
-        -------
-        bool
-            True if change detected, False otherwise.
-        """
+        """Check if a change (drift) has been detected."""
         return self.change_detected

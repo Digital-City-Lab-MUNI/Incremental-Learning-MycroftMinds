@@ -134,15 +134,7 @@ class IncubationBoost:
             self.tqdm = tqdm.tqdm
 
     def partial_fit(self, X: Sequence[Sequence[float]], y: Sequence[float]) -> None:
-        """Incrementally fit on a batch of samples.
-
-        Parameters
-        ----------
-        X : sequence of sequence of float
-            Feature matrix (row-major). Each inner sequence is a sample.
-        y : sequence of float
-            Target values aligned with ``X``.
-        """
+        """Incrementally fit on a batch of samples."""
         iterator = range(len(X)) if not self.verbose else self.tqdm(range(len(X)))
         for i in iterator:
             self._partial_fit(X[i], y[i])
@@ -231,18 +223,7 @@ class IncubationBoost:
         return None
 
     def predict(self, X: Sequence[float]) -> float:
-        """Predict a target value for a single feature vector.
-
-        Parameters
-        ----------
-        X : sequence of float
-            Feature vector.
-
-        Returns
-        -------
-        float
-            Ensemble prediction (sum of learner predictions with shrinkage).
-        """
+        """Predict a single target value for a single feature vector."""
         y_pred = 0.0
         for n, node in enumerate(self.chain):
             y_pred += node.predict(X) * (1.0 if n == 0 else self.learning_rate)
