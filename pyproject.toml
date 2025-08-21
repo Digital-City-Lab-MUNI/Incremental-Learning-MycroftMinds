@@ -18,7 +18,7 @@ lint.extend-select = [
   "D417",  # Missing argument descriptions
 ]
 
-# Ignore codes
+# Ignore these codes
 lint.ignore = [
   "D105",  # Missing docstring in magic method
   "D107",  # Missing __init__ docstring
