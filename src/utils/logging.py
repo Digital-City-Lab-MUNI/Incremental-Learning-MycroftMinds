@@ -30,7 +30,7 @@ def setup_log_directory(log_dir: Optional[str] = None, log_prefix: Optional[str]
     if log_dir is None:
         if log_prefix is None:
             log_prefix = "tuning"
-        log_dir = f"../results/{log_prefix}_results"
+        log_dir = f"../../results/{log_prefix}"
 
     os.makedirs(log_dir, exist_ok=True)
     return log_dir
@@ -54,7 +54,7 @@ def create_log_file(log_dir: str, model_name: str, file_prefix: Optional[str] = 
     str
         Path to the log file.
     """
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     if file_prefix:
         filename = f"{timestamp}_{file_prefix}_{model_name}_tuning.txt"
@@ -156,6 +156,9 @@ def load_checkpoint_results(results_dir: str) -> Dict[str, Any]:
             with open(file_path, "rb") as f:
                 results[model_name] = pickle.load(f)
             print(f"Loaded {model_name} results")
+
+        except FileNotFoundError:
+            print(f"Results file {file_path} does not exist.")
         except Exception as e:
             print(f"Failed to load {model_name}: {e}")
 
@@ -165,15 +168,21 @@ def load_checkpoint_results(results_dir: str) -> Dict[str, Any]:
 def list_log_files(results_dir: str) -> List[str]:
     """List all log files in the results directory."""
     try:
-    log_files = glob.glob(f"{results_dir}/*.txt")
-    log_files.sort()
+        log_files = glob.glob(f"{results_dir}/*.txt")
+        log_files.sort()
 
-    print(f"Available log files in {results_dir}:")
-    for log_file in log_files:
-        file_size = os.path.getsize(log_file)
-        print(f"  {os.path.basename(log_file)} ({file_size} bytes)")
+        print(f"Available log files in {results_dir}:")
+        for log_file in log_files:
+            file_size = os.path.getsize(log_file)
+            print(f"  {os.path.basename(log_file)} ({file_size} bytes)")
 
-    return log_files
+        return log_files
+
+    except FileNotFoundError:
+        print(f"Results directory {results_dir} does not exist.")
+    except Exception as e:
+        print(f"Error listing log files: {e}")
+        return []
 
 
 def view_log_tail(log_file: str, lines: int = 20) -> None:
@@ -186,6 +195,8 @@ def view_log_tail(log_file: str, lines: int = 20) -> None:
             print("=" * 60)
             for line in tail_lines:
                 print(line.rstrip())
+    except FileNotFoundError:
+        print(f"Log file {log_file} does not exist.")
     except Exception as e:
         print(f"Error reading log file: {e}")
 
