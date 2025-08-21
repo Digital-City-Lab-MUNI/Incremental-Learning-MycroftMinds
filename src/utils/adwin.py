@@ -11,7 +11,7 @@ import math
 
 
 class ADWIN:
-    """Adaptive Windowing (ADWIN) change detector.
+    """Adaptive Windowing (ADWIN) drift detector.
 
     Parameters
     ----------
@@ -25,8 +25,8 @@ class ADWIN:
         Internal window of recent samples.
     n : int
         Total number of processed samples.
-    change_detected : bool
-        Whether a change was detected upon the last update.
+    drift_detected : bool
+        Whether a drift was detected upon the last update.
     max_windows : int
         Maximum number of elements retained in the window (cap).
     """
@@ -35,26 +35,14 @@ class ADWIN:
         self.delta = delta
         self.window = deque()
         self.n = 0
-        self.change_detected = False
+        self.drift_detected = False
         self.max_windows = 100
 
     def add_sample(self, sample: float) -> None:
-        """
-        Add a sample to the ADWIN window and check for change detection.
-
-        Parameters
-        ----------
-        sample : float
-            The new sample to add to the window.
-
-        Notes
-        -----
-        Adding a sample will not immediately trigger a change detection. If a change is
-        detected, the window is updated accordingly.
-        """
+        """Add a sample to the ADWIN window and check for drift detection."""
         self.window.append(sample)
         self.n += 1
-        self.change_detected = False
+        self.drift_detected = False
 
         if len(self.window) > 2:
             for division_index in range(1, len(self.window)):
@@ -70,7 +58,7 @@ class ADWIN:
                     for _ in range(division_index):
                         self.window.popleft()
                         self.n -= 1
-                    self.change_detected = True
+                    self.drift_detected = True
                     return
         if len(self.window) > self.max_windows:
             self.window.popleft()
@@ -78,7 +66,7 @@ class ADWIN:
 
     def bound(self, n_left: int, n_right: int) -> float:
         """
-        Calculate the statistical bound for change detection.
+        Calculate the statistical bound for drift detection.
 
         Parameters
         ----------
@@ -97,4 +85,4 @@ class ADWIN:
 
     def isDrift(self) -> bool:
         """Check if a change (drift) has been detected."""
-        return self.change_detected
+        return self.drift_detected
