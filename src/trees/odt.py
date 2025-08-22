@@ -1,97 +1,113 @@
-from sklearn.model_selection import train_test_split
+"""Oblivious Decision Tree (ODT) implementation for regression.
+
+Applies a single (feature, threshold) split uniformly across all nodes at a
+given depth level, enabling fast traversal and compact models.
+"""
+
 from sklearn.metrics import mean_absolute_error
 from matplotlib import pyplot as plt
 from tree import BaseTree, Node
 import numpy as np
+
+
 class ODTree(BaseTree):
+    """Oblivious depth-limited regression tree (same split per level).
 
-    def __init__(self,depth):
-        super(ODTree, self).__init__(depth)
-        self.splits = [None] * depth
-        self.already_used_features = dict()
+    Uses one (feature, threshold) pair per depth level applied uniformly to
+    all nodes at that level (oblivious structure). Splits are chosen greedily
+    by maximizing variance reduction. A feature is not reused until all have
+    been used (unless ``depth`` exceeds the number of features).
 
-    def fit(self,X,y):
-        self.root = self.__grow(X,y,X,y,depth = 0)
+    Parameters
+    ----------
+    depth : int
+        Maximum tree depth (number of split levels).
+    """
 
-    def __grow(self,X,y,X_masked,y_masked,depth) -> Node:
+    def __init__(self, depth: int) -> None:
+        super().__init__(depth)
+        self.splits: list[tuple] = [None] * depth
+        self.already_used_features: dict[int, list] = {}
 
-        ''' get mean value for regression'''
-        if  len(y_masked) == 0:
+    def fit(self, X: np.ndarray, y: np.ndarray) -> None:
+        """Fit tree, computing uniform splits per depth level."""
+        self.root = self.__grow(X, y, X, y, depth=0)
+
+    def __grow(self, X: np.ndarray, y: np.ndarray, X_masked: np.ndarray, y_masked: np.ndarray, depth: int) -> Node:
+        """Recursive builder applying level-wise (oblivious) splits.
+
+        Returns a leaf when maximum depth reached or no valid split exists.
+        """
+        if len(y_masked) == 0:
             value = 0
         else:
             value = sum(y_masked) / len(y_masked)
-
-        ''' check depth '''
+        # depth check
         if depth >= self.depth:
-            return Node(value = value)
+            return Node(value=value)
 
         # check if split for this level exists, if not then find new split
         if not self.splits[depth]:
-            self.splits[depth] = self.__split(X,y)
-        threshold, feature = self.splits[depth][0], self.splits[depth][1]
+            self.splits[depth] = self.__split(X, y)
+        threshold, feature = self.splits[depth]
 
-        if threshold == None or feature == None:
-            return Node(value = value)
+        if threshold is None or feature is None:
+            return Node(value=value)
 
         left_indices = X_masked[:, feature] < threshold
         right_indices = ~left_indices
 
-        left_child = self.__grow(X,y,X_masked[left_indices],y_masked[left_indices],depth+1)
-        right_child = self.__grow(X,y,X_masked[right_indices],y_masked[right_indices],depth+1)
+        left_child = self.__grow(X, y, X_masked[left_indices], y_masked[left_indices], depth + 1)
+        right_child = self.__grow(X, y, X_masked[right_indices], y_masked[right_indices], depth + 1)
 
         return Node(
-            value    = value,
-            feature  = feature,
-            threshold= threshold,
-            left     = left_child,
-            right    = right_child
+            value=value,
+            feature=feature,
+            threshold=threshold,
+            left=left_child,
+            right=right_child,
         )
 
-    def __areAllFeaturesUsed(self,X):
-        ret = True
-        for feature,_ in enumerate(X[0, :]):
-            if feature not in self.already_used_features:
-                ret = False
-        return ret
+    def __areAllFeaturesUsed(self, X: np.ndarray) -> bool:
+        """Return True if each feature index appears in already-used map."""
+        return all(feature in self.already_used_features for feature, _ in enumerate(X[0, :]))
 
-    def __split(self,X,y) -> {int,int}:
-        __best_variance = 0
+    def __split(self, X: np.ndarray, y: np.ndarray) -> tuple:
+        """Find best (threshold, feature) maximizing variance reduction."""
+        __best_variance: float = 0
         __best_threshold = None
         __best_feature = None
 
-        for feature,_ in enumerate(X[0, :]):
-
+        for feature, _ in enumerate(X[0, :]):
             # if all features were used, then allow for reusing feature
             if feature in self.already_used_features and not self.__areAllFeaturesUsed(X):
                 continue
 
             thresholds = X[:, feature]
             for threshold in thresholds:
-
                 if feature in self.already_used_features:
                     if threshold in self.already_used_features[feature]:
                         continue
 
-                left_mask = X[:,feature] < threshold
+                left_mask = X[:, feature] < threshold
                 right_mask = ~left_mask
 
-                ''' check if mask is doing any split and not just moving all data into right or left set'''
+                # ensure split is non-trivial
                 if sum(left_mask) == 0 or sum(right_mask) == 0:
                     continue
 
-                variance = self._variance_reduction(y,y[left_mask],y[right_mask])
+                variance = self._variance_reduction(y, y[left_mask], y[right_mask])
                 if variance > __best_variance:
                     __best_variance = variance
                     __best_threshold = threshold
                     __best_feature = feature
 
-        if __best_feature != None:
+        if __best_feature is not None:
             self.already_used_features[__best_feature] = [__best_threshold]
         return __best_threshold, __best_feature
 
 
 if __name__ == "__main__":
-
     tree = ODTree(depth=3)
     # Generate synthetic data following a sine wave pattern
     X = np.linspace(0, 10, 100).reshape(-1, 1)  # Features: 100 points from 0 to 10

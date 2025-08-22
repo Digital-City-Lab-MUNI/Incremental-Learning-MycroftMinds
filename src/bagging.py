@@ -12,6 +12,7 @@ if parent_dir not in sys.path:
 
 
 from src.trees.fastodt import FastODT
+import src.trees.constants as C
 
 import abc
 import collections
@@ -76,7 +77,7 @@ class BaseForest(base.Ensemble):
             self._drift_detection_disabled = False
 
         # The background models
-        self._background = ( # : list[BaseTreeClassifier | BaseTreeRegressor | None]
+        self._background = (  # : list[BaseTreeClassifier | BaseTreeRegressor | None]
             None if self._warning_detection_disabled else [None] * self.n_models  # type: ignore
         )
 
@@ -112,7 +113,7 @@ class BaseForest(base.Ensemble):
         raise NotImplementedError
 
     @abc.abstractmethod
-    def _new_base_model(self): # -> BaseTreeClassifier | BaseTreeRegressor:
+    def _new_base_model(self):  # -> BaseTreeClassifier | BaseTreeRegressor:
         raise NotImplementedError
 
     def n_warnings_detected(self, tree_id: int | None = None) -> int:
@@ -175,8 +176,7 @@ class BaseForest(base.Ensemble):
                 y_true=y,
                 y_pred=(
                     model.predict_proba_one(x)
-                    if isinstance(self.metric, metrics.base.ClassificationMetric)
-                    and not self.metric.requires_labels
+                    if isinstance(self.metric, metrics.base.ClassificationMetric) and not self.metric.requires_labels
                     else y_pred
                 ),
             )
@@ -202,11 +202,7 @@ class BaseForest(base.Ensemble):
                         self._warning_tracker[i] += 1
 
                 if not self._drift_detection_disabled:
-                    drift_input = (
-                        drift_input
-                        if drift_input is not None
-                        else self._drift_detector_input(i, y, y_pred)
-                    )
+                    drift_input = drift_input if drift_input is not None else self._drift_detector_input(i, y, y_pred)
                     self._drift_detectors[i].update(drift_input)
 
                     if self._drift_detectors[i].drift_detected:
@@ -367,6 +363,7 @@ class BaseForest(base.Ensemble):
 
 #             return new_adaptive
 
+
 class ARFRegressorFODT(BaseForest, base.Regressor):
     """Adaptive Random Forest regressor based on FODT.
 
@@ -467,13 +464,15 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
         [*Tree parameter*] The minimum number of samples every branch resulting from a split
         candidate must have to be considered valid.
     bin_type
-        [*Tree parameter*] The binning strategy used for numeric features.
+        [*FastODT parameter*] The binning strategy used for numeric features.
         - 'mean' - Bins are created based on the mean of the feature values.
         - 'adaptive' - Bins are created dynamically based on the data distribution. Defaults to 'adaptive'.z
     max_bins
-        [*Tree parameter*] The maximum number of bins to use for numeric features. Defaults to 32.
+        [*FastODT parameter*] The maximum number of bins to use for numeric features. Defaults to 32.
     inherit_bins
-        [*Tree parameter*] If True, inherit the binning strategy from the parent node. Defaults to False.
+        [*FastODT parameter*] If True, inherit the binning strategy from the parent node. Defaults to False.
+    split_criterion
+        [*FastODT parameter*] The criterion used to evaluate splits. Defaults to 'vr_rel'.
     binary_split
         [*Tree parameter*] If True, only allow binary splits.
     max_size
@@ -558,10 +557,10 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
         max_feature: float = 1.0,
         eagerness: float = 0.0,
         grace_period_depth: int = -1,
-        bin_type: str = "adaptive",
+        bin_type: str = C.HistogramType.ADAPTIVE,
         max_bins: int = 32,
         inherit_bins: bool = False,
-        split_criterion: str = "vr_rel",
+        split_criterion: str = C.SplitCriterion.VR_REL,
     ):
         super().__init__(
             n_models=n_models,
@@ -592,8 +591,8 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
         self.stop_mem_management = stop_mem_management
         self.remove_poor_attrs = remove_poor_attrs
         self.merit_preprune = merit_preprune
-        self.max_feature = max_feature
         self.eagerness = eagerness
+        self.max_feature = max_feature
         self.bin_type = bin_type
         self.max_bins = max_bins
         self.inherit_bins = inherit_bins
@@ -603,8 +602,8 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
             self.aggregation_method = aggregation_method
         else:
             raise ValueError(
-                f"Invalid aggregation_method: {aggregation_method}.\n"
-                f"Valid values are: {self._VALID_AGGREGATION_METHOD}"
+                f"Invalid aggregation_method: {aggregation_method}."
+                f"\nValid values are: {self._VALID_AGGREGATION_METHOD}."
             )
 
         # Used to normalize the input for the drift trackers
@@ -666,7 +665,7 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
             bin_type=self.bin_type,
             max_bins=self.max_bins,
             inherit_bins=self.inherit_bins,
-            split_criterion=self.split_criterion
+            split_criterion=self.split_criterion,
         )
 
     def _drift_detector_input(
@@ -696,9 +695,6 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
 
 
 if __name__ == "__main__":
-    
-
-
     ARF = ARFRegressorFODT(
         n_models=10,
         max_features=1,
@@ -709,9 +705,9 @@ if __name__ == "__main__":
         grace_period=9,
         max_depth=10,
         delta=0.5,
-        #tau=0.05,
+        # tau=0.05,
     )
-    
+
     ARF.learn_one({"a": 100, "b": 2}, 30000)
     ARF.learn_one({"a": 200, "b": 3}, 30000)
     ARF.learn_one({"a": 300, "b": 4}, 30000)
