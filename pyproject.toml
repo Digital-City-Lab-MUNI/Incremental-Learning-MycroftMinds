@@ -1,0 +1,55 @@
+[tool.ruff]  # Linting options
+line-length = 120
+target-version = "py311"  # Python version
+
+# Lint rule selection
+lint.select = [
+  "E",  # pycodestyle errors
+  "F",  # pyflakes
+  #"I",  # isort (import sorting)
+  "D",  # pydocstyle
+  "B",  # flake8-bugbear
+  #"UP", # pyupgrade
+  #"N",  # pep8-naming
+  "ANN",  # Missing type annotations
+]
+
+lint.extend-select = [
+  "D417",  # Missing argument descriptions
+]
+
+# Ignore these codes
+lint.ignore = [
+  "D105",  # Missing docstring in magic method
+  "D107",  # Missing __init__ docstring
+  "D301",  # Use `r"""` if any backslashes in a docstring
+  "ANN401",  # typing.Any are disallowed
+]
+
+# Exclusions for linting (complements CLI excludes if any)
+exclude = [
+  ".venv",
+  ".vscode",
+  "__pycache__",
+  "bagging.py",
+  "ensemble_methods",
+  "**/__*.py",
+]
+
+[tool.ruff.lint.pydocstyle]  # Docstring linting options
+convention = "numpy"
+
+[tool.ruff.format]  # Formatting options
+# Exclusions for formatting
+exclude = [
+  ".venv",
+  ".vscode",
+  "__pycache__",
+  "bagging.py",
+  "ensemble_methods",
+  "**/__*.py",
+]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"

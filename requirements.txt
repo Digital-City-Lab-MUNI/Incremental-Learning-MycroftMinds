@@ -1,0 +1,14 @@
+# Core runtime dependencies
+numpy==2.2.5
+pandas==2.2.3
+scikit-learn==1.6.1
+scipy==1.15.3
+river==0.22.0
+tqdm==4.67.1
+Pympler==1.1
+ipython==9.2.0
+# Visualization
+matplotlib==3.10.3
+seaborn==0.13.2
+# Dev dependencies
+ruff==0.12.8

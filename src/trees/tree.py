@@ -1,26 +1,39 @@
+"""Simple regression tree baseline and helpers.
+
+Defines a minimal ``BaseTree`` with greedy variance-reduction splits and its
+node structure used in examples and tests.
+"""
+
 from sklearn.model_selection import train_test_split
-from src.trees.base import BaseLeaner
+from src.trees.base import BaseLearner
 import numpy as np
 
+
 class Node:
+    """Regression tree node.
+
+    Parameters
+    ----------
+    feature : int, optional
+        Index of the feature used for splitting (``None`` for leaf).
+    threshold : float, optional
+        Threshold value for split (``None`` for leaf).
+    left : Node, optional
+        Left child.
+    right : Node, optional
+        Right child.
+    value : float, optional
+        Prediction value (mean target for the leaf / node).
+    """
+
     def __init__(
         self,
         feature: int = None,
         threshold: float = None,
-        left: 'Node' = None,
-        right: 'Node' = None,
-        value: float = None
-    ):
-        """
-        Node for regression tree.
-
-        Args:
-            feature: Index of the feature to split on.
-            threshold: Threshold value for the split.
-            left: Left child node.
-            right: Right child node.
-            value: Predicted value at the node (mean of targets).
-        """
+        left: "Node" = None,
+        right: "Node" = None,
+        value: float = None,
+    ) -> None:
         self.feature = feature
         self.threshold = threshold
         self.left = left
@@ -33,117 +46,100 @@ class Node:
         print(f"{prefix}threshold: {self.threshold}")
         print(f"{prefix}value: {self.value}")
 
-class BaseTree(BaseLeaner):
-    def __init__(self, depth: int):
-        """
-        Base regression tree.
 
-        Args:
-            depth: Maximum depth of the tree.
-        """
+class BaseTree(BaseLearner):
+    """Base regression tree with greedy variance-reduction splits.
+
+    Parameters
+    ----------
+    depth : int
+        Maximum depth allowed for the tree.
+
+    Attributes
+    ----------
+    root : Node
+        Root node of the tree.
+    """
+
+    def __init__(self, depth: int) -> None:
         super().__init__()
         self.root: Node = None
         self.depth: int = depth
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> None:
-        """
-        Fit the regression tree to the data.
+        """Fit the regression tree to the data.
 
-        Args:
-            X: Feature matrix.
-            y: Target vector.
+        Parameters
+        ----------
+        X : np.ndarray
+            Feature matrix ``(n_samples, n_features)``.
+        y : np.ndarray
+            Target vector ``(n_samples,)``.
         """
-        self.root = self.__grow(X, y, depth=0)
+        self.root = self._grow(X, y, depth=0)
 
     def predict(self, X: np.ndarray) -> np.ndarray:
-        """
-        Predict target values for X.
+        """Predict target values for one or many samples.
 
-        Args:
-            X: Feature matrix or single sample.
+        Parameters
+        ----------
+        X : np.ndarray
+            1D feature vector or 2D feature matrix.
 
-        Returns:
-            Predicted values.
+        Returns
+        -------
+        np.ndarray or float
+            Prediction(s) matching the input dimensionality.
         """
         X = np.asarray(X)
         if X.ndim == 1:
-            return self.__traverse(X, self.root)
+            return self._traverse(X, self.root)
         elif X.ndim == 2:
-            return np.array([self.__traverse(x, self.root) for x in X])
+            return np.array([self._traverse(x, self.root) for x in X])
         else:
-            raise ValueError(
-                f"Received data with shape {X.shape}, but expected 1D or 2D array."
-            )
+            raise ValueError(f"Received data with shape {X.shape}, but expected 1D or 2D array.")
 
-    def __traverse(self, X: np.ndarray, node: Node) -> float:
-        """
-        Traverse the tree to make a prediction for a single sample.
-
-        Args:
-            X: Feature vector.
-            node: Current node.
-
-        Returns:
-            Predicted value.
-        """
+    def _traverse(self, X: np.ndarray, node: Node) -> float:
+        """Traverse the tree recursively for a single sample."""
         ret = node.value
         if node.threshold is None:
             return ret
 
         if X[node.feature] < node.threshold:
-            return self.__traverse(X, node.left)
+            return self._traverse(X, node.left)
         else:
-            return self.__traverse(X, node.right)
+            return self._traverse(X, node.right)
 
-    def __grow(self, X: np.ndarray, y: np.ndarray, depth: int) -> Node:
-        """
-        Recursively grow the regression tree.
-
-        Args:
-            X: Feature matrix.
-            y: Target vector.
-            depth: Current depth.
-
-        Returns:
-            Root node of the grown subtree.
-        """
+    def _grow(self, X: np.ndarray, y: np.ndarray, depth: int) -> Node:
+        """Recursively grow the regression tree returning subtree root."""
         value = float(sum(y)) / len(y)
 
         if depth >= self.depth:
             return Node(value=value)
 
-        threshold, feature = self.__split(X, y)
+        threshold, feature = self._split(X, y)
         if threshold is None or feature is None:
             return Node(value=value)
 
         left_indices = X[:, feature] < threshold
         right_indices = ~left_indices
 
-        left_child = self.__grow(X[left_indices], y[left_indices], depth + 1)
-        right_child = self.__grow(X[right_indices], y[right_indices], depth + 1)
+        left_child = self._grow(X[left_indices], y[left_indices], depth + 1)
+        right_child = self._grow(X[right_indices], y[right_indices], depth + 1)
 
         return Node(
             value=value,
             feature=feature,
             threshold=threshold,
             left=left_child,
-            right=right_child
+            right=right_child,
         )
 
-    def __split(self, X: np.ndarray, y: np.ndarray) -> tuple:
-        """
-        Find the best split for the current node.
-
-        Args:
-            X: Feature matrix.
-            y: Target vector.
-
-        Returns:
-            Tuple of (best_threshold, best_feature).
-        """
-        __best_variance = 0
-        __best_threshold = None
-        __best_feature = None
+    def _split(self, X: np.ndarray, y: np.ndarray) -> tuple:
+        """Return (threshold, feature) giving maximum variance reduction."""
+        best_variance = 0
+        best_threshold = None
+        best_feature = None
 
         for feature, _ in enumerate(X[0, :]):
             thresholds = X[:, feature]
@@ -154,30 +150,19 @@ class BaseTree(BaseLeaner):
                 if sum(left_mask) == 0 or sum(right_mask) == 0:
                     continue
                 variance = self._variance_reduction(y, y[left_mask], y[right_mask])
-                if variance > __best_variance:
-                    __best_variance = variance
-                    __best_threshold = threshold
-                    __best_feature = feature
+                if variance > best_variance:
+                    best_variance = variance
+                    best_threshold = threshold
+                    best_feature = feature
 
-        return __best_threshold, __best_feature
+        return best_threshold, best_feature
 
-    def _variance_reduction(
-        self, y: np.ndarray, y_left: np.ndarray, y_right: np.ndarray
-    ) -> float:
-        """
-        Compute variance reduction for a split.
+    def _variance_reduction(self, y: np.ndarray, y_left: np.ndarray, y_right: np.ndarray) -> float:
+        """Compute absolute variance reduction for given left/right splits."""
 
-        Args:
-            y: All target values.
-            y_left: Left split target values.
-            y_right: Right split target values.
-
-        Returns:
-            Variance reduction value.
-        """
-        def variance(labels):
-            mean = sum(labels) / len(labels)
-            return sum((x - mean) ** 2 for x in labels) / len(labels)
+        def variance(labels: np.ndarray) -> float:
+            mean = np.mean(labels)
+            return np.mean((labels - mean) ** 2)
 
         y_variance = variance(y)
         y_left_variance = variance(y_left)
@@ -190,26 +175,26 @@ class BaseTree(BaseLeaner):
 
     def show(self) -> None:
         """Print the structure of the tree."""
-        self.__traverse_show(self.root, "")
+        self._traverse_show(self.root, "")
 
-    def __traverse_show(self, node: Node, prefix: str) -> None:
+    def _traverse_show(self, node: Node, prefix: str) -> None:
         node.show(prefix)
         if node.left:
             print(f"{prefix}Left:")
-            self.__traverse_show(node.left, prefix + " ")
+            self._traverse_show(node.left, prefix + " ")
         if node.right:
             print(f"{prefix}Right:")
-            self.__traverse_show(node.right, prefix + " ")
+            self._traverse_show(node.right, prefix + " ")
 
     def show_final(self) -> None:
         """Print only the leaf nodes of the tree."""
-        self.__traverse_show_final(self.root, "")
+        self._traverse_show_final(self.root, "")
 
     def is_filled(self) -> bool:
-        """Check if the tree is fully grown to the specified depth."""
-        return self.__check_if_filled(self.root, 0)
+        """Return True if the tree is fully grown to the specified depth."""
+        return self._check_if_filled(self.root, 0)
 
-    def __check_if_filled(self, node: Node, depth: int = 0) -> bool:
+    def _check_if_filled(self, node: Node, depth: int = 0) -> bool:
         if node is None:
             return False
 
@@ -217,16 +202,16 @@ class BaseTree(BaseLeaner):
             return True
 
         if node.left:
-            return self.__check_if_filled(node.left, depth + 1)
+            return self._check_if_filled(node.left, depth + 1)
         if node.right:
-            return self.__check_if_filled(node.right, depth + 1)
+            return self._check_if_filled(node.right, depth + 1)
         return False
 
     def how_deep(self) -> bool:
-        """Check if the tree is fully grown to the specified depth."""
-        return self.__how_deep(self.root, 0)
+        """Return depth reached (max depth of any leaf)."""
+        return self._how_deep(self.root, 0)
 
-    def __how_deep(self, node: Node, depth: int = 0) -> bool:
+    def _how_deep(self, node: Node, depth: int = 0) -> bool:
         if node is None:
             return depth
 
@@ -234,29 +219,30 @@ class BaseTree(BaseLeaner):
             return depth
 
         if node.left:
-            return self.__how_deep(node.left, depth + 1)
+            return self._how_deep(node.left, depth + 1)
         if node.right:
-            return self.__how_deep(node.right, depth + 1)
+            return self._how_deep(node.right, depth + 1)
         return depth
 
-
-    def __traverse_show_final(self, node: Node, prefix: str) -> None:
+    def _traverse_show_final(self, node: Node, prefix: str) -> None:
         if node.left is None and node.right is None:
             node.show(prefix)
 
         if node.left:
-            self.__traverse_show_final(node.left, prefix + " ")
+            self._traverse_show_final(node.left, prefix + " ")
         if node.right:
-            self.__traverse_show_final(node.right, prefix + " ")
+            self._traverse_show_final(node.right, prefix + " ")
+
 
 if __name__ == "__main__":
-
-    X = np.array([
-        [2, 3], [1, 4], [3, 6], [4, 2], [5, 5],
-        [2, 3], [1, 4], [3, 6], [4, 2], [5, 5],
-        [2, 4], [3, 4], [5, 4], [4, 6], [2, 2],
-        [5, 3], [1, 6], [2, 5], [1, 3], [5, 2]
-    ])
+    X = np.array(
+        [
+            [2, 3], [1, 4], [3, 6], [4, 2], [5, 5],
+            [2, 3], [1, 4], [3, 6], [4, 2], [5, 5],
+            [2, 4], [3, 4], [5, 4], [4, 6], [2, 2],
+            [5, 3], [1, 6], [2, 5], [1, 3], [5, 2],
+        ]
+    )  # noqa
 
     y = np.array([10, 12, 15, 13, 16, 10, 12, 15, 13, 16, 11, 14, 17, 18, 9, 13, 14, 11, 12, 8])
 
@@ -274,4 +260,3 @@ if __name__ == "__main__":
         print(f"predictions[{X_eval[i]}]: {tree.predict(X_eval[i])} == {y_eval[i]}")
 
     tree.show()
-    

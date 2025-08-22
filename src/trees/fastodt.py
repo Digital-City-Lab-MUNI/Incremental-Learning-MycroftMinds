@@ -1,85 +1,96 @@
-from sklearn.metrics import mean_absolute_error
-from matplotlib import pyplot as plt 
-from src.trees.tree import BaseTree, Node
+"""Fast Online Decision Tree (FastODT).
+
+This module defines the :class:`FastODT` incremental regression tree that uses
+Hoeffding bound based split decisions with pluggable histogram summarizers and
+split criteria. The tree can be trained sample-by-sample either via
+``learn_one`` or ``partial_fit``, while maintaining statistics at each leaf and
+deciding on splits once a "grace period" worth of observations has been
+processed.
+
+Key Features
+------------
+* Hoeffding bound controlled splitting with tie-breaking threshold.
+* Support for multiple histogram binning strategies (adaptive, mean, etc.).
+* Optional feature subsampling (``max_feature`` fraction) at split evaluation.
+* Grace-period depth limitation (apply grace period only to shallow nodes).
+* Rolling error tracking through ``measure_error``.
+
+"""
+
+from src.trees.tree import BaseTree
 from src.trees.node_hf import NodeHoeffdingBound
 from src.utils.utils import ensure_2d_array
 from src.trees.split_criteria import get_split_criterion
 from src.trees.histogram import get_histogram_type
+import src.trees.constants as C
 import numpy as np
 import pandas as pd
 import tqdm
 import time
-import os
+from typing import Sequence, Union
+
 
 class FastODT(BaseTree):
-    def __init__(self, 
-                 depth=25, 
-                 grace_period=10, 
-                 split_confidence=0.01, 
-                 tie_threshold=0.05,
-                 max_feature=1.0,
-                 eagerness=0.0, 
-                 grace_period_depth=-1, 
-                 bin_type='adaptive', 
-                 max_bins=16,
-                 inherit_bins=False, 
-                 split_criterion='vr_rel'):
-        """
-        Initialize the FastODT tree model with parameters.
+    """Incremental regression tree using Hoeffding bound guided splits.
 
-        Parameters:
-        ----------
-        depth : int, optional (default=5)
-            Maximum depth of the decision tree. Controls the number of splits from the root to a leaf.
+    Parameters
+    ----------
+    depth : int, default=25
+        Maximum depth (root at depth 0). Nodes at or beyond this depth are
+        treated as leaves.
+    grace_period : int, default=10
+        Minimum number of samples a leaf observes before evaluating a split.
+    split_confidence : float, default=0.01
+        Hoeffding bound confidence (smaller values -> more eager splitting).
+    tie_threshold : float, default=0.05
+        Threshold below which competing splits are forced to break ties.
+    max_feature : float, default=1.0
+        Fraction (0,1] of features considered per split; 1.0 = all features.
+    eagerness : float, default=0.0
+        Additional factor influencing node split aggressiveness (passed down to
+        node implementation).
+    grace_period_depth : int, default=-1
+        Depth up to which the grace period applies. ``-1`` disables the limit.
+    bin_type : str or type, default="adaptive"
+        Histogram strategy identifier or class implementing the required API.
+    max_bins : int, default=16
+        Maximum bins per feature histogram.
+    inherit_bins : bool, default=False
+        If True, child nodes receive copies of parent histograms on split.
+    split_criterion : str or callable, default="vr_rel"
+        Split criterion identifier or function returning merit scores.
 
-        grace_period : int, optional (default=10)
-            Number of samples a node should observe before attempting to split.
+    Attributes
+    ----------
+    root : NodeHoeffdingBound
+        Root node of the tree.
+    splits : list
+        Cached best split (feature, threshold, ...) per depth to encourage
+        consistency among nodes at the same depth.
+    error_rates : list[float]
+        Rolling window (length 20) of recent absolute errors for monitoring.
+    """
 
-        split_confidence : float, optional (default=1.0)
-            Confidence level for splitting criterion. A higher value makes splitting more conservative.
-
-        max_feature : float, optional (default=1.0)
-            Fraction of features to consider for splitting at each node.
-
-        eagerness : float, optional (default=0.0)
-            Parameter to control the eagerness to split for Hoeffding Bound nodes.
-
-        grace_period_depth : int, optional (default=-1)
-            Grace period value to control to how deep nodes grace period should still apply. 
-            If set to 1, only first node will use grace_period, 
-            If set to 100, first 100 nodes will use grace period,
-            If set to -1, this feature is disabled (set to over 999999999999999 internally).
-
-        bin_type : str or class, optional (default='adaptive')
-            String name of histogram type (e.g., 'adaptive', 'equiwidth', 'mean') or a histogram class. If None or 'adaptive', uses AdaptiveHistogram.
-
-        max_bins : int, optional (default=32)
-            Maximum number of bins per feature per node.
-
-        inherit_bins : bool, optional (default=False)
-            If True, pass histograms from parent to children on split. If False, children start with empty histograms.
-
-        split_criterion : str or callable, optional (default=None)
-            String name of split criterion (e.g., 'variance') or a callable. If None, uses default for node type.
-
-        Attributes:
-        ----------
-        root : Node
-            The root node of the tree, initialized according to the chosen `option`.
-
-        splits : list
-            A list initialized to hold split information for each depth level.
-
-        Raises:
-        ------
-        None
-        """
+    def __init__(
+        self,
+        depth: int = 25,
+        grace_period: int = 10,
+        split_confidence: float = 0.01,
+        tie_threshold: float = 0.05,
+        max_feature: float = 1.0,
+        eagerness: float = 0.0,
+        grace_period_depth: int = -1,
+        bin_type: Union[str, callable] = C.HistogramType.ADAPTIVE,
+        max_bins: int = 16,
+        inherit_bins: bool = False,
+        split_criterion: Union[str, callable] = C.SplitCriterion.VR_REL,
+    ) -> None:
         self.grace_period = grace_period  # Number of samples before checking for a split
         self.split_confidence = split_confidence  # Confidence level for splitting
         self.depth = depth
         self.splits = [None] * depth
 
-        self.error_rates = np.zeros(20).tolist() 
+        self.error_rates = np.zeros(20).tolist()
 
         self.max_feature = max_feature
         self.grace_period_depth = grace_period_depth
@@ -102,16 +113,42 @@ class FastODT(BaseTree):
             bin_type=bin_type,
             max_bins=max_bins,
             inherit_bins=inherit_bins,
-            split_criterion=split_criterion
+            split_criterion=split_criterion,
         )
 
-    def measure_error(self, y_baseline, y_predicted):
+    def measure_error(self, y_baseline: float, y_predicted: float) -> float:
+        """Update rolling error buffer and return its mean.
+
+        Parameters
+        ----------
+        y_baseline : float
+            Ground truth target value.
+        y_predicted : float
+            Model prediction.
+
+        Returns
+        -------
+        float
+            Mean of the rolling error window (length 20).
+        """
         self.error_rates.pop(0)
         self.error_rates.append(y_baseline - y_predicted)
         return np.mean(self.error_rates)
 
-    def partial_fit(self, X: np.ndarray, y: np.ndarray, verbose: bool = False):
-        X = ensure_2d_array(X) # 10.1 -> [10.1] -> (1,1)
+    def partial_fit(self, X: np.ndarray, y: np.ndarray, verbose: bool = False) -> None:
+        """Fit the model incrementally on a batch of samples.
+
+        Parameters
+        ----------
+        X : np.ndarray
+            Feature matrix of shape (n_samples, n_features) or (n_features,) for
+            a single sample.
+        y : np.ndarray
+            Target values of shape (n_samples,) or scalar.
+        verbose : bool, default=False
+            If True, displays a progress bar via ``tqdm``.
+        """
+        X = ensure_2d_array(X)  # 10.1 -> [10.1] -> (1,1)
         y = np.asarray(y)
         if y.ndim == 0:
             y = np.array([y])
@@ -125,11 +162,8 @@ class FastODT(BaseTree):
             for i in range(len(X)):
                 self._update_tree(self.root, X[i], y[i], depth=0)
 
-    def learn_one(self, x, y: float):
-        """
-        Incrementally update the tree with a single sample (x, y).
-        x must be a 1D array-like structure that can be converted to a numpy array (or dict).
-        """
+    def learn_one(self, x: Union[np.ndarray, Sequence[float], dict, pd.DataFrame], y: float) -> None:
+        """Update the model with a single observation."""
         if isinstance(x, dict):
             x = np.asarray(list(x.values()))
         elif isinstance(x, pd.DataFrame):
@@ -140,11 +174,8 @@ class FastODT(BaseTree):
             x = x[0]
         self._update_tree(self.root, x, y, depth=0)
 
-    def predict_one(self, x):
-        """
-        Predict the output for a single sample x.
-        x must be a 1D array-like structure that can be converted to a numpy array (or dict).
-        """
+    def predict_one(self, x: Union[np.ndarray, Sequence[float], dict]) -> float:
+        """Predict target for a single sample."""
         if isinstance(x, dict):
             x = np.asarray(list(x.values()))
         else:
@@ -153,17 +184,18 @@ class FastODT(BaseTree):
             x = x[0]
         return self.predict(x)
 
-    def _update_tree(self, node, x: np.ndarray, y: float, depth=0):
+    def _update_tree(self, node: NodeHoeffdingBound, x: np.ndarray, y: float, depth: int = 0) -> None:
+        """Update the tree with a new sample."""
         # Check if we reached the maximum depth
         if depth >= self.depth:
             return
-        
+
         # if node is a leaf, update its stats and check for split
         if node.left is None and node.right is None:
             node.update_stats(x, y)
             if node.reached_grace_period() or self.grace_period_depth < depth:  # check if grace period is over
                 self._attempt_split(node, depth)
-        
+
         # traverse the tree to reach the correct leaf
         elif node.feature is not None:
             if x[node.feature] <= node.threshold:
@@ -171,133 +203,238 @@ class FastODT(BaseTree):
             elif x[node.feature] > node.threshold:
                 self._update_tree(node.right, x, y, depth + 1)
 
-    def _attempt_split(self, node, depth: int):
-        best_split, _ = node.find_best_split() # here happens hf bound calculation
+    def _attempt_split(self, node: NodeHoeffdingBound, depth: int) -> None:
+        """Attempt to split the node when the Hoeffding Bound indicates a split is warranted."""
+        best_split, _ = node.find_best_split()  # here happens hf bound calculation
         if self.splits[depth] is not None:
             node.split(self.splits[depth], self.split_confidence)
             node.left.update_from_parent_node(node)
             node.right.update_from_parent_node(node)
-        
+
         elif best_split[0] is not None:
-            self.splits[depth] = best_split 
+            self.splits[depth] = best_split
             node.split(best_split, self.split_confidence)
             node.left.update_from_parent_node(node)
             node.right.update_from_parent_node(node)
 
 
-
 if __name__ == "__main__":
+    import numpy as np
+    from sklearn.metrics import mean_absolute_error
+    from src.trees.histogram import MeanSplitterHistogram, AdaptiveHistogram
+    from src.utils.memory import calculate_memory_usage
+    import matplotlib.pyplot as plt
 
-    X = np.load('./smoke_data/X.npy', allow_pickle=True)
-    Y = np.load('./smoke_data/y.npy', allow_pickle=True)
-    print(X.shape, Y.shape)
-    X = X[:,2:]
-    print(type(X), type(Y), X[0])
+    print("================================NEW ATTEMPT================================")
 
-    # Test if model will be partially filled after receiving only one sample
-    model_hf = FastODT(
-        depth=20, 
-        grace_period=10,
-        split_confidence=0.0001,
-    )
-    model_hf.partial_fit(X[0,:], Y[0], verbose=True)
-    # only one depth split at most should be created
-    assert(False == model_hf.is_filled())
-
-    start = time.time()
+    # Load smoke data
+    X = np.load("./smoke_data/X.npy", allow_pickle=True)
+    Y = np.load("./smoke_data/y.npy", allow_pickle=True)
+    X = X[:, 2:]
+    Y = np.clip(Y, 0, 200)
     PRINT_BUFFOR_START = 3000
     PRINT_BUFFOR_END = 3500
-    SAMPLES = X.shape[0]
+    split_confidences = [0.0001, 0.001, 0.01, 0.1, 0.5, 1]
+    results = {
+        "mean": [],
+        "adapt4": [],
+        "adapt8": [],
+        "adapt16": [],
+        "mae_mean": [],
+        "mae_adapt4": [],
+        "mae_adapt8": [],
+        "mae_adapt16": [],
+        "train_time_mean": [],
+        "train_time_adapt4": [],
+        "train_time_adapt8": [],
+        "train_time_adapt16": [],
+    }
 
-    # Generate synthetic data following a sine wave pattern
-    # T = np.linspace(0, 5, SAMPLES).reshape(-1, 1)  # Features: 100 points from 0 to 5
-    # Y = np.sin(T).ravel() + np.random.normal(0, 0.1, T.shape[0])  # Sine wave with noise
-    # X = - np.sin(T).ravel() + np.random.normal(0, 0.1, T.shape[0])  # Sine wave with noise
-    print(f"Working with: {SAMPLES} SAMPLES")
-    print(len(X),len(Y))
-    # depth = 20
+    DEPTH = 50
+    GRACE_PERIOD = 100
+    GRACE_PERIOD_DEPTH = -1
+    EAGERNESS = 0
 
-    # Train and predict with different depths
-    depths = [100]
-    predictions_hf = {}
-
-    for d in depths:
-        split_confidence_hf = 0.0001
-        grace_period = 1
-        grace_period_depth = 1
-
-        model_hf = FastODT(
-            depth=d, 
-            grace_period=grace_period,
-            split_confidence=split_confidence_hf,
+    for split_conf in split_confidences:
+        # MeanSplitterHistogram
+        model_mean = FastODT(
+            depth=DEPTH,
+            grace_period=GRACE_PERIOD,
+            split_confidence=split_conf,
             max_feature=1.0,
-            grace_period_depth=grace_period_depth
+            eagerness=EAGERNESS,
+            grace_period_depth=GRACE_PERIOD_DEPTH,
+            bin_type=MeanSplitterHistogram,
+            max_bins=1,
         )
-        model_hf.partial_fit(X, Y, verbose=True)
-        Y_pred_hf = model_hf.predict(X)
-        predictions_hf[d] = Y_pred_hf
-        mae_hf = mean_absolute_error(Y, Y_pred_hf)
-        print(f"Depth {d} split confidence: {split_confidence_hf} - MAE: {mae_hf:.4f}")
+        t_train_start = time.time()
+        model_mean.partial_fit(X, Y)
+        t_train_end = time.time()
+        train_time_mean = t_train_end - t_train_start
+        results["train_time_mean"].append(train_time_mean)
+        t0 = time.time()
+        size_mean = calculate_memory_usage(model_mean)
+        t1 = time.time()
+        print(
+            f"MeanSplitterHistogram model size with deepness {DEPTH} "
+            f"and split confidence {split_conf}: {size_mean} MB "
+            f"(size calc time: {t1 - t0:.3f}s)"
+        )
+        print(f"MeanSplitterHistogram training time: {train_time_mean:.3f}s")
+        y_pred_mean = np.array([model_mean.predict(x) for x in X])
+        mae_mean = mean_absolute_error(Y, y_pred_mean)
+        results["mean"].append(y_pred_mean)
+        results["mae_mean"].append(mae_mean)
 
-    print(f"Training for 1 label data (1D) took: {time.time()-start}s")
-    # Plot predicted values (vs true Y)
-    plt.figure(figsize=(12, 6))
-    plt.plot(Y[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Actual Y", color="black", linewidth=2)
-
-    for d in depths:
-        plt.plot(predictions_hf[d][PRINT_BUFFOR_START:PRINT_BUFFOR_END], label=f"Depth {d} Prediction HF")
-
-    plt.xlabel(f"Samples")
-    plt.ylabel("Target Y")
-    plt.ylim(0, 300)
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
-
-    Y = np.clip(Y, 0, 200)
-
-    start = time.time()
-    # # 2nd example - multifeature classification
-    # Generate Features
-    n_samples = Y.shape[0]
-    
-    # Train and predict with different depths
-    depths = depths
-    predictions_hf = {}
-
-    for d in depths:
-        split_confidence_hf = 0.001
-        grace_period = 10
-        grace_period_depth=1
-
-        model_hf = FastODT(
-            depth=d, 
-            grace_period=grace_period,
-            split_confidence=split_confidence_hf,
+        # AdaptiveHistogram (max_bins=4)
+        model_adapt4 = FastODT(
+            depth=DEPTH,
+            grace_period=GRACE_PERIOD,
+            split_confidence=split_conf,
             max_feature=1.0,
-            grace_period_depth = grace_period_depth
+            eagerness=EAGERNESS,
+            grace_period_depth=GRACE_PERIOD_DEPTH,
+            bin_type=AdaptiveHistogram,
+            max_bins=4,
         )
-        model_hf.partial_fit(X, Y, verbose=True)
-        Y_pred_hf = np.array([model_hf.predict(x) for x in X])
-        predictions_hf[d] = Y_pred_hf
-        mae_hf = mean_absolute_error(Y, Y_pred_hf)
-        print(f"Depth {d} split confidence: {split_confidence_hf} - MAE: {mae_hf:.4f}")
+        t_train_start = time.time()
+        model_adapt4.partial_fit(X, Y)
+        t_train_end = time.time()
+        train_time_adapt4 = t_train_end - t_train_start
+        results["train_time_adapt4"].append(train_time_adapt4)
+        t0 = time.time()
+        size_adapt4 = calculate_memory_usage(model_adapt4)
+        t1 = time.time()
+        print(
+            f"AdaptiveHistogram (4 bins) model size with deepness {DEPTH} "
+            f"and split confidence {split_conf}: {size_adapt4} MB "
+            f"(size calc time: {t1 - t0:.3f}s)"
+        )
+        print(f"AdaptiveHistogram (4 bins) training time: {train_time_adapt4:.3f}s")
+        y_pred_adapt4 = np.array([model_adapt4.predict(x) for x in X])
+        mae_adapt4 = mean_absolute_error(Y, y_pred_adapt4)
+        results["adapt4"].append(y_pred_adapt4)
+        results["mae_adapt4"].append(mae_adapt4)
 
-    print(f"Training for 3 label data (1D) took: {time.time()-start}s")
+        # AdaptiveHistogram (max_bins=8)
+        model_adapt8 = FastODT(
+            depth=DEPTH,
+            grace_period=GRACE_PERIOD,
+            split_confidence=split_conf,
+            max_feature=1.0,
+            eagerness=EAGERNESS,
+            grace_period_depth=GRACE_PERIOD_DEPTH,
+            bin_type=AdaptiveHistogram,
+            max_bins=8,
+        )
+        t_train_start = time.time()
+        model_adapt8.partial_fit(X, Y)
+        t_train_end = time.time()
+        train_time_adapt8 = t_train_end - t_train_start
+        results["train_time_adapt8"].append(train_time_adapt8)
+        t0 = time.time()
+        size_adapt8 = calculate_memory_usage(model_adapt8)
+        t1 = time.time()
+        print(
+            f"AdaptiveHistogram (8 bins) model size with deepness {DEPTH} "
+            f"and split confidence {split_conf}: {size_adapt8} MB "
+            f"(size calc time: {t1 - t0:.3f}s)"
+        )
+        print(f"AdaptiveHistogram (8 bins) training time: {train_time_adapt8:.3f}s")
+        y_pred_adapt8 = np.array([model_adapt8.predict(x) for x in X])
+        mae_adapt8 = mean_absolute_error(Y, y_pred_adapt8)
+        results["adapt8"].append(y_pred_adapt8)
+        results["mae_adapt8"].append(mae_adapt8)
 
-    # Plot predicted values (vs true Y)
-    plt.figure(figsize=(12, 6))
-    plt.plot(Y[PRINT_BUFFOR_START:PRINT_BUFFOR_END], label="Actual Y", color="black", linewidth=2)
+        # AdaptiveHistogram (max_bins=16)
+        model_adapt16 = FastODT(
+            depth=DEPTH,
+            grace_period=GRACE_PERIOD,
+            split_confidence=split_conf,
+            max_feature=1.0,
+            eagerness=EAGERNESS,
+            grace_period_depth=GRACE_PERIOD_DEPTH,
+            bin_type=AdaptiveHistogram,
+            max_bins=16,
+        )
+        t_train_start = time.time()
+        model_adapt16.partial_fit(X, Y)
+        t_train_end = time.time()
+        train_time_adapt16 = t_train_end - t_train_start
+        results["train_time_adapt16"].append(train_time_adapt16)
+        t0 = time.time()
+        size_adapt16 = calculate_memory_usage(model_adapt16)
+        t1 = time.time()
+        print(
+            f"AdaptiveHistogram (16 bins) model size with deepness {DEPTH} "
+            f"and split confidence {split_conf}: {size_adapt16} MB "
+            f"(size calc time: {t1 - t0:.3f}s)"
+        )
+        print(f"AdaptiveHistogram (16 bins) training time: {train_time_adapt16:.3f}s")
+        y_pred_adapt16 = np.array([model_adapt16.predict(x) for x in X])
+        mae_adapt16 = mean_absolute_error(Y, y_pred_adapt16)
+        results["adapt16"].append(y_pred_adapt16)
+        results["mae_adapt16"].append(mae_adapt16)
 
-    for d in depths:
-        plt.plot(predictions_hf[d][PRINT_BUFFOR_START:PRINT_BUFFOR_END], label=f"Depth {d} Prediction HF")
+        print(
+            f"Split confidence {split_conf} - MAE: "
+            f"Mean={mae_mean:.4f}, Adapt4={mae_adapt4:.4f}, "
+            f"Adapt8={mae_adapt8:.4f}, Adapt16={mae_adapt16:.4f}\n"
+        )
 
-    plt.xlabel("T (synthetic time)")
-    plt.ylabel("Target Y")
-    plt.title(f"FastODT Regression on clipped smoke data. HF {split_confidence_hf}")
-    plt.ylim(0, 300)
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
+        # After training, print number of bins in root node for each feature
+        # print(f"[SplitConf={split_conf}] MeanSplitter bins per feature:")
+        # for f, h in model_mean.root.histograms.items():
+        #     print(f"  Feature {f}: {len(getattr(h, 'bin_edges', []))} bins")
+
+        # print(f"[SplitConf={split_conf}] AdaptiveHistogram (4 bins) bins per feature:")
+        # for f, h in model_adapt4.root.histograms.items():
+        #     print(f"  Feature {f}: {len(getattr(h, 'bin_edges', []))} bins")
+
+        # print(f"[SplitConf={split_conf}] AdaptiveHistogram (8 bins) bins per feature:")
+        # for f, h in model_adapt8.root.histograms.items():
+        #     print(f"  Feature {f}: {len(getattr(h, 'bin_edges', []))} bins")
+
+        # print(f"[SplitConf={split_conf}] AdaptiveHistogram (16 bins) bins per feature:")
+        # for f, h in model_adapt16.root.histograms.items():
+        #     print(f"  Feature {f}: {len(getattr(h, 'bin_edges', []))} bins")
+
+    # Plot predictions for each split confidence
+    for i, split_conf in enumerate(split_confidences):
+        plt.figure(figsize=(12, 5))
+        plt.plot(
+            Y[PRINT_BUFFOR_START:PRINT_BUFFOR_END],
+            label="Actual Y",
+            color="black",
+            linewidth=2,
+        )
+        plt.plot(
+            results["mean"][i][PRINT_BUFFOR_START:PRINT_BUFFOR_END],
+            label="MeanSplitter",
+        )
+        plt.plot(
+            results["adapt4"][i][PRINT_BUFFOR_START:PRINT_BUFFOR_END],
+            label="AdaptiveHistogram (4 bins)",
+            linestyle="-",
+            alpha=0.7,
+        )
+        plt.plot(
+            results["adapt8"][i][PRINT_BUFFOR_START:PRINT_BUFFOR_END],
+            label="AdaptiveHistogram (8 bins)",
+            linestyle="-.",
+            alpha=0.7,
+        )
+        plt.plot(
+            results["adapt16"][i][PRINT_BUFFOR_START:PRINT_BUFFOR_END],
+            label="AdaptiveHistogram (16 bins)",
+            linestyle="--",
+            alpha=0.7,
+        )
+        plt.xlabel("Samples")
+        plt.ylabel("Target Y")
+        plt.title(f"Predictions (Split Confidence={split_conf})")
+        plt.ylim(0, 300)
+        plt.legend()
+        plt.grid(True)
+        plt.tight_layout()
+        plt.show()
