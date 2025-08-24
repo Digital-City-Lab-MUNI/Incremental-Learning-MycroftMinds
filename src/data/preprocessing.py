@@ -2,7 +2,7 @@
 
 This module provides helper functions to:
 
-* Read raw CSV batches (``first_batch`` / ``second_batch``) into pandas DataFrames.
+* Read raw CSV batches (``first_batch`` / ``second_batch``/ 'AQ', 'electricity', 'friedman') into pandas DataFrames.
 * Optionally aggregate time series to a coarser temporal resolution while validating lag specifications.
 * Preprocess individual device DataFrames
   (timezone normalization, temporal feature extraction, optional cyclical features).
@@ -22,6 +22,77 @@ from typing import List, Optional, Dict, Tuple
 
 LOCATION_INDUSTRIAL = "industrial"
 LOCATION_COMMERCIAL = "commercial"
+
+def read_other_data(
+    data_path: str,
+    name: str,
+    site_ids: Optional[List[str]] = None,
+) -> List[pd.DataFrame]:
+    """Read auxiliary datasets such as ``AQ.csv``, ``electricity.csv`` or ``friedman.csv``.
+
+    Parameters
+    ----------
+    data_path : str
+        Directory containing the data files.
+    name : str
+        Name of the dataset to load. Supported values:
+        - ``"AQ"``
+        - ``"electricity"``
+        - ``"friedman"``
+    site_ids : list of str, optional
+        Currently unused. Reserved for consistency with other loaders.
+
+    Returns
+    -------
+    list of pd.DataFrame
+        A list containing one DataFrame corresponding to the selected dataset.
+        A ``device_id`` and ``serial_number`` column is injected.
+
+    Raises
+    ------
+    ValueError
+        If ``name`` is not one of the supported dataset names.
+    FileNotFoundError
+        If the corresponding CSV file does not exist.
+    """
+    try:
+        if name == "AQ":
+            file_path = os.path.join(data_path, "AQ.csv")
+            df = pd.read_csv(file_path)
+            df["device_id"] = "const"
+            df["serial_number"] = "const"
+            return [df]
+
+        elif name == "electricity":
+            file_path = os.path.join(data_path, "electricity.csv")
+            df = pd.read_csv(file_path)
+
+            for col in df.columns:
+                if col != "time":
+                    df[col] = pd.to_numeric(df[col], errors="coerce")
+
+            df["device_id"] = "const"
+            df["serial_number"] = "const"
+            return [df]
+
+        elif name == "friedman":
+            file_path = os.path.join(data_path, "friedman.csv")
+            df = pd.read_csv(file_path)
+            df["device_id"] = "const"
+            df["serial_number"] = "const"
+            return [df]
+
+        else:
+            raise ValueError(f"Unsupported dataset name: {name}")
+
+    except FileNotFoundError:
+        raise FileNotFoundError(f"CSV file for '{name}' not found in {data_path}")
+    except pd.errors.EmptyDataError:
+        raise ValueError(f"CSV file for '{name}' is empty: {file_path}")
+    except pd.errors.ParserError:
+        raise ValueError(f"CSV file for '{name}' could not be parsed: {file_path}")
+    except Exception as e:
+        raise RuntimeError(f"Unexpected error while reading '{name}': {e}")
 
 
 def read_second_batch(
