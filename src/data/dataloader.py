@@ -36,7 +36,7 @@ from src.data.preprocessing import (
     aggregate_and_validate_lags,
     read_first_batch,
     read_second_batch,
-    read_other_data
+    read_other_data,
 )
 from src.data.feature_engineering import add_lag_features
 
@@ -202,8 +202,8 @@ def get_train_test_sets(
         elif new_data == "second_batch":
             extract_path = os.path.join(data_dir, new_data)
             dataframes = read_second_batch(extract_path, location=location, site_ids=device_list)
-        elif new_data in ['AQ', 'electricity', 'friedman']:
-            extract_path = os.path.join(data_dir, 'other_data')
+        elif new_data in ["AQ", "electricity", "friedman"]:
+            extract_path = os.path.join(data_dir, "other_data")
             dataframes = read_other_data(extract_path, name=new_data)
         else:
             csv_files = glob.glob(os.path.join(data_dir, "smart_meter_data_*.csv"))
