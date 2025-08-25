@@ -23,6 +23,7 @@ from typing import List, Optional, Dict, Tuple
 LOCATION_INDUSTRIAL = "industrial"
 LOCATION_COMMERCIAL = "commercial"
 
+
 def read_other_data(
     data_path: str,
     name: str,
@@ -85,14 +86,14 @@ def read_other_data(
         else:
             raise ValueError(f"Unsupported dataset name: {name}")
 
-    except FileNotFoundError:
-        raise FileNotFoundError(f"CSV file for '{name}' not found in {data_path}")
-    except pd.errors.EmptyDataError:
-        raise ValueError(f"CSV file for '{name}' is empty: {file_path}")
-    except pd.errors.ParserError:
-        raise ValueError(f"CSV file for '{name}' could not be parsed: {file_path}")
-    except Exception as e:
-        raise RuntimeError(f"Unexpected error while reading '{name}': {e}")
+    except FileNotFoundError as err:
+        raise FileNotFoundError(f"CSV file for '{name}' not found in {data_path}") from err
+    except pd.errors.EmptyDataError as err:
+        raise ValueError(f"CSV file for '{name}' is empty: {file_path}") from err
+    except pd.errors.ParserError as err:
+        raise ValueError(f"CSV file for '{name}' could not be parsed: {file_path}") from err
+    except Exception as err:
+        raise RuntimeError(f"Unexpected error while reading '{name}': {err}") from err
 
 
 def read_second_batch(
