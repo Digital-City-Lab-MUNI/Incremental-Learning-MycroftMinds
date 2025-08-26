@@ -9,9 +9,10 @@ from matplotlib import pyplot as plt
 from tree import BaseTree, Node
 import numpy as np
 
+
 class ODTree(BaseTree):
     """Oblivious depth-limited regression tree (same split per level)."""
 
-    def __init__(self,depth):
+    def __init__(self, depth):
         super(ODTree, self).__init__(depth)
-        raise NotImplementedError  # it is obsolete 
+        raise NotImplementedError  # it is obsolete

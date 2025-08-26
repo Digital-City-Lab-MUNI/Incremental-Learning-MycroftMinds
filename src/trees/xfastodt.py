@@ -1,5 +1,5 @@
 from sklearn.metrics import mean_absolute_error
-from matplotlib import pyplot as plt 
+from matplotlib import pyplot as plt
 from src.trees.tree import BaseTree, Node
 from src.trees.xnode_hf import NodeHoeffdingBound
 from src.utils.utils import ensure_2d_array
@@ -11,19 +11,23 @@ import tqdm
 import time
 import os
 
+MAX_TREE_DEPTH = 999_999_999_999_999
+
+
 class xFastODT(BaseTree):
-    def __init__(self, 
-                 depth=25, 
-                 grace_period=10, 
-                 split_confidence=0.01, 
-                 tie_threshold=0.05,
-                 max_feature=1.0,
-                 eagerness=0.0, 
-                 grace_period_depth=-1, 
-                 bin_type='adaptive', 
-                 max_bins=16,
-                 inherit_bins=False, 
-                 split_criterion='vr_rel'):
+    def __init__(
+        self,
+        depth: int = 25,
+        grace_period: int = 10,
+        split_confidence: float = 0.01,
+        tie_threshold: float = 0.05,
+        max_feature: float = 1.0,
+        grace_period_depth: int = -1,
+        bin_type: str = "adaptive",
+        max_bins: int = 16,
+        inherit_bins: bool = False,
+        split_criterion: str = "vr_rel",
+    ):
         """
         Initialize the FastODT tree model with parameters.
 
@@ -41,12 +45,9 @@ class xFastODT(BaseTree):
         max_feature : float, optional (default=1.0)
             Fraction of features to consider for splitting at each node.
 
-        eagerness : float, optional (default=0.0)
-            Parameter to control the eagerness to split for Hoeffding Bound nodes.
-
         grace_period_depth : int, optional (default=-1)
-            Grace period value to control to how deep nodes grace period should still apply. 
-            If set to 1, only first node will use grace_period, 
+            Grace period value to control to how deep nodes grace period should still apply.
+            If set to 1, only first node will use grace_period,
             If set to 100, first 100 nodes will use grace period,
             If set to -1, this feature is disabled (set to over 999999999999999 internally).
 
@@ -74,21 +75,21 @@ class xFastODT(BaseTree):
         ------
         None
         """
-        self.grace_period = grace_period  # Number of samples before checking for a split
-        self.split_confidence = split_confidence  # Confidence level for splitting
-        self.depth = depth
-        self.current_depth = 0
-        self.splits_values = [None] * depth
-        self.splits_features = [None] * depth
-        self.depths_containers = []
-        self.mature_tree = False
+        self.grace_period: int = grace_period  # Number of samples before checking for a split
+        self.split_confidence: float = split_confidence  # Confidence level for splitting
+        self.depth: int = depth
+        self.current_depth: int = 0
+        self.splits_values: list[object] = [None] * depth
+        self.splits_features: list[object] = [None] * depth
+        self.depths_containers: list = []
+        self.mature_tree: bool = False
 
-        self.error_rates = np.zeros(20).tolist() 
+        self.error_rates: list[float] = np.zeros(20).tolist()
 
-        self.max_feature = max_feature
-        self.grace_period_depth = grace_period_depth
+        self.max_feature: int = max_feature
+        self.grace_period_depth: int = grace_period_depth
         if self.grace_period_depth == -1:
-            self.grace_period_depth = 999999999999999
+            self.grace_period_depth = MAX_TREE_DEPTH
 
         self.tie_threshold = tie_threshold
         if isinstance(bin_type, str) or bin_type is None:
@@ -99,27 +100,34 @@ class xFastODT(BaseTree):
 
         # create the root node
         for d in range(self.depth):
-            self.depths_containers.append([None] * (2**(d+1)))
+            self.depths_containers.append([None] * (2 ** (d + 1)))
 
         self.depths_containers[0][0] = NodeHoeffdingBound(
-                split_confidence=self.split_confidence,
-                tie_threshold=self.tie_threshold,
-                max_feature=self.max_feature,
-                eagerness=eagerness,
-                grace_period=grace_period,
-                bin_type=bin_type,
-                max_bins=max_bins,
-                inherit_bins=inherit_bins,
-                split_criterion=split_criterion
-            )
-
-    def measure_error(self, y_baseline, y_predicted):
-        self.error_rates.pop(0)
-        self.error_rates.append(y_baseline - y_predicted)
-        return np.mean(self.error_rates)
+            split_confidence=self.split_confidence,
+            tie_threshold=self.tie_threshold,
+            max_feature=self.max_feature,
+            grace_period=grace_period,
+            bin_type=bin_type,
+            max_bins=max_bins,
+            inherit_bins=inherit_bins,
+            split_criterion=split_criterion,
+        )
 
     def partial_fit(self, X: np.ndarray, y: np.ndarray, verbose: bool = False):
-        X = ensure_2d_array(X) # 10.1 -> [10.1] -> (1,1)
+        """Fit the model incrementally on a batch of samples.
+
+        Parameters
+        ----------
+        X : np.ndarray
+            Feature matrix of shape (n_samples, n_features) or (n_features,) for
+            a single sample.
+        y : np.ndarray
+            Target values of shape (n_samples,) or scalar.
+        verbose : bool, default=False
+            If True, displays a progress bar via ``tqdm``.
+        """
+
+        X = ensure_2d_array(X)  # 10.1 -> [10.1] -> (1,1)
         y = np.asarray(y)
         if y.ndim == 0:
             y = np.array([y])
@@ -128,10 +136,10 @@ class xFastODT(BaseTree):
 
         if verbose:
             for i in tqdm.tqdm(range(len(X))):
-                self._update_tree(None, X[i], y[i], depth=0)
+                self.__update_tree(None, X[i], y[i], depth=0)
         else:
             for i in range(len(X)):
-                self._update_tree(None, X[i], y[i], depth=0)
+                self.__update_tree(None, X[i], y[i], depth=0)
 
     def learn_one(self, x, y: float):
         """
@@ -146,7 +154,7 @@ class xFastODT(BaseTree):
             x = np.asarray(x)
         if x.ndim == 2 and x.shape[0] == 1:
             x = x[0]
-        self._update_tree(None, x, y, depth=0)
+        self.__update_tree(None, x, y, depth=0)
 
     def predict_one(self, x):
         """
@@ -162,13 +170,14 @@ class xFastODT(BaseTree):
         return self.predict(x)
 
     def predict(self, X: np.ndarray):
+        """Predicts y value."""
+
         return_vector = []
         for x in X:
             # Check if we reached the maximum depth
-            active_splits_features = self.splits_features[:self.current_depth]
-            active_splits_values = self.splits_values[:self.current_depth]
-            x_split_values = x[active_splits_features]
-            decision_vector = x_split_values > active_splits_values
+            active_splits_features = self.splits_features[: self.current_depth]
+            active_splits_values = self.splits_values[: self.current_depth]
+            decision_vector = x[active_splits_features] > active_splits_values
 
             node_index = sum((1 << i) for i, decision in enumerate(reversed(decision_vector)) if decision)
             node_depth = len(active_splits_features)
@@ -179,25 +188,35 @@ class xFastODT(BaseTree):
             return_vector.append(node.value)
         return return_vector
 
-    def _update_tree(self, node, x: np.ndarray, y: float, depth=0):
-        # Check if we reached the maximum depth
-        active_splits_features = self.splits_features[:self.current_depth]
-        active_splits_values = self.splits_values[:self.current_depth]
+    def __update_tree(self, node, x: np.ndarray, y: float, depth=0):
+        """Update the tree with a new sample."""
 
+        # Take all currently known splits
+        # At this point we should have all splits for self.current_depth
+        active_splits_features = self.splits_features[: self.current_depth]
+        active_splits_values = self.splits_values[: self.current_depth]
+
+        # if number of splits is greater than defined depth of the tree,
+        # or tree is marked as matured, then we abort updating it
+        # as it is fully developed tree
         if len(active_splits_features) >= self.depth or self.mature_tree:
             return
 
-        x_split_values = x[active_splits_features]
-        decision_vector = x_split_values > active_splits_values
+        # For each sample x, we take all features defined by `active_splits_features`
+        # and we compre them against all known splits `active_splits_values`
+        # that gives boolean decision vector of [true, false ,true , false, ...]
+        decision_vector = x[active_splits_features] > active_splits_values
 
+        # if decision vector is empty then there was no data passed
         if len(decision_vector) == 0:
             node_index = 0
             node_depth = 0
         else:
-            # Convert to integer
+            # If decision vector was not empty then boolean values from
+            # that vector [true, false ,true , false, ...] can be interpreted
+            # as binary value 1010... which after changing into decimal will give proper result
             node_index = sum((1 << i) for i, decision in enumerate(reversed(decision_vector)) if decision)
             node_depth = len(active_splits_features)
-
 
         node = self.depths_containers[node_depth][node_index]
         if node is None:
@@ -205,68 +224,64 @@ class xFastODT(BaseTree):
         # print(f"node_depth: {node_depth}, node_index: {node_index}, node.index {node.index}")
 
         node.update_stats(x, y)
-        best_split, _ = node.find_best_split() # here happens hf bound calculation
+        best_split, _ = node.find_best_split()  # here happens hf bound calculation
         if best_split[0] is not None:
             depth = len(decision_vector)
 
             self.splits_features[depth] = best_split[0]
             self.splits_values[depth] = best_split[1]
 
-            if depth+1 < self.depth:
+            if depth + 1 < self.depth:
                 left, right = node.produce_split(best_split, self.split_confidence)
-                self.depths_containers[depth+1][left.index] = left
-                self.depths_containers[depth+1][right.index] = right
+                self.depths_containers[depth + 1][left.index] = left
+                self.depths_containers[depth + 1][right.index] = right
                 self.current_depth += 1
             else:
                 self.mature_tree = True
 
     def __find_node(self, depth, index):
+        """Finds last populated node by index."""
+
         node = self.depths_containers[depth][index]
         # print(f"looking for index: {index}")
         if node is None:
-            parent_node = None
-            # check if we are in left or right node
-            parent_depth = depth - 1
-            if index % 2 == 0:
-                parent_node_index = int(index/2)
-            else:
-                parent_node_index = int(index/2 - 1)
-            node = self.__find_node(parent_depth,parent_node_index)
+            parent_node_index = (
+                index // 2
+            )  # find parent index by rule that it is child index / 2 and floored to nearest integer
+            node = self.__find_node(depth - 1, parent_node_index)
             node.index = index
             self.depths_containers[depth][index] = node
             # this is cheap trick and needs to check if we initialize nodes correclty in this case
         return node
 
     def _attempt_split(self, node, depth: int):
-        best_split, _ = node.find_best_split() # here happens hf bound calculation
+        """Attempts splitting and producing two new nodes."""
+
+        best_split, _ = node.find_best_split()  # here happens hf bound calculation
         if self.splits_features[depth] is not None:
             node.split(self.splits_features[depth], self.split_confidence)
             node.left.update_from_parent_node(node)
             node.right.update_from_parent_node(node)
-        
+
         elif best_split[0] is not None:
-            self.splits_features[depth] = best_split 
+            self.splits_features[depth] = best_split
             node.split(best_split, self.split_confidence)
             node.left.update_from_parent_node(node)
             node.right.update_from_parent_node(node)
 
-if __name__ == "__main__":
 
-    X = np.load('./smoke_data/X.npy', allow_pickle=True)
-    Y = np.load('./smoke_data/y.npy', allow_pickle=True)
+if __name__ == "__main__":
+    X = np.load("./smoke_data/X.npy", allow_pickle=True)
+    Y = np.load("./smoke_data/y.npy", allow_pickle=True)
     print(X.shape, Y.shape)
-    X = X[:,2:]
+    X = X[:, 2:]
     # print(type(X), type(Y), X[0])
 
     # Test if model will be partially filled after receiving only one sample
     start = time.time()
-    model_hf = xFastODT(
-        depth=20, 
-        grace_period=10,
-        split_confidence=0.0001
-    )
+    model_hf = xFastODT(depth=20, grace_period=10, split_confidence=0.0001)
     start = time.time()
-    model_hf.partial_fit(X[:,:], Y, verbose=True)
+    model_hf.partial_fit(X[:, :], Y, verbose=True)
     print(f"It took: {time.time() - start}s")
 
     Y_pred_hf = model_hf.predict(X)
