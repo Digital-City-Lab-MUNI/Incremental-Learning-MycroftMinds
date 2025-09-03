@@ -5,6 +5,7 @@ from src.trees.xnode_hf import NodeHoeffdingBound
 from src.utils.utils import ensure_2d_array
 from src.trees.split_criteria import get_split_criterion
 from src.trees.histogram import get_histogram_type
+from collections import defaultdict
 import numpy as np
 import pandas as pd
 import tqdm
@@ -100,7 +101,7 @@ class xFastODT(BaseTree):
 
         # create the root node
         for d in range(self.depth):
-            self.depths_containers.append([None] * (2 ** (d + 1)))
+            self.depths_containers.append(defaultdict(lambda: None))
 
         self.depths_containers[0][0] = NodeHoeffdingBound(
             split_confidence=self.split_confidence,
@@ -196,12 +197,6 @@ class xFastODT(BaseTree):
         active_splits_features = self.splits_features[: self.current_depth]
         active_splits_values = self.splits_values[: self.current_depth]
 
-        # if number of splits is greater than defined depth of the tree,
-        # or tree is marked as matured, then we abort updating it
-        # as it is fully developed tree
-        if len(active_splits_features) >= self.depth or self.mature_tree:
-            return
-
         # For each sample x, we take all features defined by `active_splits_features`
         # and we compre them against all known splits `active_splits_values`
         # that gives boolean decision vector of [true, false ,true , false, ...]
@@ -221,7 +216,9 @@ class xFastODT(BaseTree):
         node = self.depths_containers[node_depth][node_index]
         if node is None:
             node = self.__find_node(node_depth, node_index)
-        # print(f"node_depth: {node_depth}, node_index: {node_index}, node.index {node.index}")
+        else:
+            if self.mature_tree:
+                return
 
         node.update_stats(x, y)
         best_split, _ = node.find_best_split()  # here happens hf bound calculation
@@ -233,6 +230,8 @@ class xFastODT(BaseTree):
 
             if depth + 1 < self.depth:
                 left, right = node.produce_split(best_split, self.split_confidence)
+                left.update_from_parent_node(node)
+                right.update_from_parent_node(node)
                 self.depths_containers[depth + 1][left.index] = left
                 self.depths_containers[depth + 1][right.index] = right
                 self.current_depth += 1
@@ -279,7 +278,7 @@ if __name__ == "__main__":
 
     # Test if model will be partially filled after receiving only one sample
     start = time.time()
-    model_hf = xFastODT(depth=20, grace_period=10, split_confidence=0.0001)
+    model_hf = xFastODT(depth=50, grace_period=10, split_confidence=0.0001)
     start = time.time()
     model_hf.partial_fit(X[:, :], Y, verbose=True)
     print(f"It took: {time.time() - start}s")
@@ -298,7 +297,7 @@ if __name__ == "__main__":
     plt.xlabel(f"Samples")
     plt.ylabel("Target Y")
     plt.title(f"FastODT Regression on smoke data.")
-    plt.ylim(0, 300)
+    plt.ylim(-10, 300)
     plt.legend()
     plt.grid(True)
     plt.tight_layout()
