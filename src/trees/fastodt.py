@@ -21,7 +21,10 @@ from src.trees.tree import BaseTree
 from src.trees.node_hf import NodeHoeffdingBound
 from src.utils.utils import ensure_2d_array
 from src.trees.split_criteria import get_split_criterion
-from src.trees.histogram import get_histogram_type
+from src.trees.histogram import get_histogram_type, HistogramContainer
+from src.trees.split_criteria import VarianceReduction, VarianceReductionRelative
+
+
 import src.trees.constants as C
 import numpy as np
 import pandas as pd
@@ -80,10 +83,9 @@ class FastODT(BaseTree):
         max_feature: float = 1.0,
         eagerness: float = 0.0,
         grace_period_depth: int = -1,
-        bin_type: Union[str, callable] = C.HistogramType.ADAPTIVE,
-        max_bins: int = 16,
-        inherit_bins: bool = False,
-        split_criterion: Union[str, callable] = C.SplitCriterion.VR_REL,
+        hist = None,
+        split_criterion: str = VarianceReduction,
+
     ) -> None:
         self.grace_period = grace_period  # Number of samples before checking for a split
         self.split_confidence = split_confidence  # Confidence level for splitting
@@ -98,11 +100,13 @@ class FastODT(BaseTree):
             self.grace_period_depth = 999999999999999
 
         self.tie_threshold = tie_threshold
-        if isinstance(bin_type, str) or bin_type is None:
-            bin_type = get_histogram_type(bin_type)
 
-        if isinstance(split_criterion, str):
-            split_criterion = get_split_criterion(split_criterion)
+        if not hist:
+            hist=HistogramContainer(
+                max_bins=16,
+                inherit_bins=False,
+            )
+
         # create the root node
         self.root = NodeHoeffdingBound(
             split_confidence=self.split_confidence,
@@ -110,9 +114,7 @@ class FastODT(BaseTree):
             max_feature=self.max_feature,
             eagerness=eagerness,
             grace_period=grace_period,
-            bin_type=bin_type,
-            max_bins=max_bins,
-            inherit_bins=inherit_bins,
+            hist=hist,
             split_criterion=split_criterion,
         )
 
@@ -264,8 +266,10 @@ if __name__ == "__main__":
             max_feature=1.0,
             eagerness=EAGERNESS,
             grace_period_depth=GRACE_PERIOD_DEPTH,
-            bin_type=MeanSplitterHistogram,
-            max_bins=1,
+            hist=HistogramContainer(
+                bin_type=MeanSplitterHistogram,
+                max_bins=1,
+            )
         )
         t_train_start = time.time()
         model_mean.partial_fit(X, Y)
@@ -294,8 +298,10 @@ if __name__ == "__main__":
             max_feature=1.0,
             eagerness=EAGERNESS,
             grace_period_depth=GRACE_PERIOD_DEPTH,
-            bin_type=AdaptiveHistogram,
-            max_bins=4,
+            hist=HistogramContainer(
+                bin_type=AdaptiveHistogram,
+                max_bins=4,
+            )
         )
         t_train_start = time.time()
         model_adapt4.partial_fit(X, Y)
@@ -324,8 +330,10 @@ if __name__ == "__main__":
             max_feature=1.0,
             eagerness=EAGERNESS,
             grace_period_depth=GRACE_PERIOD_DEPTH,
-            bin_type=AdaptiveHistogram,
-            max_bins=8,
+            hist=HistogramContainer(
+                bin_type=AdaptiveHistogram,
+                max_bins=8,
+            )
         )
         t_train_start = time.time()
         model_adapt8.partial_fit(X, Y)
@@ -354,8 +362,10 @@ if __name__ == "__main__":
             max_feature=1.0,
             eagerness=EAGERNESS,
             grace_period_depth=GRACE_PERIOD_DEPTH,
-            bin_type=AdaptiveHistogram,
-            max_bins=16,
+            hist=HistogramContainer(
+                bin_type=AdaptiveHistogram,
+                max_bins=16,
+            )
         )
         t_train_start = time.time()
         model_adapt16.partial_fit(X, Y)
