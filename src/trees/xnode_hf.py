@@ -2,8 +2,8 @@ import math
 import numpy as np
 from collections import defaultdict
 from src.utils.utils import get_unique_random_numbers
-from src.trees.histogram import AdaptiveHistogram, EquiWidthHistogram
-from src.trees.split_criteria import variance_reduction, variance_reduction_relative
+from src.trees.histogram import AdaptiveHistogram, EquiWidthHistogram, HistogramContainer
+from src.trees.split_criteria import VarianceReduction, VarianceReductionRelative
 
 
 def hoeffding_bound(R: float, n: int, delta: float) -> float:
@@ -85,13 +85,10 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         split_confidence,
         tie_threshold=0.05,
         max_feature=1.0,
-        eagerness=0.0,
         grace_period=0,
         index=0,
-        bin_type=AdaptiveHistogram,
-        max_bins=32,
-        inherit_bins=False,
-        split_criterion=None,
+        hist=HistogramContainer,
+        split_criterion = VarianceReduction,
     ):
         self.index: int = index
 
@@ -117,12 +114,8 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         self.max_feature: float = max_feature
         self.feature_indices: np.ndarray = None
 
-        self.bin_type: callable = bin_type  # e.g. 'adaptive', 'equiwidth', 'mean'
-        self.max_bins: int = max_bins
-        self.histograms: dict = None  # Will be initialized after seeing first sample
-
-        self.split_criterion: callable = split_criterion if split_criterion is not None else variance_reduction
-        self.inherit_bins: bool = inherit_bins
+        self.split_criterion: callable = split_criterion
+        self.hist = hist
 
     def check_grace_period(self):
         """Check if grace period is met."""
@@ -147,27 +140,11 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         self.sum_y_squared += y**2
         self.value = self.sum_y / self.samples_seen  # Average target value
 
-        # Initialize histograms if needed
-        if self.histograms is None:
-            self.histograms = {}
-            for feature in self.feature_indices:
-                self.histograms[feature] = self.bin_type(max_bins=self.max_bins)
-
-        # Update histograms for each feature
-        for feature, val in zip(self.feature_indices, x_shortlisted):
-            self.histograms[feature].insert(val, y)
+        self.hist.update_stats(self.feature_indices,x_shortlisted,y)
 
     def update_from_parent_node(self, parent) -> None:
         """Update this node's statistics from a parent node."""
-        # !probably should get it removed properly!
-        # self.samples_seen = parent.samples_seen
-        # self.sum_y = parent.sum_y
-        # self.sum_y_squared = parent.sum_y_squared
-        # !probably should get it removed properly!
-        self.value = parent.value  # but not this
-
-        # if self.grace_period > 0:
-        #     self.grace_period_offset = parent.samples_seen  # remove this too
+        self.value = parent.value
 
     def _hoeffding_R(self) -> float:
         """
@@ -176,37 +153,22 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         For absolute reduction, R is calculated as 0.25 * (y_max - y_min) ** 2, which is the Popoviciu upper bound.
         """
         # fixed range
-        if self.split_criterion == variance_reduction_relative:
-            return 1.0
-
-        # absolute range
-        elif self.split_criterion == variance_reduction:
-            return 0.25 * (self.y_max - self.y_min) ** 2  # Popoviciu upper bound
+        return self.split_criterion.R(self.y_min, self.y_max)
 
     def find_best_split(self) -> tuple:
         """Find the best split based on current histograms and splitting criteria.
         We use Hoeffding bound to determine if the split is statistically significant."""
 
-        best_split_1st = (None, None, 0)
-        best_split_2nd = (None, None, 0)
-
-        for feature, hist in (self.histograms or {}).items():
-            candidates = hist.get_candidates()
-            for thr in candidates:
-                left_stats = hist.aggregate_stats(thr, left=True)
-                right_stats = hist.aggregate_stats(thr, left=False)
-                reduction = self.split_criterion(
-                    left_stats, right_stats, self.samples_seen, self.sum_y, self.sum_y_squared
-                )
-                if reduction > best_split_1st[2]:
-                    best_split_2nd = best_split_1st
-                    best_split_1st = (feature, thr, reduction)
-                elif reduction > best_split_2nd[2] and reduction < best_split_1st[2]:
-                    best_split_2nd = (feature, thr, reduction)
-
         # Apply Hoeffding bound after considering all features
         R = self._hoeffding_R()  # range based on absolute or relative reduction
         e = hoeffding_bound(R, self.samples_seen, self.delta)
+
+        best_split_1st, best_split_2nd = self.hist.find_best_split(
+            self.split_criterion,
+            self.samples_seen,
+            self.sum_y,
+            self.sum_y_squared
+        )
 
         if best_split_1st[2] - best_split_2nd[2] > e or self.tie_threshold > e:
             return (best_split_1st[0], best_split_1st[1]), best_split_1st[2]
@@ -223,16 +185,19 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
     def produce_split(self, split_info, split_confidence):
         """Split the node based on the best split found."""
         self.feature, self.threshold = split_info
+        hist_left, hist_right = self.hist.split(
+            self.feature,
+            self.threshold
+        )
+
         left = NodeHoeffdingBound(
             split_confidence=split_confidence,
             tie_threshold=self.tie_threshold,
             max_feature=self.max_feature,
             grace_period=self.grace_period,
             index=2 * self.index,  # left should have index same as parent
-            bin_type=self.bin_type,
-            max_bins=self.max_bins,
-            inherit_bins=self.inherit_bins,
             split_criterion=self.split_criterion,
+            hist = hist_left
         )
         right = NodeHoeffdingBound(
             split_confidence=split_confidence,
@@ -240,23 +205,10 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
             max_feature=self.max_feature,
             grace_period=self.grace_period,
             index=2 * self.index + 1,  # right should have index same as parent + 1
-            bin_type=self.bin_type,
-            max_bins=self.max_bins,
-            inherit_bins=self.inherit_bins,
             split_criterion=self.split_criterion,
+            hist = hist_right
         )
 
-        # TODO: this should be done inside histogram splitter class
-        if self.inherit_bins and self.histograms is not None:
-            left.histograms = {}
-            right.histograms = {}
-            for feature, hist in self.histograms.items():
-                if feature == self.feature:
-                    left.histograms[feature] = hist.partition_bins(self.threshold, left=True)
-                    right.histograms[feature] = hist.partition_bins(self.threshold, left=False)
-                else:
-                    left.histograms[feature] = hist.copy_bins()
-                    right.histograms[feature] = hist.copy_bins()
         return left, right
 
     def reached_grace_period(self) -> bool:
@@ -275,14 +227,22 @@ if __name__ == "__main__":
     X = np.random.uniform(0, 10, (100, 2))
     y = X[:, 0] * 2 + np.random.normal(0, 1, 100)
 
+    histContainer = HistogramContainer(
+        bin_type=AdaptiveHistogram, 
+        max_bins=4
+    )
+
     node = NodeHoeffdingBound(
-        split_confidence=0.01, max_feature=1.0, grace_period=10, bin_type=AdaptiveHistogram, max_bins=4
+        split_confidence=0.01, 
+        max_feature=1.0, 
+        grace_period=10, 
+        hist=histContainer
     )
     for i in range(20):
         node.update_stats(X[i], y[i])
     print("Samples seen:", node.samples_seen)
     print("Histograms:")
-    for f, h in node.histograms.items():
+    for f, h in node.hist.histograms.items():
         print(f"Feature {f}: bin_edges={h.bin_edges}, bin_stats={[s['count'] for s in h.bin_stats]}")
 
     best_split, gain = node.find_best_split()
@@ -300,14 +260,22 @@ if __name__ == "__main__":
     print("\n\nTesting NodeHoeffdingBound with MeanSplitterHistogram (average splitter)...")
     from src.trees.histogram import MeanSplitterHistogram
 
+    histContainer = HistogramContainer(
+        bin_type=MeanSplitterHistogram, 
+        max_bins=1
+    )
+
     node_mean = NodeHoeffdingBound(
-        split_confidence=0.01, max_feature=1.0, grace_period=10, bin_type=MeanSplitterHistogram, max_bins=1
+        split_confidence=0.01, 
+        max_feature=1.0, 
+        grace_period=10,
+        hist=histContainer,
     )
     for i in range(20):
         node_mean.update_stats(X[i], y[i])
     print("Samples seen (mean splitter):", node_mean.samples_seen)
     print("Histograms (mean splitter):")
-    for f, h in node_mean.histograms.items():
+    for f, h in node_mean.hist.histograms.items():
         print(f"Feature {f}: bin_edges={h.bin_edges}, bin_stats={[s['count'] for s in h.bin_stats]}")
     best_split_mean, gain_mean = node_mean.find_best_split()
     print("Best split (mean splitter):", best_split_mean, "Gain:", gain_mean)

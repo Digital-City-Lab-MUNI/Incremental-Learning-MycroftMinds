@@ -42,7 +42,6 @@ from typing import Type, Union, Dict, List
 import bisect
 import src.trees.constants as C
 
-
 class AdaptiveHistogram:
     """
     Adaptive, memory-bounded histogram for streaming numerical data.
@@ -568,3 +567,75 @@ def get_histogram_type(name: str | None) -> Type[Union[AdaptiveHistogram, EquiWi
     if name in (C.HistogramType.MEAN, C.HistogramType.AVERAGE):
         return MeanSplitterHistogram
     raise ValueError(f"Unknown histogram type: {name}")
+
+class HistogramContainer:
+
+    def __init__(
+        self,
+        bin_type=AdaptiveHistogram,
+        max_bins=32,
+        inherit_bins=False,
+    ):
+        self.bin_type: callable = bin_type  # e.g. 'adaptive', 'equiwidth', 'mean'
+        self.max_bins: int = max_bins
+        self.histograms: dict = {}  # Will be initialized after seeing first sample
+
+        self.inherit_bins: bool = inherit_bins
+
+    def update_stats(self, feature_indices, x, y):
+        # Initialize histograms if needed
+        if not len(self.histograms.items()):
+            self.histograms = {}
+            for feature in feature_indices:
+                self.histograms[feature] = self.bin_type(max_bins=self.max_bins)
+
+        # Update histograms for each feature
+        for feature, val in zip(feature_indices, x):
+            self.histograms[feature].insert(val, y)
+
+    def find_best_split(self, split_criterion, samples_seen, sum_y, sum_y_squared):
+
+        best_split_1st = (None, None, 0)
+        best_split_2nd = (None, None, 0)
+
+        for feature, hist in (self.histograms or {}).items():
+            candidates = hist.get_candidates()
+            for thr in candidates:
+                left_stats = hist.aggregate_stats(thr, left=True)
+                right_stats = hist.aggregate_stats(thr, left=False)
+                reduction = split_criterion.reduce(
+                    left_stats, right_stats, samples_seen, sum_y, sum_y_squared
+                )
+                if reduction > best_split_1st[2]:
+                    best_split_2nd = best_split_1st
+                    best_split_1st = (feature, thr, reduction)
+                elif reduction > best_split_2nd[2] and reduction < best_split_1st[2]:
+                    best_split_2nd = (feature, thr, reduction)
+
+        return best_split_1st, best_split_2nd
+
+
+    def split(self, feature, threshold):
+        left_histograms = HistogramContainer(
+            bin_type=self.bin_type,
+            max_bins=self.max_bins,
+            inherit_bins=self.inherit_bins,
+        )
+
+        right_histograms = HistogramContainer(
+            bin_type=self.bin_type,
+            max_bins=self.max_bins,
+            inherit_bins=self.inherit_bins,
+        )
+    
+        if self.inherit_bins and self.histograms is not None:
+            for f_tmp, hist in self.histograms.items():
+                if f_tmp == feature:
+                    left_histograms.histograms[f_tmp] = hist.partition_bins(threshold, left=True)
+                    right_histograms.histograms[f_tmp] = hist.partition_bins(threshold, left=False)
+                else:
+                    left_histograms.histograms[f_tmp] = hist.copy_bins()
+                    right_histograms.histograms[f_tmp] = hist.copy_bins()
+        return left_histograms, right_histograms
+
+

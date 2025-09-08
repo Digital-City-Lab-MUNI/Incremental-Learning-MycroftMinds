@@ -3,8 +3,8 @@ from matplotlib import pyplot as plt
 from src.trees.tree import BaseTree, Node
 from src.trees.xnode_hf import NodeHoeffdingBound
 from src.utils.utils import ensure_2d_array
-from src.trees.split_criteria import get_split_criterion
-from src.trees.histogram import get_histogram_type
+from src.trees.split_criteria import VarianceReduction, VarianceReductionRelative
+from src.trees.histogram import get_histogram_type, HistogramContainer
 from collections import defaultdict
 import numpy as np
 import pandas as pd
@@ -24,10 +24,12 @@ class xFastODT(BaseTree):
         tie_threshold: float = 0.05,
         max_feature: float = 1.0,
         grace_period_depth: int = -1,
-        bin_type: str = "adaptive",
-        max_bins: int = 16,
-        inherit_bins: bool = False,
-        split_criterion: str = "vr_rel",
+        splitter = None,
+
+        ## things bin related
+        hist = None,
+        split_criterion: str = VarianceReduction,
+
     ):
         """
         Initialize the FastODT tree model with parameters.
@@ -93,24 +95,28 @@ class xFastODT(BaseTree):
             self.grace_period_depth = MAX_TREE_DEPTH
 
         self.tie_threshold = tie_threshold
-        if isinstance(bin_type, str) or bin_type is None:
-            bin_type = get_histogram_type(bin_type)
-
-        if isinstance(split_criterion, str):
-            split_criterion = get_split_criterion(split_criterion)
 
         # create the root node
         for d in range(self.depth):
             self.depths_containers.append(defaultdict(lambda: None))
+
+        if not splitter:
+            splitter = lambda nodes, current_node : self.__basic_splitter(nodes, current_node)
+
+        self.splitter = splitter
+
+        if not hist:
+            hist=HistogramContainer(
+                max_bins=16,
+                inherit_bins=False,
+            )
 
         self.depths_containers[0][0] = NodeHoeffdingBound(
             split_confidence=self.split_confidence,
             tie_threshold=self.tie_threshold,
             max_feature=self.max_feature,
             grace_period=grace_period,
-            bin_type=bin_type,
-            max_bins=max_bins,
-            inherit_bins=inherit_bins,
+            hist=hist,
             split_criterion=split_criterion,
         )
 
@@ -189,6 +195,10 @@ class xFastODT(BaseTree):
             return_vector.append(node.value)
         return return_vector
 
+    def __basic_splitter(self, nodes, node):
+        best_split, _ = node.find_best_split()  # here happens hf bound calculation
+        return best_split
+
     def __update_tree(self, node, x: np.ndarray, y: float, depth=0):
         """Update the tree with a new sample."""
 
@@ -221,7 +231,10 @@ class xFastODT(BaseTree):
                 return
 
         node.update_stats(x, y)
-        best_split, _ = node.find_best_split()  # here happens hf bound calculation
+
+        # this can be used to find best splits with histograms on each level
+        best_split = self.splitter(self.depths_containers[node_depth], node)
+
         if best_split[0] is not None:
             depth = len(decision_vector)
 
