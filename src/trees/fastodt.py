@@ -32,9 +32,9 @@ import tqdm
 import time
 from typing import Sequence, Union
 
-
 class FastODT(BaseTree):
-    """Incremental regression tree using Hoeffding bound guided splits.
+    """
+    Incremental regression tree using Hoeffding bound guided splits.
 
     Parameters
     ----------
@@ -42,36 +42,47 @@ class FastODT(BaseTree):
         Maximum depth (root at depth 0). Nodes at or beyond this depth are
         treated as leaves.
     grace_period : int, default=10
-        Minimum number of samples a leaf observes before evaluating a split.
+        Minimum number of samples a leaf must observe before evaluating a split.
     split_confidence : float, default=0.01
-        Hoeffding bound confidence (smaller values -> more eager splitting).
+        Hoeffding bound confidence parameter. Smaller values make the tree
+        split more aggressively; larger values make it more conservative.
     tie_threshold : float, default=0.05
         Threshold below which competing splits are forced to break ties.
     max_feature : float, default=1.0
-        Fraction (0,1] of features considered per split; 1.0 = all features.
+        Fraction of features considered per split (``(0,1]``). ``1.0`` uses all features.
     eagerness : float, default=0.0
-        Additional factor influencing node split aggressiveness (passed down to
-        node implementation).
+        Additional factor influencing node split aggressiveness (passed to nodes).
     grace_period_depth : int, default=-1
-        Depth up to which the grace period applies. ``-1`` disables the limit.
-    bin_type : str or type, default="adaptive"
-        Histogram strategy identifier or class implementing the required API.
-    max_bins : int, default=16
-        Maximum bins per feature histogram.
-    inherit_bins : bool, default=False
-        If True, child nodes receive copies of parent histograms on split.
-    split_criterion : str or callable, default="vr_rel"
-        Split criterion identifier or function returning merit scores.
+        Depth up to which the grace period applies. ``-1`` disables this limit
+        (internally set to a very large number).
+    hist : object, optional
+        Histogram container instance (e.g., ``HistogramContainer``). Provides
+        per-feature binning for split candidate evaluation. If ``None``,
+        defaults to ``HistogramContainer(max_bins=16, inherit_bins=False)``.
+    split_criterion : callable, default=VarianceReduction
+        Function to compute split quality. By default uses variance reduction.
 
     Attributes
     ----------
     root : NodeHoeffdingBound
         Root node of the tree.
     splits : list
-        Cached best split (feature, threshold, ...) per depth to encourage
-        consistency among nodes at the same depth.
-    error_rates : list[float]
+        Per-depth cache of split placeholders, initialized to ``None`` for each
+        depth level.
+    error_rates : list of float
         Rolling window (length 20) of recent absolute errors for monitoring.
+    depth : int
+        Maximum depth of the tree.
+    grace_period : int
+        Minimum number of samples per node before evaluating a split.
+    split_confidence : float
+        Hoeffding bound confidence parameter.
+    tie_threshold : float
+        Threshold for tie-breaking between near-equal splits.
+    max_feature : float
+        Fraction of features sampled for splits.
+    grace_period_depth : int
+        Depth until which the grace period applies.
     """
 
     def __init__(

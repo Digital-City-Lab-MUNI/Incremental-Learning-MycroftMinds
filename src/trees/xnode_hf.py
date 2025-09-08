@@ -29,57 +29,72 @@ def hoeffding_bound(R: float, n: int, delta: float) -> float:
     #     harmonic_mean_n = 1/((1/n_left)+(1/n_right))
     # return math.sqrt(1/(2*harmonic_mean_n) / delta)
 
-
 class NodeHoeffdingBound:  # one leaf of the FastODT
     """
-    Incremental tree node with histogram-based binning for split selection.
+    Incremental tree node with histogram-based split selection.
+
+    Maintains per-feature histograms for candidate thresholds, applies a
+    variance-reduction criterion (by default), and uses a Hoeffding bound to
+    decide when a statistically reliable split can be performed.
 
     Parameters
     ----------
     split_confidence : float
-        Confidence level for splitting criterion.
-    tie_threshold : float
-        Threshold for tie-breaking in split selection. Default is 0.05.
-    max_feature : float
-        Fraction of features to consider for splitting at each node.
-    grace_period : int
-        Number of samples a node should observe before attempting to split.
-    bin_type : class
-        Histogram class to use for binning (e.g., AdaptiveHistogram, EquiWidthHistogram).
-    max_bins : int
-        Maximum number of bins per feature per node.
-    split_criterion : callable
-        Function to compute split quality (default: variance reduction).
+        Confidence parameter ``delta`` for the Hoeffding test.
+    tie_threshold : float, default=0.05
+        Tie-breaking threshold when best and second-best gains are close.
+    max_feature : float, default=1.0
+        Fraction of features randomly sampled for this node (``(0,1]``).
+    grace_period : int, default=0
+        Minimum samples observed before considering a split.
+    index : int, default=0
+        Unique index or identifier for the node.
+    hist : type, default=HistogramContainer
+        Histogram container class used to maintain per-feature distributions.
+    split_criterion : callable, default=VarianceReduction
+        Function to compute split quality.
 
     Attributes
     ----------
-    histograms : dict
-        Per-feature histograms for binning and split candidate generation.
-    left : NodeHoeffdingBound
-        Left child node (None if leaf).
-    right : NodeHoeffdingBound
-        Right child node (None if leaf).
-    feature : int
-        Index of the feature used for splitting.
-    threshold : float
-        Threshold value for the split on the feature.
+    index : int
+        Identifier of this node within the tree.
+    delta : float
+        Confidence parameter for Hoeffding bound.
+    tie_threshold : float
+        Tie-breaking threshold when best and second-best gains are close.
     samples_seen : int
-        Total number of samples seen by this node.
+        Total number of samples observed at this node.
+    y_max : float
+        Maximum target value seen.
+    y_min : float
+        Minimum target value seen.
     sum_y : float
-        Sum of target values for samples seen by this node.
+        Sum of target values observed.
     sum_y_squared : float
-        Sum of squared target values for samples seen by this node.
+        Sum of squared target values observed.
     value : float
-        Average target value for samples seen by this node.
+        Average target value for samples seen (used for leaf prediction).
+    left : NodeHoeffdingBound or None
+        Left child node; ``None`` means this is a leaf.
+    right : NodeHoeffdingBound or None
+        Right child node; ``None`` means this is a leaf.
+    feature : int or None
+        Splitting feature index.
+    threshold : float or None
+        Splitting feature threshold.
+    grace_period : int
+        Minimum samples observed before considering a split.
     grace_period_offset : int
-        Offset for the grace period, used to determine when to split.
-    feature_indices : np.ndarray
-        Randomly selected feature indices based on `max_feature`.
+        Offset from parent's ``samples_seen`` for proper grace period calculation.
+    max_feature : float
+        Fraction of features randomly sampled for this node.
+    feature_indices : np.ndarray or None
+        Indices of features considered for splitting.
+    split_criterion : callable
+        Function to evaluate split quality.
+    hist : type
+        Histogram container class used by this node.
     """
-
-    # TODO:
-    # reduction of memory footprint
-
     def __init__(
         self,
         split_confidence,

@@ -33,7 +33,8 @@ def hoeffding_bound(R: float, n: int, delta: float) -> float:
 
 
 class NodeHoeffdingBound:  # one leaf of the FastODT
-    """Incremental node with histogram-based split selection.
+    """
+    Incremental node with histogram-based split selection.
 
     Maintains per-feature histograms for candidate thresholds, applies a
     variance-reduction criterion, and uses a Hoeffding bound to decide when a
@@ -42,7 +43,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
     Parameters
     ----------
     split_confidence : float
-        Confidence parameter ``delta`` for Hoeffding test.
+        Confidence parameter ``delta`` for the Hoeffding test.
     tie_threshold : float, default=0.05
         Tie-breaking threshold when best and second-best gains are close.
     max_feature : float, default=1.0
@@ -51,15 +52,10 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         Factor controlling speed of splitting (increases effective attempts).
     grace_period : int, default=0
         Minimum samples observed before considering a split.
-    bin_type : type, default=AdaptiveHistogram
-        Histogram class (AdaptiveHistogram, EquiWidthHistogram, MeanSplitter...).
-    max_bins : int, default=32
-        Maximum bins per feature histogram.
-    inherit_bins : bool, default=False
-        If True children receive partitioned / copied parent histograms.
-    split_criterion : callable, optional
-        Function computing split quality; defaults to absolute variance
-        reduction.
+    hist : type, default=HistogramContainer
+        Histogram container class used to maintain per-feature distributions.
+    split_criterion : callable, default=VarianceReduction
+        Function computing split quality.
 
     Attributes
     ----------
@@ -78,14 +74,14 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
     sum_y_squared : float
         Sum of squared target values seen by this node.
     value : float
-        Average target value for samples seen by this node.
-    left : NodeHoeffdingBound
-        Left child node.
-    right : NodeHoeffdingBound
-        Right child node.
-    feature : int
+        Average target value for samples seen by this node (used for leaf prediction).
+    left : NodeHoeffdingBound or None
+        Left child node; ``None`` means this is a leaf.
+    right : NodeHoeffdingBound or None
+        Right child node; ``None`` means this is a leaf.
+    feature : int or None
         Splitting feature index.
-    threshold : float
+    threshold : float or None
         Splitting feature threshold.
     eagerness : float
         Eagerness factor for splitting.
@@ -96,30 +92,25 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
     split_ideal_period : int
         Ideal split period.
     grace_period : int
-        Grace period for splitting.
+        Minimum samples observed before considering a split.
     grace_period_offset : int
-        Offset for grace period.
+        Offset for grace period, inherited from parent when applicable.
     prev_splitting_period : int
         Previous splitting period.
     max_feature : float
-        Maximum feature fraction.
-    feature_indices : np.ndarray
+        Fraction of features randomly sampled for this node.
+    feature_indices : np.ndarray or None
         Indices of features to consider for splitting.
-    bin_type : callable
-        Histogram binning strategy.
-    max_bins : int
-        Maximum number of bins for histograms.
-    histograms : dict
-        Histograms for each feature.
     split_criterion : callable
         Function to evaluate split quality.
-    inherit_bins : bool
-        Whether to inherit bins from parent.
+    hist : type
+        Histogram container class used by this node.
 
+    Notes
+    -----
+    This class is designed for use in streaming/online decision trees where
+    splits must be chosen incrementally and with statistical guarantees.
     """
-
-    # TODO:
-    # reduction of memory footprint
 
     def __init__(
         self,

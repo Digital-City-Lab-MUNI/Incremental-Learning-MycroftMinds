@@ -568,7 +568,38 @@ def get_histogram_type(name: str | None) -> Type[Union[AdaptiveHistogram, EquiWi
         return MeanSplitterHistogram
     raise ValueError(f"Unknown histogram type: {name}")
 
+
 class HistogramContainer:
+    """
+    Container for per-feature histograms used in split evaluation.
+
+    Wraps a chosen histogram binning strategy (e.g. adaptive, equi-width)
+    and manages per-feature histograms with a fixed maximum number of bins.
+    Optionally allows children to inherit parent histograms after a split.
+
+    Parameters
+    ----------
+    bin_type : callable, default=AdaptiveHistogram
+        Histogram class implementing the required API (e.g.,
+        ``AdaptiveHistogram``, ``EquiWidthHistogram``, ``MeanSplitter``).
+    max_bins : int, default=32
+        Maximum number of bins allowed per feature histogram.
+    inherit_bins : bool, default=False
+        Whether child nodes inherit (copy/partition) the parent histograms
+        after a split. If ``False``, children start with empty histograms.
+
+    Attributes
+    ----------
+    bin_type : callable
+        Histogram class used to create per-feature histograms.
+    max_bins : int
+        Maximum number of bins per feature histogram.
+    histograms : dict
+        Mapping from feature index to histogram instance. Empty until the
+        first sample is observed.
+    inherit_bins : bool
+        Whether histograms are inherited by children after a split.
+    """
 
     def __init__(
         self,

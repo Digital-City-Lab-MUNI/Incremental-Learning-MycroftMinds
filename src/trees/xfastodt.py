@@ -14,8 +14,76 @@ import os
 
 MAX_TREE_DEPTH = 999_999_999_999_999
 
-
 class xFastODT(BaseTree):
+    """
+    Extended Fast Online Decision Tree (FastODT).
+
+    A streaming decision tree that incrementally updates nodes using
+    Hoeffding bounds, histogram-based binning, and variance reduction
+    (or a user-specified split criterion). Designed for online learning
+    with configurable depth, feature subsampling, and grace period
+    strategies.
+
+    Parameters
+    ----------
+    depth : int, default=25
+        Maximum depth of the decision tree (number of splits from root to leaf).
+    grace_period : int, default=10
+        Number of samples a node must observe before attempting to split.
+    split_confidence : float, default=0.01
+        Confidence parameter for the Hoeffding bound. Smaller values allow
+        more aggressive splitting; larger values make splitting more conservative.
+    tie_threshold : float, default=0.05
+        Threshold used to break ties when multiple splits have nearly equal gain.
+    max_feature : float, default=1.0
+        Fraction of features randomly sampled for each split (``(0,1]``).
+    grace_period_depth : int, default=-1
+        Depth control for applying the grace period:
+        - ``1`` → only the root node uses grace period,
+        - ``N`` → first ``N`` nodes use grace period,
+        - ``-1`` → disabled (internally set to a very large value).
+    splitter : callable, optional
+        Function defining how splits are performed. If ``None``, defaults
+        to an internal basic splitter.
+    hist : object, optional
+        Histogram container instance (e.g., ``HistogramContainer``).
+        Provides per-feature binning for split candidate evaluation.
+        If ``None``, defaults to ``HistogramContainer(max_bins=16, inherit_bins=False)``.
+    split_criterion : callable, default=VarianceReduction
+        Function to compute split quality. By default uses variance reduction.
+
+    Attributes
+    ----------
+    depth : int
+        Maximum tree depth.
+    current_depth : int
+        Current depth of the tree.
+    grace_period : int
+        Number of samples before checking for splits.
+    split_confidence : float
+        Confidence parameter for Hoeffding bound.
+    tie_threshold : float
+        Tie-breaking threshold for splitting.
+    max_feature : float
+        Fraction of features sampled for each split.
+    grace_period_depth : int
+        Depth until which grace period applies.
+    depths_containers : list of dict
+        Nested containers for managing nodes at each depth level.
+    splits_values : list
+        Stores split threshold values per depth.
+    splits_features : list
+        Stores feature indices per depth.
+    splitter : callable
+        Function responsible for splitting nodes.
+    error_rates : list of float
+        Stores recent error rates for adaptive control (length 20).
+    mature_tree : bool
+        Whether the tree has grown to its intended size/depth.
+    root : NodeHoeffdingBound
+        Root node of the tree.
+    """
+
     def __init__(
         self,
         depth: int = 25,
@@ -31,53 +99,6 @@ class xFastODT(BaseTree):
         split_criterion: str = VarianceReduction,
 
     ):
-        """
-        Initialize the FastODT tree model with parameters.
-
-        Parameters:
-        ----------
-        depth : int, optional (default=5)
-            Maximum depth of the decision tree. Controls the number of splits from the root to a leaf.
-
-        grace_period : int, optional (default=10)
-            Number of samples a node should observe before attempting to split.
-
-        split_confidence : float, optional (default=1.0)
-            Confidence level for splitting criterion. A higher value makes splitting more conservative.
-
-        max_feature : float, optional (default=1.0)
-            Fraction of features to consider for splitting at each node.
-
-        grace_period_depth : int, optional (default=-1)
-            Grace period value to control to how deep nodes grace period should still apply.
-            If set to 1, only first node will use grace_period,
-            If set to 100, first 100 nodes will use grace period,
-            If set to -1, this feature is disabled (set to over 999999999999999 internally).
-
-        bin_type : str or class, optional (default='adaptive')
-            String name of histogram type (e.g., 'adaptive', 'equiwidth', 'mean') or a histogram class. If None or 'adaptive', uses AdaptiveHistogram.
-
-        max_bins : int, optional (default=32)
-            Maximum number of bins per feature per node.
-
-        inherit_bins : bool, optional (default=False)
-            If True, pass histograms from parent to children on split. If False, children start with empty histograms.
-
-        split_criterion : str or callable, optional (default=None)
-            String name of split criterion (e.g., 'variance') or a callable. If None, uses default for node type.
-
-        Attributes:
-        ----------
-        root : Node
-            The root node of the tree, initialized according to the chosen `option`.
-
-        splits : list
-            A list initialized to hold split information for each depth level.
-
-        Raises:
-        ------
-        None
-        """
         self.grace_period: int = grace_period  # Number of samples before checking for a split
         self.split_confidence: float = split_confidence  # Confidence level for splitting
         self.depth: int = depth
