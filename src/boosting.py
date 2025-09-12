@@ -21,6 +21,7 @@ Both classes expose ``partial_fit`` for batch-style incremental updates and
 from __future__ import annotations
 
 from typing import List, Optional, Sequence, Type
+from src.trees.split_criteria import BaseReduction, VarianceReduction, VarianceReductionRelative
 
 from src.trees.fastodt import FastODT
 import src.trees.constants as C
@@ -101,9 +102,8 @@ class IncubationBoost:
         max_feature: float = 1.0,
         grace_period_depth: int = -1,
         eagerness: float = 0.0,
-        bin_type: str = C.HistogramType.ADAPTIVE,
-        max_bins: int = 32,
-        split_criterion: str = C.SplitCriterion.VR_REL,
+        hist = None,
+        split_criterion: type[BaseReduction] = VarianceReductionRelative,
         verbose: bool = True,
     ) -> None:
         self.chain: List[FastODT] = []
@@ -117,8 +117,7 @@ class IncubationBoost:
         self.grace_period_depth = grace_period_depth
         self.tie_threshold = tie_threshold
         self.eagerness = eagerness
-        self.bin_type = bin_type
-        self.max_bins = max_bins
+        self.hist = hist
         self.split_criterion = split_criterion
         self.incubating_node: Optional[FastODT] = None
         self.verbose = verbose
@@ -154,8 +153,7 @@ class IncubationBoost:
                 split_confidence=self.split_confidence,
                 max_feature=self.max_feature,
                 tie_threshold=self.tie_threshold,
-                bin_type=self.bin_type,
-                max_bins=self.max_bins,
+                hist = self.hist,
                 split_criterion=self.split_criterion,
             )
             self.chain.append(new_node)

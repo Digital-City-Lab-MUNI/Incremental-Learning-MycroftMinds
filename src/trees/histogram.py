@@ -603,9 +603,9 @@ class HistogramContainer:
 
     def __init__(
         self,
-        bin_type=AdaptiveHistogram,
-        max_bins=32,
-        inherit_bins=False,
+        bin_type : callable =AdaptiveHistogram,
+        max_bins : int = 32,
+        inherit_bins : bool = False,
     ):
         self.bin_type: callable = bin_type  # e.g. 'adaptive', 'equiwidth', 'mean'
         self.max_bins: int = max_bins

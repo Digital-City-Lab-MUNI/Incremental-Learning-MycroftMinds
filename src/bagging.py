@@ -557,10 +557,8 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
         max_feature: float = 1.0,
         eagerness: float = 0.0,
         grace_period_depth: int = -1,
-        bin_type: str = C.HistogramType.ADAPTIVE,
-        max_bins: int = 32,
-        inherit_bins: bool = False,
-        split_criterion: str = C.SplitCriterion.VR_REL,
+        hist = None,
+        split_criterion: type[BaseReduction] = VarianceReductionRelative,
     ):
         super().__init__(
             n_models=n_models,
@@ -593,9 +591,7 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
         self.merit_preprune = merit_preprune
         self.eagerness = eagerness
         self.max_feature = max_feature
-        self.bin_type = bin_type
-        self.max_bins = max_bins
-        self.inherit_bins = inherit_bins
+        self.hist = hist
         self.split_criterion = split_criterion
 
         if aggregation_method in self._VALID_AGGREGATION_METHOD:
@@ -662,9 +658,7 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
             max_feature=self.max_feature,
             eagerness=self.eagerness,
             grace_period_depth=self.grace_period_depth,
-            bin_type=self.bin_type,
-            max_bins=self.max_bins,
-            inherit_bins=self.inherit_bins,
+            hist=self.hist,
             split_criterion=self.split_criterion,
         )
 
