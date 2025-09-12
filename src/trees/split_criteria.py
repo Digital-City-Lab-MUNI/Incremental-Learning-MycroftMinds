@@ -63,7 +63,8 @@ class VarianceReduction:
 
     @classmethod
     def R(cls, *args):
-        return 1.0
+        y_max, y_min = args
+        return 0.25 * (y_max - y_min) ** 2  # Popoviciu upper bound
 
 class VarianceReductionRelative:
 
@@ -103,9 +104,7 @@ class VarianceReductionRelative:
 
     @classmethod
     def R(cls, *args):
-        y_max, y_min = args
-        return 0.25 * (y_max - y_min) ** 2  # Popoviciu upper bound
-
+        return 1.0
 
 
 def get_split_criterion(name: str | None) -> callable:
