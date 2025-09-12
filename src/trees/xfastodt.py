@@ -3,7 +3,7 @@ from matplotlib import pyplot as plt
 from src.trees.tree import BaseTree, Node
 from src.trees.xnode_hf import NodeHoeffdingBound
 from src.utils.utils import ensure_2d_array
-from src.trees.split_criteria import VarianceReduction, VarianceReductionRelative
+from src.trees.split_criteria import BaseReduction, VarianceReduction, VarianceReductionRelative
 from src.trees.histogram import get_histogram_type, HistogramContainer
 from collections import defaultdict
 import numpy as np
@@ -96,7 +96,7 @@ class xFastODT(BaseTree):
 
         ## things bin related
         hist = None,
-        split_criterion: str = VarianceReduction,
+        split_criterion: type[BaseReduction] = VarianceReductionRelative,
 
     ):
         self.grace_period: int = grace_period  # Number of samples before checking for a split

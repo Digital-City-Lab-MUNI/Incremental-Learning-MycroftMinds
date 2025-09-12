@@ -8,7 +8,7 @@ when a split is statistically justified under streaming constraints.
 import numpy as np
 from src.utils.utils import get_unique_random_numbers
 from src.trees.histogram import AdaptiveHistogram, HistogramContainer
-from src.trees.split_criteria import VarianceReduction, VarianceReductionRelative
+from src.trees.split_criteria import BaseReduction, VarianceReduction, VarianceReductionRelative
 
 
 def hoeffding_bound(R: float, n: int, delta: float) -> float:
@@ -120,7 +120,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         eagerness: float = 0.0,
         grace_period: int = 0,
         hist=HistogramContainer,
-        split_criterion = VarianceReduction,
+        split_criterion: type[BaseReduction] = VarianceReductionRelative,
     ) -> None:
         self.tie_threshold: float = tie_threshold
         self.delta: float = split_confidence

@@ -3,7 +3,7 @@ import numpy as np
 from collections import defaultdict
 from src.utils.utils import get_unique_random_numbers
 from src.trees.histogram import AdaptiveHistogram, EquiWidthHistogram, HistogramContainer
-from src.trees.split_criteria import VarianceReduction, VarianceReductionRelative
+from src.trees.split_criteria import BaseReduction, VarianceReduction, VarianceReductionRelative
 
 
 def hoeffding_bound(R: float, n: int, delta: float) -> float:
@@ -103,7 +103,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         grace_period=0,
         index=0,
         hist=HistogramContainer,
-        split_criterion = VarianceReduction,
+        split_criterion: type[BaseReduction] = VarianceReductionRelative,
     ):
         self.index: int = index
 

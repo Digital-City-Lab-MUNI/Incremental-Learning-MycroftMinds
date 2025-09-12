@@ -2,6 +2,30 @@
 
 import src.trees.constants as C
 
+class BaseReduction:
+    
+    @classmethod
+    def reduce(
+        cls,
+        left_stats: dict,
+        right_stats: dict,
+        total_n: int,
+        total_sum_y: float,
+        total_sum_y2: float,
+    ) -> float:
+        raise NotImplementedError("Subclasses must implement reduce()")
+
+    @classmethod
+    def reduce(
+        cls,
+        left_stats: dict,
+        right_stats: dict,
+        total_n: int,
+        total_sum_y: float,
+        total_sum_y2: float,
+    ) -> float:
+        raise NotImplementedError("Subclasses must implement R()")
+
 class VarianceReduction:
 
     @classmethod

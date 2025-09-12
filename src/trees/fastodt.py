@@ -22,7 +22,7 @@ from src.trees.node_hf import NodeHoeffdingBound
 from src.utils.utils import ensure_2d_array
 from src.trees.split_criteria import get_split_criterion
 from src.trees.histogram import get_histogram_type, HistogramContainer
-from src.trees.split_criteria import VarianceReduction, VarianceReductionRelative
+from src.trees.split_criteria import BaseReduction, VarianceReduction, VarianceReductionRelative
 
 
 import src.trees.constants as C
@@ -30,7 +30,7 @@ import numpy as np
 import pandas as pd
 import tqdm
 import time
-from typing import Sequence, Union
+from typing import Sequence, Union, Type
 
 class FastODT(BaseTree):
     """
@@ -95,7 +95,7 @@ class FastODT(BaseTree):
         eagerness: float = 0.0,
         grace_period_depth: int = -1,
         hist = None,
-        split_criterion: str = VarianceReduction,
+        split_criterion: type[BaseReduction] = VarianceReductionRelative,
 
     ) -> None:
         self.grace_period = grace_period  # Number of samples before checking for a split
