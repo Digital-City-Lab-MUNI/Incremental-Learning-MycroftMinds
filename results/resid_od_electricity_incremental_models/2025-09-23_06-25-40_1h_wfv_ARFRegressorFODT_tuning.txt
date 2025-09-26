@@ -1,0 +1,376 @@
+Grid Search Started: 2025-09-23 06:25:40
+Model: ARFRegressorFODT
+File prefix: 1h_wfv
+Total parameter combinations: 100
+Aggregation: hourly | Data Frequency: H | Update Frequency: H
+Parameter grid: {'n_models': [5, 60, 15, 30], 'max_features': [0.7, 0.3, 0.5], 'max_depth': [5, 30, 10], 'aggregation_method': ['mean'], 'disable_weighted_vote': [False], 'drift_detector': [None], 'warning_detector': [None], 'eagerness': [0], 'tau': [0.01, 0.05], 'delta': [0.01, 0.5, 0.05, 0.1, 0.005], 'grace_period': [0, 24, 48, 96], 'grace_period_depth': [-1, 0, 1], 'bin_type': ['mean'], 'split_criterion': ['vr_rel']}
+Log directory: ../../results/resid_od_electricity_incremental_models
+
+
+================================================================================
+CHECKPOINT: Iteration 1/100
+Current Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+================================================================================
+NEW BEST SCORES FOUND!
+   RMSE: N/A -> 0.674 (decreased)
+   MAE: N/A -> 0.442 (decreased)
+   MAPE: N/A -> 48.433% (decreased)
+   DIR_ACCURACY: N/A -> 48.098% (increased)
+   FIRST_DIFF_CORR: N/A -> -6.670% (increased)
+   SPIKES_IMMEDIATE.F1: N/A -> 0.958% (increased)
+   DROPS_IMMEDIATE.F1: N/A -> 0.541% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.674
+   MAE: 0.442
+   MAPE: 48.433%
+   DIR_ACCURACY: 48.098%
+   FIRST_DIFF_CORR: -6.670%
+   SPIKES_IMMEDIATE.F1: 0.958%
+   DROPS_IMMEDIATE.F1: 0.541%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.674)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   MAE (best: 0.442)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   MAPE (best: 48.433%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   DIR_ACCURACY (best: 48.098%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   FIRST_DIFF_CORR (best: -6.670%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   SPIKES_IMMEDIATE.F1 (best: 0.958%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   DROPS_IMMEDIATE.F1 (best: 0.541%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+
+Progress: 1.0% (1/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 2/100
+Current Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 5, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.005, 'grace_period': 48, 'grace_period_depth': 1, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.678
+   MAE: 0.444
+   MAPE: 48.647%
+   DIR_ACCURACY: 47.666%
+   FIRST_DIFF_CORR: -6.974%
+   SPIKES_IMMEDIATE.F1: 0.232%
+   DROPS_IMMEDIATE.F1: 0.000%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.674)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   MAE (best: 0.442)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   MAPE (best: 48.433%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   DIR_ACCURACY (best: 48.098%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   FIRST_DIFF_CORR (best: -6.670%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   SPIKES_IMMEDIATE.F1 (best: 0.958%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   DROPS_IMMEDIATE.F1 (best: 0.541%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+
+Progress: 2.0% (2/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 3/100
+Current Parameters: {'n_models': 30, 'max_features': 0.5, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.05, 'delta': 0.5, 'grace_period': 0, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+================================================================================
+NEW BEST SCORES FOUND!
+   DROPS_IMMEDIATE.F1: 0.541% -> 0.816% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.677
+   MAE: 0.444
+   MAPE: 48.634%
+   DIR_ACCURACY: 48.012%
+   FIRST_DIFF_CORR: -6.879%
+   SPIKES_IMMEDIATE.F1: 0.501%
+   DROPS_IMMEDIATE.F1: 0.816%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.674)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   MAE (best: 0.442)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   MAPE (best: 48.433%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   DIR_ACCURACY (best: 48.098%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   FIRST_DIFF_CORR (best: -6.670%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   SPIKES_IMMEDIATE.F1 (best: 0.958%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   DROPS_IMMEDIATE.F1 (best: 0.816%)
+     Parameters: {'n_models': 30, 'max_features': 0.5, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.05, 'delta': 0.5, 'grace_period': 0, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+
+Progress: 3.0% (3/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 4/100
+Current Parameters: {'n_models': 30, 'max_features': 0.5, 'max_depth': 5, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.05, 'delta': 0.5, 'grace_period': 0, 'grace_period_depth': -1, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.681
+   MAE: 0.447
+   MAPE: 48.698%
+   DIR_ACCURACY: 47.717%
+   FIRST_DIFF_CORR: -7.017%
+   SPIKES_IMMEDIATE.F1: 0.323%
+   DROPS_IMMEDIATE.F1: 0.000%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.674)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   MAE (best: 0.442)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   MAPE (best: 48.433%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   DIR_ACCURACY (best: 48.098%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   FIRST_DIFF_CORR (best: -6.670%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   SPIKES_IMMEDIATE.F1 (best: 0.958%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   DROPS_IMMEDIATE.F1 (best: 0.816%)
+     Parameters: {'n_models': 30, 'max_features': 0.5, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.05, 'delta': 0.5, 'grace_period': 0, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+
+Progress: 4.0% (4/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 5/100
+Current Parameters: {'n_models': 30, 'max_features': 0.5, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.01, 'grace_period': 0, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.678
+   MAE: 0.445
+   MAPE: 48.641%
+   DIR_ACCURACY: 47.797%
+   FIRST_DIFF_CORR: -6.887%
+   SPIKES_IMMEDIATE.F1: 0.000%
+   DROPS_IMMEDIATE.F1: 0.438%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.674)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   MAE (best: 0.442)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   MAPE (best: 48.433%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   DIR_ACCURACY (best: 48.098%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   FIRST_DIFF_CORR (best: -6.670%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   SPIKES_IMMEDIATE.F1 (best: 0.958%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   DROPS_IMMEDIATE.F1 (best: 0.816%)
+     Parameters: {'n_models': 30, 'max_features': 0.5, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.05, 'delta': 0.5, 'grace_period': 0, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.674, {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+      MAE=0.442, {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+      MAPE=48.433%, {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+      Dir_Acc=48.098%, {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+      First_Diff_Corr=-6.670%, {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+      Spikes_F1=0.958%, {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+      Drops_F1=0.816%, {'n_models': 30, 'max_features': 0.5, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.05, 'delta': 0.5, 'grace_period': 0, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+
+Progress: 5.0% (5/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 6/100
+Current Parameters: {'n_models': 5, 'max_features': 0.7, 'max_depth': 5, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.5, 'grace_period': 24, 'grace_period_depth': 1, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+================================================================================
+NEW BEST SCORES FOUND!
+   DIR_ACCURACY: 48.098% -> 48.348% (increased)
+   DROPS_IMMEDIATE.F1: 0.816% -> 1.627% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.678
+   MAE: 0.448
+   MAPE: 49.571%
+   DIR_ACCURACY: 48.348%
+   FIRST_DIFF_CORR: -6.831%
+   SPIKES_IMMEDIATE.F1: 0.821%
+   DROPS_IMMEDIATE.F1: 1.627%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.674)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   MAE (best: 0.442)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   MAPE (best: 48.433%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   DIR_ACCURACY (best: 48.348%)
+     Parameters: {'n_models': 5, 'max_features': 0.7, 'max_depth': 5, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.5, 'grace_period': 24, 'grace_period_depth': 1, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   FIRST_DIFF_CORR (best: -6.670%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   SPIKES_IMMEDIATE.F1 (best: 0.958%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   DROPS_IMMEDIATE.F1 (best: 1.627%)
+     Parameters: {'n_models': 5, 'max_features': 0.7, 'max_depth': 5, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.5, 'grace_period': 24, 'grace_period_depth': 1, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+
+Progress: 6.0% (6/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 7/100
+Current Parameters: {'n_models': 30, 'max_features': 0.7, 'max_depth': 5, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.05, 'delta': 0.1, 'grace_period': 48, 'grace_period_depth': 1, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.679
+   MAE: 0.446
+   MAPE: 48.740%
+   DIR_ACCURACY: 47.733%
+   FIRST_DIFF_CORR: -6.984%
+   SPIKES_IMMEDIATE.F1: 0.279%
+   DROPS_IMMEDIATE.F1: 0.192%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.674)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   MAE (best: 0.442)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   MAPE (best: 48.433%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   DIR_ACCURACY (best: 48.348%)
+     Parameters: {'n_models': 5, 'max_features': 0.7, 'max_depth': 5, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.5, 'grace_period': 24, 'grace_period_depth': 1, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   FIRST_DIFF_CORR (best: -6.670%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   SPIKES_IMMEDIATE.F1 (best: 0.958%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   DROPS_IMMEDIATE.F1 (best: 1.627%)
+     Parameters: {'n_models': 5, 'max_features': 0.7, 'max_depth': 5, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.5, 'grace_period': 24, 'grace_period_depth': 1, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+
+Progress: 7.0% (7/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 8/100
+Current Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 10, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.05, 'delta': 0.05, 'grace_period': 96, 'grace_period_depth': 1, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.676
+   MAE: 0.444
+   MAPE: 48.639%
+   DIR_ACCURACY: 48.112%
+   FIRST_DIFF_CORR: -6.852%
+   SPIKES_IMMEDIATE.F1: 0.354%
+   DROPS_IMMEDIATE.F1: 1.346%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.674)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   MAE (best: 0.442)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   MAPE (best: 48.433%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   DIR_ACCURACY (best: 48.348%)
+     Parameters: {'n_models': 5, 'max_features': 0.7, 'max_depth': 5, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.5, 'grace_period': 24, 'grace_period_depth': 1, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   FIRST_DIFF_CORR (best: -6.670%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   SPIKES_IMMEDIATE.F1 (best: 0.958%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   DROPS_IMMEDIATE.F1 (best: 1.627%)
+     Parameters: {'n_models': 5, 'max_features': 0.7, 'max_depth': 5, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.5, 'grace_period': 24, 'grace_period_depth': 1, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+
+Progress: 8.0% (8/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 9/100
+Current Parameters: {'n_models': 60, 'max_features': 0.7, 'max_depth': 5, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.05, 'delta': 0.1, 'grace_period': 0, 'grace_period_depth': -1, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.681
+   MAE: 0.447
+   MAPE: 48.755%
+   DIR_ACCURACY: 47.691%
+   FIRST_DIFF_CORR: -7.019%
+   SPIKES_IMMEDIATE.F1: 0.046%
+   DROPS_IMMEDIATE.F1: 0.000%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.674)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   MAE (best: 0.442)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   MAPE (best: 48.433%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   DIR_ACCURACY (best: 48.348%)
+     Parameters: {'n_models': 5, 'max_features': 0.7, 'max_depth': 5, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.5, 'grace_period': 24, 'grace_period_depth': 1, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   FIRST_DIFF_CORR (best: -6.670%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   SPIKES_IMMEDIATE.F1 (best: 0.958%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   DROPS_IMMEDIATE.F1 (best: 1.627%)
+     Parameters: {'n_models': 5, 'max_features': 0.7, 'max_depth': 5, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.5, 'grace_period': 24, 'grace_period_depth': 1, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+
+Progress: 9.0% (9/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 10/100
+Current Parameters: {'n_models': 5, 'max_features': 0.5, 'max_depth': 10, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.05, 'grace_period': 96, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+================================================================================
+NEW BEST SCORES FOUND!
+   RMSE: 0.674 -> 0.672 (decreased)
+   DIR_ACCURACY: 48.348% -> 49.677% (increased)
+   FIRST_DIFF_CORR: -6.670% -> -6.495% (increased)
+   DROPS_IMMEDIATE.F1: 1.627% -> 3.699% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.672
+   MAE: 0.443
+   MAPE: 49.279%
+   DIR_ACCURACY: 49.677%
+   FIRST_DIFF_CORR: -6.495%
+   SPIKES_IMMEDIATE.F1: 0.724%
+   DROPS_IMMEDIATE.F1: 3.699%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.672)
+     Parameters: {'n_models': 5, 'max_features': 0.5, 'max_depth': 10, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.05, 'grace_period': 96, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   MAE (best: 0.442)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   MAPE (best: 48.433%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   DIR_ACCURACY (best: 49.677%)
+     Parameters: {'n_models': 5, 'max_features': 0.5, 'max_depth': 10, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.05, 'grace_period': 96, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   FIRST_DIFF_CORR (best: -6.495%)
+     Parameters: {'n_models': 5, 'max_features': 0.5, 'max_depth': 10, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.05, 'grace_period': 96, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   SPIKES_IMMEDIATE.F1 (best: 0.958%)
+     Parameters: {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+   DROPS_IMMEDIATE.F1 (best: 3.699%)
+     Parameters: {'n_models': 5, 'max_features': 0.5, 'max_depth': 10, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.05, 'grace_period': 96, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.672, {'n_models': 5, 'max_features': 0.5, 'max_depth': 10, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.05, 'grace_period': 96, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+      MAE=0.442, {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+      MAPE=48.433%, {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+      Dir_Acc=49.677%, {'n_models': 5, 'max_features': 0.5, 'max_depth': 10, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.05, 'grace_period': 96, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+      First_Diff_Corr=-6.495%, {'n_models': 5, 'max_features': 0.5, 'max_depth': 10, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.05, 'grace_period': 96, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+      Spikes_F1=0.958%, {'n_models': 15, 'max_features': 0.3, 'max_depth': 30, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.1, 'grace_period': 24, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+      Drops_F1=3.699%, {'n_models': 5, 'max_features': 0.5, 'max_depth': 10, 'aggregation_method': 'mean', 'disable_weighted_vote': False, 'drift_detector': None, 'warning_detector': None, 'eagerness': 0, 'tau': 0.01, 'delta': 0.05, 'grace_period': 96, 'grace_period_depth': 0, 'bin_type': 'mean', 'split_criterion': 'vr_rel'}
+
+Progress: 10.0% (10/100 combinations)
+================================================================================

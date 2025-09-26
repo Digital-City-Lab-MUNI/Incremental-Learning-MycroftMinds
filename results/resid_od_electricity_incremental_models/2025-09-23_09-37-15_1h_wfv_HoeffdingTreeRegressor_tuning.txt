@@ -1,0 +1,3606 @@
+Grid Search Started: 2025-09-23 09:37:15
+Model: HoeffdingTreeRegressor
+File prefix: 1h_wfv
+Total parameter combinations: 100
+Aggregation: hourly | Data Frequency: H | Update Frequency: 1h
+Parameter grid: {'max_depth': [3, 5, 10, 15, 20], 'grace_period': [0, 10, 24, 48, 69, 96], 'tau': [0.001, 0.005, 0.01, 0.03, 0.05, 0.1], 'delta': [0.001, 0.005, 0.01, 0.05, 0.1]}
+Log directory: ../../results/resid_od_electricity_incremental_models
+
+
+================================================================================
+CHECKPOINT: Iteration 1/100
+Current Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+================================================================================
+NEW BEST SCORES FOUND!
+   RMSE: N/A -> 0.608 (decreased)
+   MAE: N/A -> 0.412 (decreased)
+   MAPE: N/A -> 52.121% (decreased)
+   DIR_ACCURACY: N/A -> 51.790% (increased)
+   FIRST_DIFF_CORR: N/A -> 0.894% (increased)
+   SPIKES_IMMEDIATE.F1: N/A -> 2.121% (increased)
+   DROPS_IMMEDIATE.F1: N/A -> 4.745% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.608
+   MAE: 0.412
+   MAPE: 52.121%
+   DIR_ACCURACY: 51.790%
+   FIRST_DIFF_CORR: 0.894%
+   SPIKES_IMMEDIATE.F1: 2.121%
+   DROPS_IMMEDIATE.F1: 4.745%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.608)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 51.790%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   FIRST_DIFF_CORR (best: 0.894%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   SPIKES_IMMEDIATE.F1 (best: 2.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DROPS_IMMEDIATE.F1 (best: 4.745%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+
+Progress: 1.0% (1/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 2/100
+Current Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+================================================================================
+NEW BEST SCORES FOUND!
+   DIR_ACCURACY: 51.790% -> 53.150% (increased)
+   FIRST_DIFF_CORR: 0.894% -> 5.098% (increased)
+   SPIKES_IMMEDIATE.F1: 2.121% -> 4.289% (increased)
+   DROPS_IMMEDIATE.F1: 4.745% -> 4.935% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.609
+   MAE: 0.426
+   MAPE: 57.682%
+   DIR_ACCURACY: 53.150%
+   FIRST_DIFF_CORR: 5.098%
+   SPIKES_IMMEDIATE.F1: 4.289%
+   DROPS_IMMEDIATE.F1: 4.935%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.608)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.150%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   FIRST_DIFF_CORR (best: 5.098%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 4.289%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   DROPS_IMMEDIATE.F1 (best: 4.935%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+
+Progress: 2.0% (2/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 3/100
+Current Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.01, 'delta': 0.01}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.609
+   MAE: 0.426
+   MAPE: 57.682%
+   DIR_ACCURACY: 53.150%
+   FIRST_DIFF_CORR: 5.098%
+   SPIKES_IMMEDIATE.F1: 4.289%
+   DROPS_IMMEDIATE.F1: 4.935%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.608)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.150%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   FIRST_DIFF_CORR (best: 5.098%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 4.289%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   DROPS_IMMEDIATE.F1 (best: 4.935%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+
+Progress: 3.0% (3/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 4/100
+Current Parameters: {'max_depth': 5, 'grace_period': 24, 'tau': 0.001, 'delta': 0.01}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.626
+   MAE: 0.443
+   MAPE: 60.847%
+   DIR_ACCURACY: 50.202%
+   FIRST_DIFF_CORR: -3.095%
+   SPIKES_IMMEDIATE.F1: 2.793%
+   DROPS_IMMEDIATE.F1: 1.857%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.608)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.150%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   FIRST_DIFF_CORR (best: 5.098%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 4.289%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   DROPS_IMMEDIATE.F1 (best: 4.935%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+
+Progress: 4.0% (4/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 5/100
+Current Parameters: {'max_depth': 5, 'grace_period': 48, 'tau': 0.001, 'delta': 0.005}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.623
+   MAE: 0.440
+   MAPE: 59.976%
+   DIR_ACCURACY: 51.324%
+   FIRST_DIFF_CORR: -2.214%
+   SPIKES_IMMEDIATE.F1: 3.942%
+   DROPS_IMMEDIATE.F1: 4.099%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.608)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.150%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   FIRST_DIFF_CORR (best: 5.098%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 4.289%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   DROPS_IMMEDIATE.F1 (best: 4.935%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.608, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      MAE=0.412, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      MAPE=52.121%, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      Dir_Acc=53.150%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+      First_Diff_Corr=5.098%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+      Spikes_F1=4.289%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+      Drops_F1=4.935%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+
+Progress: 5.0% (5/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 6/100
+Current Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+================================================================================
+NEW BEST SCORES FOUND!
+   SPIKES_IMMEDIATE.F1: 4.289% -> 4.876% (increased)
+   DROPS_IMMEDIATE.F1: 4.935% -> 6.584% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.627
+   MAE: 0.436
+   MAPE: 57.597%
+   DIR_ACCURACY: 50.981%
+   FIRST_DIFF_CORR: 2.162%
+   SPIKES_IMMEDIATE.F1: 4.876%
+   DROPS_IMMEDIATE.F1: 6.584%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.608)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.150%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   FIRST_DIFF_CORR (best: 5.098%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 4.876%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+   DROPS_IMMEDIATE.F1 (best: 6.584%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+
+Progress: 6.0% (6/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 7/100
+Current Parameters: {'max_depth': 5, 'grace_period': 48, 'tau': 0.005, 'delta': 0.1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.617
+   MAE: 0.438
+   MAPE: 60.706%
+   DIR_ACCURACY: 50.983%
+   FIRST_DIFF_CORR: -1.471%
+   SPIKES_IMMEDIATE.F1: 4.227%
+   DROPS_IMMEDIATE.F1: 5.440%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.608)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.150%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   FIRST_DIFF_CORR (best: 5.098%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 4.876%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+   DROPS_IMMEDIATE.F1 (best: 6.584%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+
+Progress: 7.0% (7/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 8/100
+Current Parameters: {'max_depth': 5, 'grace_period': 0, 'tau': 0.005, 'delta': 0.001}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.628
+   MAE: 0.451
+   MAPE: 62.649%
+   DIR_ACCURACY: 48.345%
+   FIRST_DIFF_CORR: -2.782%
+   SPIKES_IMMEDIATE.F1: 1.721%
+   DROPS_IMMEDIATE.F1: 2.021%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.608)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.150%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   FIRST_DIFF_CORR (best: 5.098%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 4.876%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+   DROPS_IMMEDIATE.F1 (best: 6.584%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+
+Progress: 8.0% (8/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 9/100
+Current Parameters: {'max_depth': 3, 'grace_period': 24, 'tau': 0.1, 'delta': 0.005}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.632
+   MAE: 0.450
+   MAPE: 62.365%
+   DIR_ACCURACY: 50.834%
+   FIRST_DIFF_CORR: -4.512%
+   SPIKES_IMMEDIATE.F1: 1.208%
+   DROPS_IMMEDIATE.F1: 3.948%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.608)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.150%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   FIRST_DIFF_CORR (best: 5.098%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 4.876%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+   DROPS_IMMEDIATE.F1 (best: 6.584%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+
+Progress: 9.0% (9/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 10/100
+Current Parameters: {'max_depth': 10, 'grace_period': 69, 'tau': 0.001, 'delta': 0.01}
+================================================================================
+NEW BEST SCORES FOUND!
+   RMSE: 0.608 -> 0.607 (decreased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.607
+   MAE: 0.426
+   MAPE: 58.223%
+   DIR_ACCURACY: 52.352%
+   FIRST_DIFF_CORR: 5.088%
+   SPIKES_IMMEDIATE.F1: 4.752%
+   DROPS_IMMEDIATE.F1: 4.503%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.607)
+     Parameters: {'max_depth': 10, 'grace_period': 69, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.150%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   FIRST_DIFF_CORR (best: 5.098%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 4.876%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+   DROPS_IMMEDIATE.F1 (best: 6.584%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.607, {'max_depth': 10, 'grace_period': 69, 'tau': 0.001, 'delta': 0.01}
+      MAE=0.412, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      MAPE=52.121%, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      Dir_Acc=53.150%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+      First_Diff_Corr=5.098%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+      Spikes_F1=4.876%, {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+      Drops_F1=6.584%, {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+
+Progress: 10.0% (10/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 11/100
+Current Parameters: {'max_depth': 3, 'grace_period': 24, 'tau': 0.01, 'delta': 0.001}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.632
+   MAE: 0.450
+   MAPE: 62.419%
+   DIR_ACCURACY: 50.767%
+   FIRST_DIFF_CORR: -4.456%
+   SPIKES_IMMEDIATE.F1: 1.208%
+   DROPS_IMMEDIATE.F1: 3.946%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.607)
+     Parameters: {'max_depth': 10, 'grace_period': 69, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.150%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   FIRST_DIFF_CORR (best: 5.098%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 4.876%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+   DROPS_IMMEDIATE.F1 (best: 6.584%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+
+Progress: 11.0% (11/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 12/100
+Current Parameters: {'max_depth': 5, 'grace_period': 10, 'tau': 0.005, 'delta': 0.001}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.637
+   MAE: 0.454
+   MAPE: 62.106%
+   DIR_ACCURACY: 51.020%
+   FIRST_DIFF_CORR: -5.096%
+   SPIKES_IMMEDIATE.F1: 2.776%
+   DROPS_IMMEDIATE.F1: 5.234%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.607)
+     Parameters: {'max_depth': 10, 'grace_period': 69, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.150%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   FIRST_DIFF_CORR (best: 5.098%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 4.876%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+   DROPS_IMMEDIATE.F1 (best: 6.584%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+
+Progress: 12.0% (12/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 13/100
+Current Parameters: {'max_depth': 20, 'grace_period': 69, 'tau': 0.05, 'delta': 0.001}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.607
+   MAE: 0.425
+   MAPE: 57.998%
+   DIR_ACCURACY: 52.414%
+   FIRST_DIFF_CORR: 4.648%
+   SPIKES_IMMEDIATE.F1: 4.467%
+   DROPS_IMMEDIATE.F1: 4.321%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.607)
+     Parameters: {'max_depth': 10, 'grace_period': 69, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.150%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   FIRST_DIFF_CORR (best: 5.098%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 4.876%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+   DROPS_IMMEDIATE.F1 (best: 6.584%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+
+Progress: 13.0% (13/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 14/100
+Current Parameters: {'max_depth': 3, 'grace_period': 0, 'tau': 0.03, 'delta': 0.001}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.642
+   MAE: 0.447
+   MAPE: 57.789%
+   DIR_ACCURACY: 47.929%
+   FIRST_DIFF_CORR: -4.848%
+   SPIKES_IMMEDIATE.F1: 0.581%
+   DROPS_IMMEDIATE.F1: 0.498%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.607)
+     Parameters: {'max_depth': 10, 'grace_period': 69, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.150%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   FIRST_DIFF_CORR (best: 5.098%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 4.876%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+   DROPS_IMMEDIATE.F1 (best: 6.584%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+
+Progress: 14.0% (14/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 15/100
+Current Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+================================================================================
+NEW BEST SCORES FOUND!
+   DIR_ACCURACY: 53.150% -> 53.250% (increased)
+   FIRST_DIFF_CORR: 5.098% -> 5.740% (increased)
+   SPIKES_IMMEDIATE.F1: 4.876% -> 5.925% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.609
+   MAE: 0.423
+   MAPE: 55.821%
+   DIR_ACCURACY: 53.250%
+   FIRST_DIFF_CORR: 5.740%
+   SPIKES_IMMEDIATE.F1: 5.925%
+   DROPS_IMMEDIATE.F1: 4.747%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.607)
+     Parameters: {'max_depth': 10, 'grace_period': 69, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.250%)
+     Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 5.740%)
+     Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+   SPIKES_IMMEDIATE.F1 (best: 5.925%)
+     Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+   DROPS_IMMEDIATE.F1 (best: 6.584%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.607, {'max_depth': 10, 'grace_period': 69, 'tau': 0.001, 'delta': 0.01}
+      MAE=0.412, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      MAPE=52.121%, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      Dir_Acc=53.250%, {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+      First_Diff_Corr=5.740%, {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+      Spikes_F1=5.925%, {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+      Drops_F1=6.584%, {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+
+Progress: 15.0% (15/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 16/100
+Current Parameters: {'max_depth': 5, 'grace_period': 69, 'tau': 0.1, 'delta': 0.05}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.619
+   MAE: 0.436
+   MAPE: 59.209%
+   DIR_ACCURACY: 51.921%
+   FIRST_DIFF_CORR: 0.050%
+   SPIKES_IMMEDIATE.F1: 3.884%
+   DROPS_IMMEDIATE.F1: 4.475%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.607)
+     Parameters: {'max_depth': 10, 'grace_period': 69, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.250%)
+     Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 5.740%)
+     Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+   SPIKES_IMMEDIATE.F1 (best: 5.925%)
+     Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+   DROPS_IMMEDIATE.F1 (best: 6.584%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+
+Progress: 16.0% (16/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 17/100
+Current Parameters: {'max_depth': 20, 'grace_period': 10, 'tau': 0.1, 'delta': 0.005}
+================================================================================
+NEW BEST SCORES FOUND!
+   DIR_ACCURACY: 53.250% -> 53.583% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.636
+   MAE: 0.444
+   MAPE: 58.392%
+   DIR_ACCURACY: 53.583%
+   FIRST_DIFF_CORR: 2.549%
+   SPIKES_IMMEDIATE.F1: 3.781%
+   DROPS_IMMEDIATE.F1: 4.706%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.607)
+     Parameters: {'max_depth': 10, 'grace_period': 69, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.583%)
+     Parameters: {'max_depth': 20, 'grace_period': 10, 'tau': 0.1, 'delta': 0.005}
+   FIRST_DIFF_CORR (best: 5.740%)
+     Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+   SPIKES_IMMEDIATE.F1 (best: 5.925%)
+     Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+   DROPS_IMMEDIATE.F1 (best: 6.584%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+
+Progress: 17.0% (17/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 18/100
+Current Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.005, 'delta': 0.05}
+================================================================================
+NEW BEST SCORES FOUND!
+   RMSE: 0.607 -> 0.600 (decreased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.600
+   MAE: 0.419
+   MAPE: 56.248%
+   DIR_ACCURACY: 52.031%
+   FIRST_DIFF_CORR: 5.696%
+   SPIKES_IMMEDIATE.F1: 3.374%
+   DROPS_IMMEDIATE.F1: 3.340%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.600)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.005, 'delta': 0.05}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.583%)
+     Parameters: {'max_depth': 20, 'grace_period': 10, 'tau': 0.1, 'delta': 0.005}
+   FIRST_DIFF_CORR (best: 5.740%)
+     Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+   SPIKES_IMMEDIATE.F1 (best: 5.925%)
+     Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+   DROPS_IMMEDIATE.F1 (best: 6.584%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+
+Progress: 18.0% (18/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 19/100
+Current Parameters: {'max_depth': 5, 'grace_period': 69, 'tau': 0.05, 'delta': 0.005}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.619
+   MAE: 0.436
+   MAPE: 59.062%
+   DIR_ACCURACY: 51.962%
+   FIRST_DIFF_CORR: -0.249%
+   SPIKES_IMMEDIATE.F1: 3.544%
+   DROPS_IMMEDIATE.F1: 4.574%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.600)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.005, 'delta': 0.05}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.583%)
+     Parameters: {'max_depth': 20, 'grace_period': 10, 'tau': 0.1, 'delta': 0.005}
+   FIRST_DIFF_CORR (best: 5.740%)
+     Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+   SPIKES_IMMEDIATE.F1 (best: 5.925%)
+     Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+   DROPS_IMMEDIATE.F1 (best: 6.584%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+
+Progress: 19.0% (19/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 20/100
+Current Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.03, 'delta': 0.1}
+================================================================================
+NEW BEST SCORES FOUND!
+   RMSE: 0.600 -> 0.599 (decreased)
+   FIRST_DIFF_CORR: 5.740% -> 5.849% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.599
+   MAE: 0.418
+   MAPE: 56.170%
+   DIR_ACCURACY: 52.096%
+   FIRST_DIFF_CORR: 5.849%
+   SPIKES_IMMEDIATE.F1: 3.368%
+   DROPS_IMMEDIATE.F1: 3.327%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.599)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.03, 'delta': 0.1}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.583%)
+     Parameters: {'max_depth': 20, 'grace_period': 10, 'tau': 0.1, 'delta': 0.005}
+   FIRST_DIFF_CORR (best: 5.849%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.03, 'delta': 0.1}
+   SPIKES_IMMEDIATE.F1 (best: 5.925%)
+     Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+   DROPS_IMMEDIATE.F1 (best: 6.584%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.599, {'max_depth': 15, 'grace_period': 96, 'tau': 0.03, 'delta': 0.1}
+      MAE=0.412, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      MAPE=52.121%, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      Dir_Acc=53.583%, {'max_depth': 20, 'grace_period': 10, 'tau': 0.1, 'delta': 0.005}
+      First_Diff_Corr=5.849%, {'max_depth': 15, 'grace_period': 96, 'tau': 0.03, 'delta': 0.1}
+      Spikes_F1=5.925%, {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+      Drops_F1=6.584%, {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+
+Progress: 20.0% (20/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 21/100
+Current Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.01, 'delta': 0.001}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.627
+   MAE: 0.439
+   MAPE: 59.265%
+   DIR_ACCURACY: 51.224%
+   FIRST_DIFF_CORR: 1.147%
+   SPIKES_IMMEDIATE.F1: 3.909%
+   DROPS_IMMEDIATE.F1: 3.651%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.599)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.03, 'delta': 0.1}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.583%)
+     Parameters: {'max_depth': 20, 'grace_period': 10, 'tau': 0.1, 'delta': 0.005}
+   FIRST_DIFF_CORR (best: 5.849%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.03, 'delta': 0.1}
+   SPIKES_IMMEDIATE.F1 (best: 5.925%)
+     Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+   DROPS_IMMEDIATE.F1 (best: 6.584%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+
+Progress: 21.0% (21/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 22/100
+Current Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.01, 'delta': 0.05}
+================================================================================
+NEW BEST SCORES FOUND!
+   FIRST_DIFF_CORR: 5.849% -> 6.412% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.606
+   MAE: 0.424
+   MAPE: 57.725%
+   DIR_ACCURACY: 52.926%
+   FIRST_DIFF_CORR: 6.412%
+   SPIKES_IMMEDIATE.F1: 4.074%
+   DROPS_IMMEDIATE.F1: 4.782%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.599)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.03, 'delta': 0.1}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.583%)
+     Parameters: {'max_depth': 20, 'grace_period': 10, 'tau': 0.1, 'delta': 0.005}
+   FIRST_DIFF_CORR (best: 6.412%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.01, 'delta': 0.05}
+   SPIKES_IMMEDIATE.F1 (best: 5.925%)
+     Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+   DROPS_IMMEDIATE.F1 (best: 6.584%)
+     Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+
+Progress: 22.0% (22/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 23/100
+Current Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.1}
+================================================================================
+NEW BEST SCORES FOUND!
+   DROPS_IMMEDIATE.F1: 6.584% -> 7.966% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.605
+   MAE: 0.423
+   MAPE: 57.187%
+   DIR_ACCURACY: 53.506%
+   FIRST_DIFF_CORR: 5.203%
+   SPIKES_IMMEDIATE.F1: 4.477%
+   DROPS_IMMEDIATE.F1: 7.966%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.599)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.03, 'delta': 0.1}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.583%)
+     Parameters: {'max_depth': 20, 'grace_period': 10, 'tau': 0.1, 'delta': 0.005}
+   FIRST_DIFF_CORR (best: 6.412%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.01, 'delta': 0.05}
+   SPIKES_IMMEDIATE.F1 (best: 5.925%)
+     Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+   DROPS_IMMEDIATE.F1 (best: 7.966%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.1}
+
+Progress: 23.0% (23/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 24/100
+Current Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.599
+   MAE: 0.418
+   MAPE: 56.170%
+   DIR_ACCURACY: 52.096%
+   FIRST_DIFF_CORR: 5.849%
+   SPIKES_IMMEDIATE.F1: 3.368%
+   DROPS_IMMEDIATE.F1: 3.327%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.599)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.03, 'delta': 0.1}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.583%)
+     Parameters: {'max_depth': 20, 'grace_period': 10, 'tau': 0.1, 'delta': 0.005}
+   FIRST_DIFF_CORR (best: 6.412%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.01, 'delta': 0.05}
+   SPIKES_IMMEDIATE.F1 (best: 5.925%)
+     Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+   DROPS_IMMEDIATE.F1 (best: 7.966%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.1}
+
+Progress: 24.0% (24/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 25/100
+Current Parameters: {'max_depth': 3, 'grace_period': 10, 'tau': 0.05, 'delta': 0.01}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.642
+   MAE: 0.447
+   MAPE: 57.651%
+   DIR_ACCURACY: 49.687%
+   FIRST_DIFF_CORR: -4.798%
+   SPIKES_IMMEDIATE.F1: 1.374%
+   DROPS_IMMEDIATE.F1: 2.171%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.599)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.03, 'delta': 0.1}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.583%)
+     Parameters: {'max_depth': 20, 'grace_period': 10, 'tau': 0.1, 'delta': 0.005}
+   FIRST_DIFF_CORR (best: 6.412%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.01, 'delta': 0.05}
+   SPIKES_IMMEDIATE.F1 (best: 5.925%)
+     Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+   DROPS_IMMEDIATE.F1 (best: 7.966%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.1}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.599, {'max_depth': 15, 'grace_period': 96, 'tau': 0.03, 'delta': 0.1}
+      MAE=0.412, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      MAPE=52.121%, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      Dir_Acc=53.583%, {'max_depth': 20, 'grace_period': 10, 'tau': 0.1, 'delta': 0.005}
+      First_Diff_Corr=6.412%, {'max_depth': 15, 'grace_period': 69, 'tau': 0.01, 'delta': 0.05}
+      Spikes_F1=5.925%, {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+      Drops_F1=7.966%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.1}
+
+Progress: 25.0% (25/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 26/100
+Current Parameters: {'max_depth': 5, 'grace_period': 10, 'tau': 0.005, 'delta': 0.005}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.630
+   MAE: 0.451
+   MAPE: 62.742%
+   DIR_ACCURACY: 50.069%
+   FIRST_DIFF_CORR: -3.671%
+   SPIKES_IMMEDIATE.F1: 3.285%
+   DROPS_IMMEDIATE.F1: 1.777%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.599)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.03, 'delta': 0.1}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.583%)
+     Parameters: {'max_depth': 20, 'grace_period': 10, 'tau': 0.1, 'delta': 0.005}
+   FIRST_DIFF_CORR (best: 6.412%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.01, 'delta': 0.05}
+   SPIKES_IMMEDIATE.F1 (best: 5.925%)
+     Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+   DROPS_IMMEDIATE.F1 (best: 7.966%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.1}
+
+Progress: 26.0% (26/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 27/100
+Current Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.1, 'delta': 0.01}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.608
+   MAE: 0.412
+   MAPE: 52.143%
+   DIR_ACCURACY: 51.966%
+   FIRST_DIFF_CORR: 0.967%
+   SPIKES_IMMEDIATE.F1: 2.113%
+   DROPS_IMMEDIATE.F1: 4.820%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.599)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.03, 'delta': 0.1}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 53.583%)
+     Parameters: {'max_depth': 20, 'grace_period': 10, 'tau': 0.1, 'delta': 0.005}
+   FIRST_DIFF_CORR (best: 6.412%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.01, 'delta': 0.05}
+   SPIKES_IMMEDIATE.F1 (best: 5.925%)
+     Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+   DROPS_IMMEDIATE.F1 (best: 7.966%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.1}
+
+Progress: 27.0% (27/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 28/100
+Current Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+================================================================================
+NEW BEST SCORES FOUND!
+   DIR_ACCURACY: 53.583% -> 54.007% (increased)
+   FIRST_DIFF_CORR: 6.412% -> 6.426% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.604
+   MAE: 0.421
+   MAPE: 56.639%
+   DIR_ACCURACY: 54.007%
+   FIRST_DIFF_CORR: 6.426%
+   SPIKES_IMMEDIATE.F1: 4.933%
+   DROPS_IMMEDIATE.F1: 4.322%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.599)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.03, 'delta': 0.1}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 6.426%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   SPIKES_IMMEDIATE.F1 (best: 5.925%)
+     Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+   DROPS_IMMEDIATE.F1 (best: 7.966%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.1}
+
+Progress: 28.0% (28/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 29/100
+Current Parameters: {'max_depth': 5, 'grace_period': 48, 'tau': 0.1, 'delta': 0.005}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.623
+   MAE: 0.440
+   MAPE: 59.975%
+   DIR_ACCURACY: 51.336%
+   FIRST_DIFF_CORR: -2.175%
+   SPIKES_IMMEDIATE.F1: 3.933%
+   DROPS_IMMEDIATE.F1: 4.155%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.599)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.03, 'delta': 0.1}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 6.426%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   SPIKES_IMMEDIATE.F1 (best: 5.925%)
+     Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.001}
+   DROPS_IMMEDIATE.F1 (best: 7.966%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.1}
+
+Progress: 29.0% (29/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 30/100
+Current Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+================================================================================
+NEW BEST SCORES FOUND!
+   SPIKES_IMMEDIATE.F1: 5.925% -> 6.456% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.609
+   MAE: 0.424
+   MAPE: 57.242%
+   DIR_ACCURACY: 53.346%
+   FIRST_DIFF_CORR: 5.812%
+   SPIKES_IMMEDIATE.F1: 6.456%
+   DROPS_IMMEDIATE.F1: 6.564%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.599)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.03, 'delta': 0.1}
+   MAE (best: 0.412)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 6.426%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 7.966%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.1}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.599, {'max_depth': 15, 'grace_period': 96, 'tau': 0.03, 'delta': 0.1}
+      MAE=0.412, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      MAPE=52.121%, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      Dir_Acc=54.007%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+      First_Diff_Corr=6.426%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+      Spikes_F1=6.456%, {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+      Drops_F1=7.966%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.1}
+
+Progress: 30.0% (30/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 31/100
+Current Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.001}
+================================================================================
+NEW BEST SCORES FOUND!
+   RMSE: 0.599 -> 0.590 (decreased)
+   MAE: 0.412 -> 0.407 (decreased)
+   FIRST_DIFF_CORR: 6.426% -> 7.013% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.590
+   MAE: 0.407
+   MAPE: 53.028%
+   DIR_ACCURACY: 52.802%
+   FIRST_DIFF_CORR: 7.013%
+   SPIKES_IMMEDIATE.F1: 4.444%
+   DROPS_IMMEDIATE.F1: 4.196%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.590)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.001}
+   MAE (best: 0.407)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.001}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.013%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.001}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 7.966%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.1}
+
+Progress: 31.0% (31/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 32/100
+Current Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.001, 'delta': 0.005}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.627
+   MAE: 0.434
+   MAPE: 56.595%
+   DIR_ACCURACY: 50.447%
+   FIRST_DIFF_CORR: 3.633%
+   SPIKES_IMMEDIATE.F1: 5.631%
+   DROPS_IMMEDIATE.F1: 5.389%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.590)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.001}
+   MAE (best: 0.407)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.001}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.013%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.001}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 7.966%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.1}
+
+Progress: 32.0% (32/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 33/100
+Current Parameters: {'max_depth': 5, 'grace_period': 48, 'tau': 0.001, 'delta': 0.05}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.619
+   MAE: 0.438
+   MAPE: 59.905%
+   DIR_ACCURACY: 51.447%
+   FIRST_DIFF_CORR: -1.151%
+   SPIKES_IMMEDIATE.F1: 4.072%
+   DROPS_IMMEDIATE.F1: 4.934%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.590)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.001}
+   MAE (best: 0.407)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.001}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.013%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.001}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 7.966%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.1}
+
+Progress: 33.0% (33/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 34/100
+Current Parameters: {'max_depth': 5, 'grace_period': 24, 'tau': 0.05, 'delta': 0.005}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.623
+   MAE: 0.438
+   MAPE: 59.704%
+   DIR_ACCURACY: 50.429%
+   FIRST_DIFF_CORR: -2.061%
+   SPIKES_IMMEDIATE.F1: 2.479%
+   DROPS_IMMEDIATE.F1: 2.248%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.590)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.001}
+   MAE (best: 0.407)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.001}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.013%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.001}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 7.966%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.1}
+
+Progress: 34.0% (34/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 35/100
+Current Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+================================================================================
+NEW BEST SCORES FOUND!
+   RMSE: 0.590 -> 0.589 (decreased)
+   MAE: 0.407 -> 0.406 (decreased)
+   FIRST_DIFF_CORR: 7.013% -> 7.357% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.589
+   MAE: 0.406
+   MAPE: 53.045%
+   DIR_ACCURACY: 53.177%
+   FIRST_DIFF_CORR: 7.357%
+   SPIKES_IMMEDIATE.F1: 4.409%
+   DROPS_IMMEDIATE.F1: 3.585%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 7.966%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.1}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.589, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      MAE=0.406, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      MAPE=52.121%, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      Dir_Acc=54.007%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+      First_Diff_Corr=7.357%, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      Spikes_F1=6.456%, {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+      Drops_F1=7.966%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.1}
+
+Progress: 35.0% (35/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 36/100
+Current Parameters: {'max_depth': 20, 'grace_period': 10, 'tau': 0.01, 'delta': 0.001}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.629
+   MAE: 0.438
+   MAPE: 58.092%
+   DIR_ACCURACY: 52.622%
+   FIRST_DIFF_CORR: 2.496%
+   SPIKES_IMMEDIATE.F1: 3.713%
+   DROPS_IMMEDIATE.F1: 5.612%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 7.966%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.1}
+
+Progress: 36.0% (36/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 37/100
+Current Parameters: {'max_depth': 3, 'grace_period': 0, 'tau': 0.001, 'delta': 0.1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.642
+   MAE: 0.456
+   MAPE: 60.862%
+   DIR_ACCURACY: 48.018%
+   FIRST_DIFF_CORR: -4.843%
+   SPIKES_IMMEDIATE.F1: 1.563%
+   DROPS_IMMEDIATE.F1: 0.634%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 7.966%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.1}
+
+Progress: 37.0% (37/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 38/100
+Current Parameters: {'max_depth': 20, 'grace_period': 69, 'tau': 0.05, 'delta': 0.005}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.608
+   MAE: 0.425
+   MAPE: 57.741%
+   DIR_ACCURACY: 52.902%
+   FIRST_DIFF_CORR: 5.256%
+   SPIKES_IMMEDIATE.F1: 4.990%
+   DROPS_IMMEDIATE.F1: 4.787%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 7.966%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.1}
+
+Progress: 38.0% (38/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 39/100
+Current Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+================================================================================
+NEW BEST SCORES FOUND!
+   DROPS_IMMEDIATE.F1: 7.966% -> 8.507% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.630
+   MAE: 0.442
+   MAPE: 58.852%
+   DIR_ACCURACY: 53.331%
+   FIRST_DIFF_CORR: 1.469%
+   SPIKES_IMMEDIATE.F1: 4.156%
+   DROPS_IMMEDIATE.F1: 8.507%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 39.0% (39/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 40/100
+Current Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.05}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.608
+   MAE: 0.424
+   MAPE: 57.339%
+   DIR_ACCURACY: 53.310%
+   FIRST_DIFF_CORR: 5.732%
+   SPIKES_IMMEDIATE.F1: 5.279%
+   DROPS_IMMEDIATE.F1: 7.079%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.589, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      MAE=0.406, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      MAPE=52.121%, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      Dir_Acc=54.007%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+      First_Diff_Corr=7.357%, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      Spikes_F1=6.456%, {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+      Drops_F1=8.507%, {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 40.0% (40/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 41/100
+Current Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+================================================================================
+NEW BEST SCORES FOUND!
+   MAE: 0.406 -> 0.406 (decreased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.590
+   MAE: 0.406
+   MAPE: 52.844%
+   DIR_ACCURACY: 52.721%
+   FIRST_DIFF_CORR: 6.786%
+   SPIKES_IMMEDIATE.F1: 4.545%
+   DROPS_IMMEDIATE.F1: 5.063%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 41.0% (41/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 42/100
+Current Parameters: {'max_depth': 15, 'grace_period': 10, 'tau': 0.03, 'delta': 0.001}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.629
+   MAE: 0.438
+   MAPE: 58.212%
+   DIR_ACCURACY: 52.554%
+   FIRST_DIFF_CORR: 2.362%
+   SPIKES_IMMEDIATE.F1: 3.811%
+   DROPS_IMMEDIATE.F1: 5.425%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 42.0% (42/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 43/100
+Current Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.1, 'delta': 0.05}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.603
+   MAE: 0.422
+   MAPE: 56.975%
+   DIR_ACCURACY: 51.430%
+   FIRST_DIFF_CORR: 5.052%
+   SPIKES_IMMEDIATE.F1: 5.266%
+   DROPS_IMMEDIATE.F1: 3.801%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 43.0% (43/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 44/100
+Current Parameters: {'max_depth': 20, 'grace_period': 10, 'tau': 0.03, 'delta': 0.005}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.636
+   MAE: 0.444
+   MAPE: 58.392%
+   DIR_ACCURACY: 53.583%
+   FIRST_DIFF_CORR: 2.549%
+   SPIKES_IMMEDIATE.F1: 3.781%
+   DROPS_IMMEDIATE.F1: 4.706%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 44.0% (44/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 45/100
+Current Parameters: {'max_depth': 10, 'grace_period': 48, 'tau': 0.001, 'delta': 0.01}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.610
+   MAE: 0.428
+   MAPE: 58.422%
+   DIR_ACCURACY: 52.677%
+   FIRST_DIFF_CORR: 4.350%
+   SPIKES_IMMEDIATE.F1: 4.658%
+   DROPS_IMMEDIATE.F1: 4.001%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.589, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      MAE=0.406, {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+      MAPE=52.121%, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      Dir_Acc=54.007%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+      First_Diff_Corr=7.357%, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      Spikes_F1=6.456%, {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+      Drops_F1=8.507%, {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 45.0% (45/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 46/100
+Current Parameters: {'max_depth': 20, 'grace_period': 0, 'tau': 0.01, 'delta': 0.05}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.648
+   MAE: 0.446
+   MAPE: 57.024%
+   DIR_ACCURACY: 52.940%
+   FIRST_DIFF_CORR: 2.804%
+   SPIKES_IMMEDIATE.F1: 5.956%
+   DROPS_IMMEDIATE.F1: 6.469%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 46.0% (46/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 47/100
+Current Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.005, 'delta': 0.05}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.608
+   MAE: 0.425
+   MAPE: 57.088%
+   DIR_ACCURACY: 53.099%
+   FIRST_DIFF_CORR: 5.105%
+   SPIKES_IMMEDIATE.F1: 5.266%
+   DROPS_IMMEDIATE.F1: 3.820%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 47.0% (47/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 48/100
+Current Parameters: {'max_depth': 5, 'grace_period': 0, 'tau': 0.03, 'delta': 0.01}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.636
+   MAE: 0.455
+   MAPE: 62.150%
+   DIR_ACCURACY: 48.149%
+   FIRST_DIFF_CORR: -4.109%
+   SPIKES_IMMEDIATE.F1: 3.742%
+   DROPS_IMMEDIATE.F1: 0.978%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 48.0% (48/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 49/100
+Current Parameters: {'max_depth': 20, 'grace_period': 96, 'tau': 0.001, 'delta': 0.001}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.590
+   MAE: 0.407
+   MAPE: 53.028%
+   DIR_ACCURACY: 52.802%
+   FIRST_DIFF_CORR: 7.013%
+   SPIKES_IMMEDIATE.F1: 4.444%
+   DROPS_IMMEDIATE.F1: 4.196%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 49.0% (49/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 50/100
+Current Parameters: {'max_depth': 20, 'grace_period': 24, 'tau': 0.05, 'delta': 0.1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.613
+   MAE: 0.424
+   MAPE: 55.600%
+   DIR_ACCURACY: 53.016%
+   FIRST_DIFF_CORR: 5.618%
+   SPIKES_IMMEDIATE.F1: 4.596%
+   DROPS_IMMEDIATE.F1: 6.986%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.589, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      MAE=0.406, {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+      MAPE=52.121%, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      Dir_Acc=54.007%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+      First_Diff_Corr=7.357%, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      Spikes_F1=6.456%, {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+      Drops_F1=8.507%, {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 50.0% (50/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 51/100
+Current Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.590
+   MAE: 0.406
+   MAPE: 52.844%
+   DIR_ACCURACY: 52.721%
+   FIRST_DIFF_CORR: 6.786%
+   SPIKES_IMMEDIATE.F1: 4.545%
+   DROPS_IMMEDIATE.F1: 5.063%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 51.0% (51/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 52/100
+Current Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.01, 'delta': 0.05}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.608
+   MAE: 0.425
+   MAPE: 57.088%
+   DIR_ACCURACY: 53.099%
+   FIRST_DIFF_CORR: 5.105%
+   SPIKES_IMMEDIATE.F1: 5.266%
+   DROPS_IMMEDIATE.F1: 3.820%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 52.0% (52/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 53/100
+Current Parameters: {'max_depth': 10, 'grace_period': 69, 'tau': 0.03, 'delta': 0.05}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.607
+   MAE: 0.426
+   MAPE: 58.269%
+   DIR_ACCURACY: 52.468%
+   FIRST_DIFF_CORR: 5.836%
+   SPIKES_IMMEDIATE.F1: 4.219%
+   DROPS_IMMEDIATE.F1: 5.647%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 53.0% (53/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 54/100
+Current Parameters: {'max_depth': 5, 'grace_period': 0, 'tau': 0.03, 'delta': 0.01}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.636
+   MAE: 0.455
+   MAPE: 62.150%
+   DIR_ACCURACY: 48.149%
+   FIRST_DIFF_CORR: -4.109%
+   SPIKES_IMMEDIATE.F1: 3.742%
+   DROPS_IMMEDIATE.F1: 0.978%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 54.0% (54/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 55/100
+Current Parameters: {'max_depth': 5, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.630
+   MAE: 0.451
+   MAPE: 62.742%
+   DIR_ACCURACY: 50.069%
+   FIRST_DIFF_CORR: -3.671%
+   SPIKES_IMMEDIATE.F1: 3.285%
+   DROPS_IMMEDIATE.F1: 1.777%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.589, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      MAE=0.406, {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+      MAPE=52.121%, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      Dir_Acc=54.007%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+      First_Diff_Corr=7.357%, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      Spikes_F1=6.456%, {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+      Drops_F1=8.507%, {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 55.0% (55/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 56/100
+Current Parameters: {'max_depth': 20, 'grace_period': 96, 'tau': 0.1, 'delta': 0.05}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.600
+   MAE: 0.417
+   MAPE: 55.406%
+   DIR_ACCURACY: 51.797%
+   FIRST_DIFF_CORR: 6.346%
+   SPIKES_IMMEDIATE.F1: 4.919%
+   DROPS_IMMEDIATE.F1: 2.604%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 56.0% (56/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 57/100
+Current Parameters: {'max_depth': 20, 'grace_period': 96, 'tau': 0.005, 'delta': 0.001}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.590
+   MAE: 0.407
+   MAPE: 53.028%
+   DIR_ACCURACY: 52.802%
+   FIRST_DIFF_CORR: 7.013%
+   SPIKES_IMMEDIATE.F1: 4.444%
+   DROPS_IMMEDIATE.F1: 4.196%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 57.0% (57/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 58/100
+Current Parameters: {'max_depth': 10, 'grace_period': 24, 'tau': 0.05, 'delta': 0.05}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.613
+   MAE: 0.425
+   MAPE: 56.402%
+   DIR_ACCURACY: 52.382%
+   FIRST_DIFF_CORR: 3.923%
+   SPIKES_IMMEDIATE.F1: 5.381%
+   DROPS_IMMEDIATE.F1: 5.378%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 58.0% (58/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 59/100
+Current Parameters: {'max_depth': 5, 'grace_period': 69, 'tau': 0.05, 'delta': 0.1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.616
+   MAE: 0.434
+   MAPE: 58.950%
+   DIR_ACCURACY: 52.108%
+   FIRST_DIFF_CORR: 0.437%
+   SPIKES_IMMEDIATE.F1: 5.232%
+   DROPS_IMMEDIATE.F1: 4.797%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 59.0% (59/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 60/100
+Current Parameters: {'max_depth': 5, 'grace_period': 69, 'tau': 0.01, 'delta': 0.001}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.619
+   MAE: 0.436
+   MAPE: 59.238%
+   DIR_ACCURACY: 51.674%
+   FIRST_DIFF_CORR: -0.338%
+   SPIKES_IMMEDIATE.F1: 4.004%
+   DROPS_IMMEDIATE.F1: 4.854%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.589, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      MAE=0.406, {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+      MAPE=52.121%, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      Dir_Acc=54.007%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+      First_Diff_Corr=7.357%, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      Spikes_F1=6.456%, {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+      Drops_F1=8.507%, {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 60.0% (60/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 61/100
+Current Parameters: {'max_depth': 3, 'grace_period': 96, 'tau': 0.01, 'delta': 0.1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.637
+   MAE: 0.444
+   MAPE: 57.658%
+   DIR_ACCURACY: 48.099%
+   FIRST_DIFF_CORR: -2.864%
+   SPIKES_IMMEDIATE.F1: 2.457%
+   DROPS_IMMEDIATE.F1: 1.173%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 61.0% (61/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 62/100
+Current Parameters: {'max_depth': 15, 'grace_period': 10, 'tau': 0.1, 'delta': 0.001}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.629
+   MAE: 0.438
+   MAPE: 58.059%
+   DIR_ACCURACY: 52.665%
+   FIRST_DIFF_CORR: 2.475%
+   SPIKES_IMMEDIATE.F1: 3.811%
+   DROPS_IMMEDIATE.F1: 5.444%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 62.0% (62/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 63/100
+Current Parameters: {'max_depth': 5, 'grace_period': 24, 'tau': 0.1, 'delta': 0.05}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.624
+   MAE: 0.441
+   MAPE: 60.718%
+   DIR_ACCURACY: 50.361%
+   FIRST_DIFF_CORR: -2.568%
+   SPIKES_IMMEDIATE.F1: 2.785%
+   DROPS_IMMEDIATE.F1: 1.867%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 63.0% (63/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 64/100
+Current Parameters: {'max_depth': 20, 'grace_period': 10, 'tau': 0.01, 'delta': 0.1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.633
+   MAE: 0.439
+   MAPE: 57.886%
+   DIR_ACCURACY: 53.201%
+   FIRST_DIFF_CORR: 4.406%
+   SPIKES_IMMEDIATE.F1: 2.781%
+   DROPS_IMMEDIATE.F1: 4.606%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 64.0% (64/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 65/100
+Current Parameters: {'max_depth': 5, 'grace_period': 48, 'tau': 0.05, 'delta': 0.1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.617
+   MAE: 0.438
+   MAPE: 60.706%
+   DIR_ACCURACY: 50.983%
+   FIRST_DIFF_CORR: -1.471%
+   SPIKES_IMMEDIATE.F1: 4.227%
+   DROPS_IMMEDIATE.F1: 5.440%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.589, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      MAE=0.406, {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+      MAPE=52.121%, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      Dir_Acc=54.007%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+      First_Diff_Corr=7.357%, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      Spikes_F1=6.456%, {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+      Drops_F1=8.507%, {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 65.0% (65/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 66/100
+Current Parameters: {'max_depth': 5, 'grace_period': 24, 'tau': 0.001, 'delta': 0.05}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.624
+   MAE: 0.441
+   MAPE: 60.718%
+   DIR_ACCURACY: 50.361%
+   FIRST_DIFF_CORR: -2.568%
+   SPIKES_IMMEDIATE.F1: 2.785%
+   DROPS_IMMEDIATE.F1: 1.867%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 66.0% (66/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 67/100
+Current Parameters: {'max_depth': 5, 'grace_period': 0, 'tau': 0.01, 'delta': 0.05}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.638
+   MAE: 0.453
+   MAPE: 60.634%
+   DIR_ACCURACY: 48.434%
+   FIRST_DIFF_CORR: -3.275%
+   SPIKES_IMMEDIATE.F1: 2.849%
+   DROPS_IMMEDIATE.F1: 3.169%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 67.0% (67/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 68/100
+Current Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.05, 'delta': 0.01}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.589
+   MAE: 0.406
+   MAPE: 53.045%
+   DIR_ACCURACY: 53.177%
+   FIRST_DIFF_CORR: 7.357%
+   SPIKES_IMMEDIATE.F1: 4.409%
+   DROPS_IMMEDIATE.F1: 3.585%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 68.0% (68/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 69/100
+Current Parameters: {'max_depth': 10, 'grace_period': 24, 'tau': 0.005, 'delta': 0.05}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.613
+   MAE: 0.425
+   MAPE: 56.402%
+   DIR_ACCURACY: 52.382%
+   FIRST_DIFF_CORR: 3.923%
+   SPIKES_IMMEDIATE.F1: 5.381%
+   DROPS_IMMEDIATE.F1: 5.378%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 69.0% (69/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 70/100
+Current Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.03, 'delta': 0.05}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.606
+   MAE: 0.424
+   MAPE: 57.725%
+   DIR_ACCURACY: 52.926%
+   FIRST_DIFF_CORR: 6.412%
+   SPIKES_IMMEDIATE.F1: 4.074%
+   DROPS_IMMEDIATE.F1: 4.782%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.589, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      MAE=0.406, {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+      MAPE=52.121%, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      Dir_Acc=54.007%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+      First_Diff_Corr=7.357%, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      Spikes_F1=6.456%, {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+      Drops_F1=8.507%, {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 70.0% (70/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 71/100
+Current Parameters: {'max_depth': 20, 'grace_period': 96, 'tau': 0.1, 'delta': 0.1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.600
+   MAE: 0.417
+   MAPE: 55.610%
+   DIR_ACCURACY: 51.945%
+   FIRST_DIFF_CORR: 6.449%
+   SPIKES_IMMEDIATE.F1: 5.089%
+   DROPS_IMMEDIATE.F1: 2.872%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 71.0% (71/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 72/100
+Current Parameters: {'max_depth': 5, 'grace_period': 10, 'tau': 0.05, 'delta': 0.05}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.631
+   MAE: 0.448
+   MAPE: 61.856%
+   DIR_ACCURACY: 51.926%
+   FIRST_DIFF_CORR: -3.493%
+   SPIKES_IMMEDIATE.F1: 2.534%
+   DROPS_IMMEDIATE.F1: 6.275%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 72.0% (72/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 73/100
+Current Parameters: {'max_depth': 10, 'grace_period': 48, 'tau': 0.01, 'delta': 0.001}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.604
+   MAE: 0.423
+   MAPE: 57.779%
+   DIR_ACCURACY: 53.407%
+   FIRST_DIFF_CORR: 5.600%
+   SPIKES_IMMEDIATE.F1: 4.335%
+   DROPS_IMMEDIATE.F1: 4.132%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 73.0% (73/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 74/100
+Current Parameters: {'max_depth': 3, 'grace_period': 0, 'tau': 0.001, 'delta': 0.1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.642
+   MAE: 0.456
+   MAPE: 60.862%
+   DIR_ACCURACY: 48.018%
+   FIRST_DIFF_CORR: -4.843%
+   SPIKES_IMMEDIATE.F1: 1.563%
+   DROPS_IMMEDIATE.F1: 0.634%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 74.0% (74/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 75/100
+Current Parameters: {'max_depth': 20, 'grace_period': 10, 'tau': 0.001, 'delta': 0.001}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.629
+   MAE: 0.438
+   MAPE: 58.092%
+   DIR_ACCURACY: 52.622%
+   FIRST_DIFF_CORR: 2.496%
+   SPIKES_IMMEDIATE.F1: 3.713%
+   DROPS_IMMEDIATE.F1: 5.612%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.589, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      MAE=0.406, {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+      MAPE=52.121%, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      Dir_Acc=54.007%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+      First_Diff_Corr=7.357%, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      Spikes_F1=6.456%, {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+      Drops_F1=8.507%, {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 75.0% (75/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 76/100
+Current Parameters: {'max_depth': 15, 'grace_period': 10, 'tau': 0.1, 'delta': 0.01}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.631
+   MAE: 0.439
+   MAPE: 57.769%
+   DIR_ACCURACY: 53.693%
+   FIRST_DIFF_CORR: 4.547%
+   SPIKES_IMMEDIATE.F1: 4.573%
+   DROPS_IMMEDIATE.F1: 6.552%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 76.0% (76/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 77/100
+Current Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.05, 'delta': 0.05}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.608
+   MAE: 0.425
+   MAPE: 57.088%
+   DIR_ACCURACY: 53.099%
+   FIRST_DIFF_CORR: 5.105%
+   SPIKES_IMMEDIATE.F1: 5.266%
+   DROPS_IMMEDIATE.F1: 3.820%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 77.0% (77/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 78/100
+Current Parameters: {'max_depth': 5, 'grace_period': 0, 'tau': 0.01, 'delta': 0.1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.638
+   MAE: 0.452
+   MAPE: 60.413%
+   DIR_ACCURACY: 48.396%
+   FIRST_DIFF_CORR: -3.198%
+   SPIKES_IMMEDIATE.F1: 2.926%
+   DROPS_IMMEDIATE.F1: 3.040%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 78.0% (78/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 79/100
+Current Parameters: {'max_depth': 3, 'grace_period': 96, 'tau': 0.05, 'delta': 0.001}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.638
+   MAE: 0.448
+   MAPE: 58.952%
+   DIR_ACCURACY: 47.974%
+   FIRST_DIFF_CORR: -3.330%
+   SPIKES_IMMEDIATE.F1: 2.672%
+   DROPS_IMMEDIATE.F1: 1.710%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 79.0% (79/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 80/100
+Current Parameters: {'max_depth': 5, 'grace_period': 48, 'tau': 0.005, 'delta': 0.05}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.619
+   MAE: 0.438
+   MAPE: 59.905%
+   DIR_ACCURACY: 51.447%
+   FIRST_DIFF_CORR: -1.151%
+   SPIKES_IMMEDIATE.F1: 4.072%
+   DROPS_IMMEDIATE.F1: 4.934%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.589, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      MAE=0.406, {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+      MAPE=52.121%, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      Dir_Acc=54.007%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+      First_Diff_Corr=7.357%, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      Spikes_F1=6.456%, {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+      Drops_F1=8.507%, {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 80.0% (80/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 81/100
+Current Parameters: {'max_depth': 5, 'grace_period': 10, 'tau': 0.01, 'delta': 0.05}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.631
+   MAE: 0.448
+   MAPE: 61.856%
+   DIR_ACCURACY: 51.926%
+   FIRST_DIFF_CORR: -3.493%
+   SPIKES_IMMEDIATE.F1: 2.534%
+   DROPS_IMMEDIATE.F1: 6.275%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 81.0% (81/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 82/100
+Current Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.05, 'delta': 0.01}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.614
+   MAE: 0.425
+   MAPE: 55.700%
+   DIR_ACCURACY: 53.016%
+   FIRST_DIFF_CORR: 4.879%
+   SPIKES_IMMEDIATE.F1: 4.838%
+   DROPS_IMMEDIATE.F1: 6.697%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 82.0% (82/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 83/100
+Current Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.001, 'delta': 0.05}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.608
+   MAE: 0.425
+   MAPE: 57.088%
+   DIR_ACCURACY: 53.099%
+   FIRST_DIFF_CORR: 5.105%
+   SPIKES_IMMEDIATE.F1: 5.266%
+   DROPS_IMMEDIATE.F1: 3.820%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 83.0% (83/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 84/100
+Current Parameters: {'max_depth': 15, 'grace_period': 0, 'tau': 0.03, 'delta': 0.05}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.645
+   MAE: 0.445
+   MAPE: 57.103%
+   DIR_ACCURACY: 52.703%
+   FIRST_DIFF_CORR: 2.669%
+   SPIKES_IMMEDIATE.F1: 5.534%
+   DROPS_IMMEDIATE.F1: 5.283%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 84.0% (84/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 85/100
+Current Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.589
+   MAE: 0.407
+   MAPE: 53.110%
+   DIR_ACCURACY: 52.765%
+   FIRST_DIFF_CORR: 7.162%
+   SPIKES_IMMEDIATE.F1: 4.395%
+   DROPS_IMMEDIATE.F1: 4.188%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.589, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      MAE=0.406, {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+      MAPE=52.121%, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      Dir_Acc=54.007%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+      First_Diff_Corr=7.357%, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      Spikes_F1=6.456%, {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+      Drops_F1=8.507%, {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 85.0% (85/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 86/100
+Current Parameters: {'max_depth': 20, 'grace_period': 24, 'tau': 0.05, 'delta': 0.005}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.613
+   MAE: 0.424
+   MAPE: 55.668%
+   DIR_ACCURACY: 53.008%
+   FIRST_DIFF_CORR: 4.814%
+   SPIKES_IMMEDIATE.F1: 4.012%
+   DROPS_IMMEDIATE.F1: 7.127%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 86.0% (86/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 87/100
+Current Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.600
+   MAE: 0.421
+   MAPE: 56.907%
+   DIR_ACCURACY: 51.592%
+   FIRST_DIFF_CORR: 5.337%
+   SPIKES_IMMEDIATE.F1: 3.731%
+   DROPS_IMMEDIATE.F1: 3.218%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 87.0% (87/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 88/100
+Current Parameters: {'max_depth': 15, 'grace_period': 48, 'tau': 0.05, 'delta': 0.05}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.608
+   MAE: 0.425
+   MAPE: 57.101%
+   DIR_ACCURACY: 53.073%
+   FIRST_DIFF_CORR: 5.100%
+   SPIKES_IMMEDIATE.F1: 5.263%
+   DROPS_IMMEDIATE.F1: 3.864%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 88.0% (88/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 89/100
+Current Parameters: {'max_depth': 20, 'grace_period': 96, 'tau': 0.001, 'delta': 0.1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.599
+   MAE: 0.418
+   MAPE: 56.172%
+   DIR_ACCURACY: 52.096%
+   FIRST_DIFF_CORR: 5.847%
+   SPIKES_IMMEDIATE.F1: 3.368%
+   DROPS_IMMEDIATE.F1: 3.327%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 89.0% (89/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 90/100
+Current Parameters: {'max_depth': 15, 'grace_period': 48, 'tau': 0.05, 'delta': 0.1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.606
+   MAE: 0.424
+   MAPE: 57.634%
+   DIR_ACCURACY: 53.370%
+   FIRST_DIFF_CORR: 5.424%
+   SPIKES_IMMEDIATE.F1: 4.979%
+   DROPS_IMMEDIATE.F1: 5.705%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.589, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      MAE=0.406, {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+      MAPE=52.121%, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      Dir_Acc=54.007%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+      First_Diff_Corr=7.357%, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      Spikes_F1=6.456%, {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+      Drops_F1=8.507%, {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 90.0% (90/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 91/100
+Current Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.03, 'delta': 0.001}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.590
+   MAE: 0.406
+   MAPE: 52.880%
+   DIR_ACCURACY: 52.378%
+   FIRST_DIFF_CORR: 6.878%
+   SPIKES_IMMEDIATE.F1: 4.473%
+   DROPS_IMMEDIATE.F1: 4.291%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 91.0% (91/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 92/100
+Current Parameters: {'max_depth': 10, 'grace_period': 0, 'tau': 0.1, 'delta': 0.05}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.636
+   MAE: 0.444
+   MAPE: 58.833%
+   DIR_ACCURACY: 51.146%
+   FIRST_DIFF_CORR: -0.620%
+   SPIKES_IMMEDIATE.F1: 5.291%
+   DROPS_IMMEDIATE.F1: 5.850%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 92.0% (92/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 93/100
+Current Parameters: {'max_depth': 5, 'grace_period': 24, 'tau': 0.05, 'delta': 0.05}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.624
+   MAE: 0.441
+   MAPE: 60.718%
+   DIR_ACCURACY: 50.361%
+   FIRST_DIFF_CORR: -2.568%
+   SPIKES_IMMEDIATE.F1: 2.785%
+   DROPS_IMMEDIATE.F1: 1.867%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 93.0% (93/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 94/100
+Current Parameters: {'max_depth': 20, 'grace_period': 24, 'tau': 0.001, 'delta': 0.001}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.609
+   MAE: 0.423
+   MAPE: 55.785%
+   DIR_ACCURACY: 53.332%
+   FIRST_DIFF_CORR: 5.731%
+   SPIKES_IMMEDIATE.F1: 5.937%
+   DROPS_IMMEDIATE.F1: 4.723%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 94.0% (94/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 95/100
+Current Parameters: {'max_depth': 3, 'grace_period': 0, 'tau': 0.1, 'delta': 0.01}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.655
+   MAE: 0.455
+   MAPE: 58.397%
+   DIR_ACCURACY: 47.800%
+   FIRST_DIFF_CORR: -6.535%
+   SPIKES_IMMEDIATE.F1: 1.908%
+   DROPS_IMMEDIATE.F1: 0.729%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.589, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      MAE=0.406, {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+      MAPE=52.121%, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      Dir_Acc=54.007%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+      First_Diff_Corr=7.357%, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      Spikes_F1=6.456%, {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+      Drops_F1=8.507%, {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 95.0% (95/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 96/100
+Current Parameters: {'max_depth': 20, 'grace_period': 24, 'tau': 0.05, 'delta': 0.1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.613
+   MAE: 0.424
+   MAPE: 55.600%
+   DIR_ACCURACY: 53.016%
+   FIRST_DIFF_CORR: 5.618%
+   SPIKES_IMMEDIATE.F1: 4.596%
+   DROPS_IMMEDIATE.F1: 6.986%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 96.0% (96/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 97/100
+Current Parameters: {'max_depth': 3, 'grace_period': 24, 'tau': 0.03, 'delta': 0.01}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.632
+   MAE: 0.450
+   MAPE: 62.419%
+   DIR_ACCURACY: 50.767%
+   FIRST_DIFF_CORR: -4.456%
+   SPIKES_IMMEDIATE.F1: 1.208%
+   DROPS_IMMEDIATE.F1: 3.946%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 97.0% (97/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 98/100
+Current Parameters: {'max_depth': 15, 'grace_period': 24, 'tau': 0.001, 'delta': 0.01}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.614
+   MAE: 0.425
+   MAPE: 55.700%
+   DIR_ACCURACY: 53.016%
+   FIRST_DIFF_CORR: 4.879%
+   SPIKES_IMMEDIATE.F1: 4.838%
+   DROPS_IMMEDIATE.F1: 6.697%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 98.0% (98/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 99/100
+Current Parameters: {'max_depth': 5, 'grace_period': 10, 'tau': 0.01, 'delta': 0.001}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.637
+   MAE: 0.454
+   MAPE: 62.106%
+   DIR_ACCURACY: 51.020%
+   FIRST_DIFF_CORR: -5.096%
+   SPIKES_IMMEDIATE.F1: 2.776%
+   DROPS_IMMEDIATE.F1: 5.234%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 99.0% (99/100 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 100/100
+Current Parameters: {'max_depth': 20, 'grace_period': 69, 'tau': 0.01, 'delta': 0.01}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.607
+   MAE: 0.424
+   MAPE: 57.683%
+   DIR_ACCURACY: 52.892%
+   FIRST_DIFF_CORR: 5.607%
+   SPIKES_IMMEDIATE.F1: 4.535%
+   DROPS_IMMEDIATE.F1: 3.557%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.589)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   MAE (best: 0.406)
+     Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+   MAPE (best: 52.121%)
+     Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+   DIR_ACCURACY (best: 54.007%)
+     Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+   FIRST_DIFF_CORR (best: 7.357%)
+     Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+   SPIKES_IMMEDIATE.F1 (best: 6.456%)
+     Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+   DROPS_IMMEDIATE.F1 (best: 8.507%)
+     Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.589, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      MAE=0.406, {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+      MAPE=52.121%, {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+      Dir_Acc=54.007%, {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+      First_Diff_Corr=7.357%, {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+      Spikes_F1=6.456%, {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+      Drops_F1=8.507%, {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+Progress: 100.0% (100/100 combinations)
+================================================================================
+
+================================================================================
+GRID SEARCH COMPLETED!
+FINAL BEST RESULTS:
+================================================================================
+BEST RMSE: 0.589
+   Best Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+
+BEST MAE: 0.406
+   Best Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+
+BEST MAPE: 52.121%
+   Best Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+
+BEST DIR_ACCURACY: 54.007%
+   Best Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+
+BEST FIRST_DIFF_CORR: 7.357%
+   Best Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+
+BEST SPIKES_IMMEDIATE.F1: 6.456%
+   Best Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+
+BEST DROPS_IMMEDIATE.F1: 8.507%
+   Best Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}
+
+================================================================================
+Grid Search Completed: 2025-09-23 14:12:17
+
+PER-DEVICE BEST RESULTS:
+================================================================================
+
+Device: const
+----------------------------------------
+BEST RMSE: 0.589
+   Best Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+BEST MAE: 0.406
+   Best Parameters: {'max_depth': 10, 'grace_period': 96, 'tau': 0.005, 'delta': 0.005}
+BEST MAPE: 52.121%
+   Best Parameters: {'max_depth': 5, 'grace_period': 96, 'tau': 0.001, 'delta': 0.005}
+BEST DIR_ACCURACY: 54.007%
+   Best Parameters: {'max_depth': 20, 'grace_period': 48, 'tau': 0.1, 'delta': 0.001}
+BEST FIRST_DIFF_CORR: 7.357%
+   Best Parameters: {'max_depth': 15, 'grace_period': 96, 'tau': 0.001, 'delta': 0.01}
+BEST SPIKES_IMMEDIATE.F1: 6.456%
+   Best Parameters: {'max_depth': 15, 'grace_period': 69, 'tau': 0.1, 'delta': 0.1}
+BEST DROPS_IMMEDIATE.F1: 8.507%
+   Best Parameters: {'max_depth': 10, 'grace_period': 10, 'tau': 0.05, 'delta': 0.005}

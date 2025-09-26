@@ -1,0 +1,786 @@
+Grid Search Started: 2025-09-24 14:45:35
+Model: IncubationBoost
+File prefix: 1h_wfv
+Total parameter combinations: 20
+Aggregation: hourly | Data Frequency: H | Update Frequency: 1h
+Parameter grid: {'length': [5, 10, 20, 30, 40], 'learning_rate': [0.001, 0.5, 0.01, 0.1], 'depth': [5, 30, 10, 20], 'grace_period': [0, 24, 48], 'grace_period_depth': [-1, 1], 'split_confidence': [0.01, 0.05, 0.1, 0.5], 'max_feature': [0.3, 0.5, 0.7, 1.0], 'tie_threshold': [0.01, 0.05], 'bin_type': ['adaptive'], 'max_bins': [8, 16, 32], 'split_criterion': ['vr_rel'], 'verbose': [False]}
+Log directory: ../../results/resid_od_electricity_incremental_models
+
+
+================================================================================
+CHECKPOINT: Iteration 1/20
+Current Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+================================================================================
+NEW BEST SCORES FOUND!
+   RMSE: N/A -> 1.230 (decreased)
+   MAE: N/A -> 0.819 (decreased)
+   MAPE: N/A -> 103.166% (decreased)
+   DIR_ACCURACY: N/A -> 50.420% (increased)
+   FIRST_DIFF_CORR: N/A -> -0.248% (increased)
+   SPIKES_IMMEDIATE.F1: N/A -> 5.390% (increased)
+   DROPS_IMMEDIATE.F1: N/A -> 2.650% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 1.230
+   MAE: 0.819
+   MAPE: 103.166%
+   DIR_ACCURACY: 50.420%
+   FIRST_DIFF_CORR: -0.248%
+   SPIKES_IMMEDIATE.F1: 5.390%
+   DROPS_IMMEDIATE.F1: 2.650%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 1.230)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAE (best: 0.819)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAPE (best: 103.166%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   DIR_ACCURACY (best: 50.420%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   FIRST_DIFF_CORR (best: -0.248%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   SPIKES_IMMEDIATE.F1 (best: 5.390%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   DROPS_IMMEDIATE.F1 (best: 2.650%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+
+Progress: 5.0% (1/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 2/20
+Current Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.05, 'max_feature': 1.0, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+================================================================================
+NEW BEST SCORES FOUND!
+   RMSE: 1.230 -> 0.723 (decreased)
+   MAE: 0.819 -> 0.495 (decreased)
+   MAPE: 103.166% -> 60.004% (decreased)
+   DROPS_IMMEDIATE.F1: 2.650% -> 2.883% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.723
+   MAE: 0.495
+   MAPE: 60.004%
+   DIR_ACCURACY: 49.933%
+   FIRST_DIFF_CORR: -6.546%
+   SPIKES_IMMEDIATE.F1: 0.186%
+   DROPS_IMMEDIATE.F1: 2.883%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.723)
+     Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.05, 'max_feature': 1.0, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAE (best: 0.495)
+     Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.05, 'max_feature': 1.0, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAPE (best: 60.004%)
+     Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.05, 'max_feature': 1.0, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+   DIR_ACCURACY (best: 50.420%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   FIRST_DIFF_CORR (best: -0.248%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   SPIKES_IMMEDIATE.F1 (best: 5.390%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   DROPS_IMMEDIATE.F1 (best: 2.883%)
+     Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.05, 'max_feature': 1.0, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+
+Progress: 10.0% (2/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 3/20
+Current Parameters: {'length': 5, 'learning_rate': 0.1, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.1, 'max_feature': 0.5, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+================================================================================
+NEW BEST SCORES FOUND!
+   DROPS_IMMEDIATE.F1: 2.883% -> 3.157% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.849
+   MAE: 0.629
+   MAPE: 94.151%
+   DIR_ACCURACY: 49.466%
+   FIRST_DIFF_CORR: -5.103%
+   SPIKES_IMMEDIATE.F1: 1.591%
+   DROPS_IMMEDIATE.F1: 3.157%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.723)
+     Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.05, 'max_feature': 1.0, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAE (best: 0.495)
+     Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.05, 'max_feature': 1.0, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAPE (best: 60.004%)
+     Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.05, 'max_feature': 1.0, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+   DIR_ACCURACY (best: 50.420%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   FIRST_DIFF_CORR (best: -0.248%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   SPIKES_IMMEDIATE.F1 (best: 5.390%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   DROPS_IMMEDIATE.F1 (best: 3.157%)
+     Parameters: {'length': 5, 'learning_rate': 0.1, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.1, 'max_feature': 0.5, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+
+Progress: 15.0% (3/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 4/20
+Current Parameters: {'length': 30, 'learning_rate': 0.01, 'depth': 10, 'grace_period': 0, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.5, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 1.706
+   MAE: 1.285
+   MAPE: 208.800%
+   DIR_ACCURACY: 49.205%
+   FIRST_DIFF_CORR: -3.401%
+   SPIKES_IMMEDIATE.F1: 3.737%
+   DROPS_IMMEDIATE.F1: 2.563%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.723)
+     Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.05, 'max_feature': 1.0, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAE (best: 0.495)
+     Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.05, 'max_feature': 1.0, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAPE (best: 60.004%)
+     Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.05, 'max_feature': 1.0, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+   DIR_ACCURACY (best: 50.420%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   FIRST_DIFF_CORR (best: -0.248%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   SPIKES_IMMEDIATE.F1 (best: 5.390%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   DROPS_IMMEDIATE.F1 (best: 3.157%)
+     Parameters: {'length': 5, 'learning_rate': 0.1, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.1, 'max_feature': 0.5, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+
+Progress: 20.0% (4/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 5/20
+Current Parameters: {'length': 20, 'learning_rate': 0.01, 'depth': 20, 'grace_period': 0, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 0.7, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.765
+   MAE: 0.507
+   MAPE: 60.205%
+   DIR_ACCURACY: 48.138%
+   FIRST_DIFF_CORR: -3.945%
+   SPIKES_IMMEDIATE.F1: 1.878%
+   DROPS_IMMEDIATE.F1: 0.403%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.723)
+     Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.05, 'max_feature': 1.0, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAE (best: 0.495)
+     Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.05, 'max_feature': 1.0, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAPE (best: 60.004%)
+     Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.05, 'max_feature': 1.0, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+   DIR_ACCURACY (best: 50.420%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   FIRST_DIFF_CORR (best: -0.248%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   SPIKES_IMMEDIATE.F1 (best: 5.390%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   DROPS_IMMEDIATE.F1 (best: 3.157%)
+     Parameters: {'length': 5, 'learning_rate': 0.1, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.1, 'max_feature': 0.5, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.723, {'length': 10, 'learning_rate': 0.5, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.05, 'max_feature': 1.0, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+      MAE=0.495, {'length': 10, 'learning_rate': 0.5, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.05, 'max_feature': 1.0, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+      MAPE=60.004%, {'length': 10, 'learning_rate': 0.5, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.05, 'max_feature': 1.0, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+      Dir_Acc=50.420%, {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+      First_Diff_Corr=-0.248%, {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+      Spikes_F1=5.390%, {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+      Drops_F1=3.157%, {'length': 5, 'learning_rate': 0.1, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.1, 'max_feature': 0.5, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+
+Progress: 25.0% (5/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 6/20
+Current Parameters: {'length': 5, 'learning_rate': 0.01, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 0.5, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+================================================================================
+NEW BEST SCORES FOUND!
+   RMSE: 0.723 -> 0.673 (decreased)
+   MAE: 0.495 -> 0.446 (decreased)
+   MAPE: 60.004% -> 49.771% (decreased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.673
+   MAE: 0.446
+   MAPE: 49.771%
+   DIR_ACCURACY: 47.789%
+   FIRST_DIFF_CORR: -6.114%
+   SPIKES_IMMEDIATE.F1: 1.378%
+   DROPS_IMMEDIATE.F1: 0.036%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.673)
+     Parameters: {'length': 5, 'learning_rate': 0.01, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 0.5, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAE (best: 0.446)
+     Parameters: {'length': 5, 'learning_rate': 0.01, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 0.5, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAPE (best: 49.771%)
+     Parameters: {'length': 5, 'learning_rate': 0.01, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 0.5, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   DIR_ACCURACY (best: 50.420%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   FIRST_DIFF_CORR (best: -0.248%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   SPIKES_IMMEDIATE.F1 (best: 5.390%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   DROPS_IMMEDIATE.F1 (best: 3.157%)
+     Parameters: {'length': 5, 'learning_rate': 0.1, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.1, 'max_feature': 0.5, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+
+Progress: 30.0% (6/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 7/20
+Current Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+================================================================================
+NEW BEST SCORES FOUND!
+   RMSE: 0.673 -> 0.643 (decreased)
+   MAE: 0.446 -> 0.432 (decreased)
+   DIR_ACCURACY: 50.420% -> 50.937% (increased)
+   DROPS_IMMEDIATE.F1: 3.157% -> 5.142% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.643
+   MAE: 0.432
+   MAPE: 51.439%
+   DIR_ACCURACY: 50.937%
+   FIRST_DIFF_CORR: -2.440%
+   SPIKES_IMMEDIATE.F1: 3.072%
+   DROPS_IMMEDIATE.F1: 5.142%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.643)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAE (best: 0.432)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAPE (best: 49.771%)
+     Parameters: {'length': 5, 'learning_rate': 0.01, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 0.5, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   DIR_ACCURACY (best: 50.937%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   FIRST_DIFF_CORR (best: -0.248%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   SPIKES_IMMEDIATE.F1 (best: 5.390%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   DROPS_IMMEDIATE.F1 (best: 5.142%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+
+Progress: 35.0% (7/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 8/20
+Current Parameters: {'length': 30, 'learning_rate': 0.1, 'depth': 20, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.05, 'max_feature': 0.7, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.650
+   MAE: 0.435
+   MAPE: 49.901%
+   DIR_ACCURACY: 48.145%
+   FIRST_DIFF_CORR: -5.105%
+   SPIKES_IMMEDIATE.F1: 0.817%
+   DROPS_IMMEDIATE.F1: 1.674%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.643)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAE (best: 0.432)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAPE (best: 49.771%)
+     Parameters: {'length': 5, 'learning_rate': 0.01, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 0.5, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   DIR_ACCURACY (best: 50.937%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   FIRST_DIFF_CORR (best: -0.248%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   SPIKES_IMMEDIATE.F1 (best: 5.390%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   DROPS_IMMEDIATE.F1 (best: 5.142%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+
+Progress: 40.0% (8/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 9/20
+Current Parameters: {'length': 5, 'learning_rate': 0.001, 'depth': 10, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.811
+   MAE: 0.543
+   MAPE: 64.669%
+   DIR_ACCURACY: 49.875%
+   FIRST_DIFF_CORR: -2.518%
+   SPIKES_IMMEDIATE.F1: 4.952%
+   DROPS_IMMEDIATE.F1: 1.337%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.643)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAE (best: 0.432)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAPE (best: 49.771%)
+     Parameters: {'length': 5, 'learning_rate': 0.01, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 0.5, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   DIR_ACCURACY (best: 50.937%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   FIRST_DIFF_CORR (best: -0.248%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   SPIKES_IMMEDIATE.F1 (best: 5.390%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   DROPS_IMMEDIATE.F1 (best: 5.142%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+
+Progress: 45.0% (9/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 10/20
+Current Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 0, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.7, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 1.145
+   MAE: 0.859
+   MAPE: 135.968%
+   DIR_ACCURACY: 50.171%
+   FIRST_DIFF_CORR: -3.969%
+   SPIKES_IMMEDIATE.F1: 3.202%
+   DROPS_IMMEDIATE.F1: 4.160%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.643)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAE (best: 0.432)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAPE (best: 49.771%)
+     Parameters: {'length': 5, 'learning_rate': 0.01, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 0.5, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   DIR_ACCURACY (best: 50.937%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   FIRST_DIFF_CORR (best: -0.248%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   SPIKES_IMMEDIATE.F1 (best: 5.390%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   DROPS_IMMEDIATE.F1 (best: 5.142%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.643, {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+      MAE=0.432, {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+      MAPE=49.771%, {'length': 5, 'learning_rate': 0.01, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 0.5, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+      Dir_Acc=50.937%, {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+      First_Diff_Corr=-0.248%, {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+      Spikes_F1=5.390%, {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+      Drops_F1=5.142%, {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+
+Progress: 50.0% (10/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 11/20
+Current Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 0, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.7, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+================================================================================
+NEW BEST SCORES FOUND!
+   FIRST_DIFF_CORR: -0.248% -> 1.509% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 2.875
+   MAE: 2.181
+   MAPE: 366.829%
+   DIR_ACCURACY: 50.455%
+   FIRST_DIFF_CORR: 1.509%
+   SPIKES_IMMEDIATE.F1: 5.336%
+   DROPS_IMMEDIATE.F1: 3.124%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.643)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAE (best: 0.432)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAPE (best: 49.771%)
+     Parameters: {'length': 5, 'learning_rate': 0.01, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 0.5, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   DIR_ACCURACY (best: 50.937%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   FIRST_DIFF_CORR (best: 1.509%)
+     Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 0, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.7, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+   SPIKES_IMMEDIATE.F1 (best: 5.390%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   DROPS_IMMEDIATE.F1 (best: 5.142%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+
+Progress: 55.0% (11/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 12/20
+Current Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+================================================================================
+NEW BEST SCORES FOUND!
+   RMSE: 0.643 -> 0.629 (decreased)
+   MAE: 0.432 -> 0.424 (decreased)
+   MAPE: 49.771% -> 49.001% (decreased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.629
+   MAE: 0.424
+   MAPE: 49.001%
+   DIR_ACCURACY: 47.940%
+   FIRST_DIFF_CORR: -3.483%
+   SPIKES_IMMEDIATE.F1: 2.020%
+   DROPS_IMMEDIATE.F1: 1.506%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.629)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAE (best: 0.424)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAPE (best: 49.001%)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   DIR_ACCURACY (best: 50.937%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   FIRST_DIFF_CORR (best: 1.509%)
+     Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 0, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.7, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+   SPIKES_IMMEDIATE.F1 (best: 5.390%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   DROPS_IMMEDIATE.F1 (best: 5.142%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+
+Progress: 60.0% (12/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 13/20
+Current Parameters: {'length': 30, 'learning_rate': 0.01, 'depth': 10, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.1, 'max_feature': 0.5, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 1.119
+   MAE: 0.824
+   MAPE: 120.321%
+   DIR_ACCURACY: 50.210%
+   FIRST_DIFF_CORR: -2.982%
+   SPIKES_IMMEDIATE.F1: 2.827%
+   DROPS_IMMEDIATE.F1: 1.616%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.629)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAE (best: 0.424)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAPE (best: 49.001%)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   DIR_ACCURACY (best: 50.937%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   FIRST_DIFF_CORR (best: 1.509%)
+     Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 0, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.7, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+   SPIKES_IMMEDIATE.F1 (best: 5.390%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   DROPS_IMMEDIATE.F1 (best: 5.142%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+
+Progress: 65.0% (13/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 14/20
+Current Parameters: {'length': 40, 'learning_rate': 0.1, 'depth': 20, 'grace_period': 48, 'grace_period_depth': -1, 'split_confidence': 0.05, 'max_feature': 0.3, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.655
+   MAE: 0.436
+   MAPE: 49.766%
+   DIR_ACCURACY: 47.742%
+   FIRST_DIFF_CORR: -5.486%
+   SPIKES_IMMEDIATE.F1: 1.203%
+   DROPS_IMMEDIATE.F1: 0.588%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.629)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAE (best: 0.424)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAPE (best: 49.001%)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   DIR_ACCURACY (best: 50.937%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   FIRST_DIFF_CORR (best: 1.509%)
+     Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 0, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.7, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+   SPIKES_IMMEDIATE.F1 (best: 5.390%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   DROPS_IMMEDIATE.F1 (best: 5.142%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+
+Progress: 70.0% (14/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 15/20
+Current Parameters: {'length': 5, 'learning_rate': 0.001, 'depth': 20, 'grace_period': 48, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.634
+   MAE: 0.427
+   MAPE: 50.882%
+   DIR_ACCURACY: 49.875%
+   FIRST_DIFF_CORR: -2.791%
+   SPIKES_IMMEDIATE.F1: 2.665%
+   DROPS_IMMEDIATE.F1: 4.343%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.629)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAE (best: 0.424)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAPE (best: 49.001%)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   DIR_ACCURACY (best: 50.937%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   FIRST_DIFF_CORR (best: 1.509%)
+     Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 0, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.7, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+   SPIKES_IMMEDIATE.F1 (best: 5.390%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   DROPS_IMMEDIATE.F1 (best: 5.142%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.629, {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+      MAE=0.424, {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+      MAPE=49.001%, {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+      Dir_Acc=50.937%, {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+      First_Diff_Corr=1.509%, {'length': 10, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 0, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.7, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+      Spikes_F1=5.390%, {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+      Drops_F1=5.142%, {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+
+Progress: 75.0% (15/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 16/20
+Current Parameters: {'length': 30, 'learning_rate': 0.01, 'depth': 5, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.5, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.667
+   MAE: 0.454
+   MAPE: 54.600%
+   DIR_ACCURACY: 48.187%
+   FIRST_DIFF_CORR: -4.892%
+   SPIKES_IMMEDIATE.F1: 1.924%
+   DROPS_IMMEDIATE.F1: 1.767%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.629)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAE (best: 0.424)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAPE (best: 49.001%)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   DIR_ACCURACY (best: 50.937%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   FIRST_DIFF_CORR (best: 1.509%)
+     Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 0, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.7, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+   SPIKES_IMMEDIATE.F1 (best: 5.390%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   DROPS_IMMEDIATE.F1 (best: 5.142%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+
+Progress: 80.0% (16/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 17/20
+Current Parameters: {'length': 30, 'learning_rate': 0.1, 'depth': 5, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.1, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.651
+   MAE: 0.442
+   MAPE: 52.768%
+   DIR_ACCURACY: 47.856%
+   FIRST_DIFF_CORR: -4.412%
+   SPIKES_IMMEDIATE.F1: 1.605%
+   DROPS_IMMEDIATE.F1: 0.963%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.629)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAE (best: 0.424)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAPE (best: 49.001%)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   DIR_ACCURACY (best: 50.937%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   FIRST_DIFF_CORR (best: 1.509%)
+     Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 0, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.7, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+   SPIKES_IMMEDIATE.F1 (best: 5.390%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   DROPS_IMMEDIATE.F1 (best: 5.142%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+
+Progress: 85.0% (17/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 18/20
+Current Parameters: {'length': 5, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 0, 'grace_period_depth': 1, 'split_confidence': 0.1, 'max_feature': 0.5, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 2.933
+   MAE: 2.206
+   MAPE: 356.831%
+   DIR_ACCURACY: 49.874%
+   FIRST_DIFF_CORR: -1.460%
+   SPIKES_IMMEDIATE.F1: 4.538%
+   DROPS_IMMEDIATE.F1: 2.980%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.629)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAE (best: 0.424)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAPE (best: 49.001%)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   DIR_ACCURACY (best: 50.937%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   FIRST_DIFF_CORR (best: 1.509%)
+     Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 0, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.7, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+   SPIKES_IMMEDIATE.F1 (best: 5.390%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   DROPS_IMMEDIATE.F1 (best: 5.142%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+
+Progress: 90.0% (18/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 19/20
+Current Parameters: {'length': 40, 'learning_rate': 0.5, 'depth': 10, 'grace_period': 0, 'grace_period_depth': -1, 'split_confidence': 0.05, 'max_feature': 0.7, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 1.677
+   MAE: 1.242
+   MAPE: 208.376%
+   DIR_ACCURACY: 49.558%
+   FIRST_DIFF_CORR: -2.354%
+   SPIKES_IMMEDIATE.F1: 3.655%
+   DROPS_IMMEDIATE.F1: 4.390%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.629)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAE (best: 0.424)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAPE (best: 49.001%)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   DIR_ACCURACY (best: 50.937%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   FIRST_DIFF_CORR (best: 1.509%)
+     Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 0, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.7, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+   SPIKES_IMMEDIATE.F1 (best: 5.390%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   DROPS_IMMEDIATE.F1 (best: 5.142%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+
+Progress: 95.0% (19/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 20/20
+Current Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 5, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.01, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.647
+   MAE: 0.434
+   MAPE: 49.950%
+   DIR_ACCURACY: 47.945%
+   FIRST_DIFF_CORR: -5.117%
+   SPIKES_IMMEDIATE.F1: 1.630%
+   DROPS_IMMEDIATE.F1: 0.952%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.629)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAE (best: 0.424)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   MAPE (best: 49.001%)
+     Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+   DIR_ACCURACY (best: 50.937%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   FIRST_DIFF_CORR (best: 1.509%)
+     Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 0, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.7, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+   SPIKES_IMMEDIATE.F1 (best: 5.390%)
+     Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+   DROPS_IMMEDIATE.F1 (best: 5.142%)
+     Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.629, {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+      MAE=0.424, {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+      MAPE=49.001%, {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+      Dir_Acc=50.937%, {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+      First_Diff_Corr=1.509%, {'length': 10, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 0, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.7, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+      Spikes_F1=5.390%, {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+      Drops_F1=5.142%, {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+
+Progress: 100.0% (20/20 combinations)
+================================================================================
+
+================================================================================
+GRID SEARCH COMPLETED!
+FINAL BEST RESULTS:
+================================================================================
+BEST RMSE: 0.629
+   Best Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+
+BEST MAE: 0.424
+   Best Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+
+BEST MAPE: 49.001%
+   Best Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+
+BEST DIR_ACCURACY: 50.937%
+   Best Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+
+BEST FIRST_DIFF_CORR: 1.509%
+   Best Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 0, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.7, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+
+BEST SPIKES_IMMEDIATE.F1: 5.390%
+   Best Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+
+BEST DROPS_IMMEDIATE.F1: 5.142%
+   Best Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+
+================================================================================
+Grid Search Completed: 2025-09-24 16:14:27
+
+PER-DEVICE BEST RESULTS:
+================================================================================
+
+Device: const
+----------------------------------------
+BEST RMSE: 0.629
+   Best Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+BEST MAE: 0.424
+   Best Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+BEST MAPE: 49.001%
+   Best Parameters: {'length': 40, 'learning_rate': 0.001, 'depth': 5, 'grace_period': 24, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 16, 'split_criterion': 'vr_rel', 'verbose': False}
+BEST DIR_ACCURACY: 50.937%
+   Best Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+BEST FIRST_DIFF_CORR: 1.509%
+   Best Parameters: {'length': 10, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 0, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.7, 'tie_threshold': 0.01, 'bin_type': 'adaptive', 'max_bins': 32, 'split_criterion': 'vr_rel', 'verbose': False}
+BEST SPIKES_IMMEDIATE.F1: 5.390%
+   Best Parameters: {'length': 30, 'learning_rate': 0.5, 'depth': 30, 'grace_period': 48, 'grace_period_depth': 1, 'split_confidence': 0.01, 'max_feature': 1.0, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
+BEST DROPS_IMMEDIATE.F1: 5.142%
+   Best Parameters: {'length': 30, 'learning_rate': 0.001, 'depth': 30, 'grace_period': 24, 'grace_period_depth': -1, 'split_confidence': 0.5, 'max_feature': 0.3, 'tie_threshold': 0.05, 'bin_type': 'adaptive', 'max_bins': 8, 'split_criterion': 'vr_rel', 'verbose': False}
