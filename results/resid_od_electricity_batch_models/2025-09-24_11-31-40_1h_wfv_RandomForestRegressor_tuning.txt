@@ -1,0 +1,778 @@
+Grid Search Started: 2025-09-24 11:31:40
+Model: RandomForestRegressor
+File prefix: 1h_wfv
+Total parameter combinations: 20
+Aggregation: hourly | Data Frequency: H | Update Frequency: 14D
+Parameter grid: {'n_estimators': [50, 100, 150, 200, 300], 'max_depth': [3, 5, 7, 10, 15, 20], 'max_features': [0.3, 0.5, 0.7, 1.0], 'random_state': [42], 'n_jobs': [-1]}
+Log directory: ../../results/resid_od_electricity_batch_models
+
+
+================================================================================
+CHECKPOINT: Iteration 1/20
+Current Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+================================================================================
+NEW BEST SCORES FOUND!
+   RMSE: N/A -> 0.540 (decreased)
+   MAE: N/A -> 0.374 (decreased)
+   MAPE: N/A -> 49.556% (decreased)
+   DIR_ACCURACY: N/A -> 58.004% (increased)
+   FIRST_DIFF_CORR: N/A -> 21.850% (increased)
+   SPIKES_IMMEDIATE.F1: N/A -> 8.203% (increased)
+   DROPS_IMMEDIATE.F1: N/A -> 7.302% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.540
+   MAE: 0.374
+   MAPE: 49.556%
+   DIR_ACCURACY: 58.004%
+   FIRST_DIFF_CORR: 21.850%
+   SPIKES_IMMEDIATE.F1: 8.203%
+   DROPS_IMMEDIATE.F1: 7.302%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.540)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAE (best: 0.374)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAPE (best: 49.556%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   DIR_ACCURACY (best: 58.004%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   FIRST_DIFF_CORR (best: 21.850%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   SPIKES_IMMEDIATE.F1 (best: 8.203%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   DROPS_IMMEDIATE.F1 (best: 7.302%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+Progress: 5.0% (1/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 2/20
+Current Parameters: {'n_estimators': 200, 'max_depth': 3, 'max_features': 0.7, 'random_state': 42, 'n_jobs': -1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.592
+   MAE: 0.425
+   MAPE: 58.601%
+   DIR_ACCURACY: 49.862%
+   FIRST_DIFF_CORR: 1.495%
+   SPIKES_IMMEDIATE.F1: 3.638%
+   DROPS_IMMEDIATE.F1: 3.280%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.540)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAE (best: 0.374)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAPE (best: 49.556%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   DIR_ACCURACY (best: 58.004%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   FIRST_DIFF_CORR (best: 21.850%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   SPIKES_IMMEDIATE.F1 (best: 8.203%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   DROPS_IMMEDIATE.F1 (best: 7.302%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+Progress: 10.0% (2/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 3/20
+Current Parameters: {'n_estimators': 200, 'max_depth': 5, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.566
+   MAE: 0.397
+   MAPE: 53.954%
+   DIR_ACCURACY: 51.643%
+   FIRST_DIFF_CORR: 9.370%
+   SPIKES_IMMEDIATE.F1: 6.822%
+   DROPS_IMMEDIATE.F1: 3.532%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.540)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAE (best: 0.374)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAPE (best: 49.556%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   DIR_ACCURACY (best: 58.004%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   FIRST_DIFF_CORR (best: 21.850%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   SPIKES_IMMEDIATE.F1 (best: 8.203%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   DROPS_IMMEDIATE.F1 (best: 7.302%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+Progress: 15.0% (3/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 4/20
+Current Parameters: {'n_estimators': 100, 'max_depth': 5, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.572
+   MAE: 0.407
+   MAPE: 55.762%
+   DIR_ACCURACY: 50.889%
+   FIRST_DIFF_CORR: 6.775%
+   SPIKES_IMMEDIATE.F1: 6.235%
+   DROPS_IMMEDIATE.F1: 0.847%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.540)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAE (best: 0.374)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAPE (best: 49.556%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   DIR_ACCURACY (best: 58.004%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   FIRST_DIFF_CORR (best: 21.850%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   SPIKES_IMMEDIATE.F1 (best: 8.203%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   DROPS_IMMEDIATE.F1 (best: 7.302%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+Progress: 20.0% (4/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 5/20
+Current Parameters: {'n_estimators': 300, 'max_depth': 5, 'max_features': 0.3, 'random_state': 42, 'n_jobs': -1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.578
+   MAE: 0.412
+   MAPE: 56.498%
+   DIR_ACCURACY: 50.560%
+   FIRST_DIFF_CORR: 4.622%
+   SPIKES_IMMEDIATE.F1: 5.981%
+   DROPS_IMMEDIATE.F1: 2.172%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.540)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAE (best: 0.374)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAPE (best: 49.556%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   DIR_ACCURACY (best: 58.004%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   FIRST_DIFF_CORR (best: 21.850%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   SPIKES_IMMEDIATE.F1 (best: 8.203%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   DROPS_IMMEDIATE.F1 (best: 7.302%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.540, {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+      MAE=0.374, {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+      MAPE=49.556%, {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+      Dir_Acc=58.004%, {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+      First_Diff_Corr=21.850%, {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+      Spikes_F1=8.203%, {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+      Drops_F1=7.302%, {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+Progress: 25.0% (5/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 6/20
+Current Parameters: {'n_estimators': 100, 'max_depth': 5, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.566
+   MAE: 0.397
+   MAPE: 54.085%
+   DIR_ACCURACY: 51.587%
+   FIRST_DIFF_CORR: 9.354%
+   SPIKES_IMMEDIATE.F1: 6.352%
+   DROPS_IMMEDIATE.F1: 3.519%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.540)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAE (best: 0.374)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAPE (best: 49.556%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   DIR_ACCURACY (best: 58.004%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   FIRST_DIFF_CORR (best: 21.850%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   SPIKES_IMMEDIATE.F1 (best: 8.203%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   DROPS_IMMEDIATE.F1 (best: 7.302%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+Progress: 30.0% (6/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 7/20
+Current Parameters: {'n_estimators': 100, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+================================================================================
+NEW BEST SCORES FOUND!
+   DIR_ACCURACY: 58.004% -> 58.195% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.543
+   MAE: 0.376
+   MAPE: 49.949%
+   DIR_ACCURACY: 58.195%
+   FIRST_DIFF_CORR: 21.440%
+   SPIKES_IMMEDIATE.F1: 7.863%
+   DROPS_IMMEDIATE.F1: 7.094%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.540)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAE (best: 0.374)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAPE (best: 49.556%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   DIR_ACCURACY (best: 58.195%)
+     Parameters: {'n_estimators': 100, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   FIRST_DIFF_CORR (best: 21.850%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   SPIKES_IMMEDIATE.F1 (best: 8.203%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   DROPS_IMMEDIATE.F1 (best: 7.302%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+Progress: 35.0% (7/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 8/20
+Current Parameters: {'n_estimators': 50, 'max_depth': 3, 'max_features': 0.7, 'random_state': 42, 'n_jobs': -1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.593
+   MAE: 0.425
+   MAPE: 58.572%
+   DIR_ACCURACY: 49.930%
+   FIRST_DIFF_CORR: 1.471%
+   SPIKES_IMMEDIATE.F1: 3.736%
+   DROPS_IMMEDIATE.F1: 3.503%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.540)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAE (best: 0.374)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAPE (best: 49.556%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   DIR_ACCURACY (best: 58.195%)
+     Parameters: {'n_estimators': 100, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   FIRST_DIFF_CORR (best: 21.850%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   SPIKES_IMMEDIATE.F1 (best: 8.203%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   DROPS_IMMEDIATE.F1 (best: 7.302%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+Progress: 40.0% (8/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 9/20
+Current Parameters: {'n_estimators': 100, 'max_depth': 10, 'max_features': 0.3, 'random_state': 42, 'n_jobs': -1}
+================================================================================
+NEW BEST SCORES FOUND!
+   SPIKES_IMMEDIATE.F1: 8.203% -> 8.405% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.547
+   MAE: 0.384
+   MAPE: 51.404%
+   DIR_ACCURACY: 54.483%
+   FIRST_DIFF_CORR: 15.082%
+   SPIKES_IMMEDIATE.F1: 8.405%
+   DROPS_IMMEDIATE.F1: 2.628%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.540)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAE (best: 0.374)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAPE (best: 49.556%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   DIR_ACCURACY (best: 58.195%)
+     Parameters: {'n_estimators': 100, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   FIRST_DIFF_CORR (best: 21.850%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   SPIKES_IMMEDIATE.F1 (best: 8.405%)
+     Parameters: {'n_estimators': 100, 'max_depth': 10, 'max_features': 0.3, 'random_state': 42, 'n_jobs': -1}
+   DROPS_IMMEDIATE.F1 (best: 7.302%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+Progress: 45.0% (9/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 10/20
+Current Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+================================================================================
+NEW BEST SCORES FOUND!
+   MAE: 0.374 -> 0.373 (decreased)
+   MAPE: 49.556% -> 49.031% (decreased)
+   FIRST_DIFF_CORR: 21.850% -> 22.075% (increased)
+   SPIKES_IMMEDIATE.F1: 8.405% -> 8.604% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.543
+   MAE: 0.373
+   MAPE: 49.031%
+   DIR_ACCURACY: 57.630%
+   FIRST_DIFF_CORR: 22.075%
+   SPIKES_IMMEDIATE.F1: 8.604%
+   DROPS_IMMEDIATE.F1: 6.763%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.540)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAE (best: 0.373)
+     Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   MAPE (best: 49.031%)
+     Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   DIR_ACCURACY (best: 58.195%)
+     Parameters: {'n_estimators': 100, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   FIRST_DIFF_CORR (best: 22.075%)
+     Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   SPIKES_IMMEDIATE.F1 (best: 8.604%)
+     Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   DROPS_IMMEDIATE.F1 (best: 7.302%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.540, {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+      MAE=0.373, {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+      MAPE=49.031%, {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+      Dir_Acc=58.195%, {'n_estimators': 100, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+      First_Diff_Corr=22.075%, {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+      Spikes_F1=8.604%, {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+      Drops_F1=7.302%, {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+Progress: 50.0% (10/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 11/20
+Current Parameters: {'n_estimators': 100, 'max_depth': 5, 'max_features': 0.3, 'random_state': 42, 'n_jobs': -1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.577
+   MAE: 0.412
+   MAPE: 56.546%
+   DIR_ACCURACY: 50.568%
+   FIRST_DIFF_CORR: 4.633%
+   SPIKES_IMMEDIATE.F1: 6.294%
+   DROPS_IMMEDIATE.F1: 3.034%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.540)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAE (best: 0.373)
+     Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   MAPE (best: 49.031%)
+     Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   DIR_ACCURACY (best: 58.195%)
+     Parameters: {'n_estimators': 100, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   FIRST_DIFF_CORR (best: 22.075%)
+     Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   SPIKES_IMMEDIATE.F1 (best: 8.604%)
+     Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   DROPS_IMMEDIATE.F1 (best: 7.302%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+Progress: 55.0% (11/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 12/20
+Current Parameters: {'n_estimators': 100, 'max_depth': 10, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.541
+   MAE: 0.377
+   MAPE: 49.905%
+   DIR_ACCURACY: 55.593%
+   FIRST_DIFF_CORR: 17.866%
+   SPIKES_IMMEDIATE.F1: 7.261%
+   DROPS_IMMEDIATE.F1: 4.383%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.540)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAE (best: 0.373)
+     Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   MAPE (best: 49.031%)
+     Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   DIR_ACCURACY (best: 58.195%)
+     Parameters: {'n_estimators': 100, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   FIRST_DIFF_CORR (best: 22.075%)
+     Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   SPIKES_IMMEDIATE.F1 (best: 8.604%)
+     Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   DROPS_IMMEDIATE.F1 (best: 7.302%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+Progress: 60.0% (12/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 13/20
+Current Parameters: {'n_estimators': 50, 'max_depth': 7, 'max_features': 0.7, 'random_state': 42, 'n_jobs': -1}
+================================================================================
+NEW BEST SCORES FOUND!
+   SPIKES_IMMEDIATE.F1: 8.604% -> 8.743% (increased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.552
+   MAE: 0.386
+   MAPE: 51.699%
+   DIR_ACCURACY: 53.296%
+   FIRST_DIFF_CORR: 13.643%
+   SPIKES_IMMEDIATE.F1: 8.743%
+   DROPS_IMMEDIATE.F1: 4.394%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.540)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAE (best: 0.373)
+     Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   MAPE (best: 49.031%)
+     Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   DIR_ACCURACY (best: 58.195%)
+     Parameters: {'n_estimators': 100, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   FIRST_DIFF_CORR (best: 22.075%)
+     Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   SPIKES_IMMEDIATE.F1 (best: 8.743%)
+     Parameters: {'n_estimators': 50, 'max_depth': 7, 'max_features': 0.7, 'random_state': 42, 'n_jobs': -1}
+   DROPS_IMMEDIATE.F1 (best: 7.302%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+Progress: 65.0% (13/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 14/20
+Current Parameters: {'n_estimators': 100, 'max_depth': 3, 'max_features': 0.7, 'random_state': 42, 'n_jobs': -1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.593
+   MAE: 0.425
+   MAPE: 58.637%
+   DIR_ACCURACY: 49.948%
+   FIRST_DIFF_CORR: 1.477%
+   SPIKES_IMMEDIATE.F1: 3.568%
+   DROPS_IMMEDIATE.F1: 3.666%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.540)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAE (best: 0.373)
+     Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   MAPE (best: 49.031%)
+     Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   DIR_ACCURACY (best: 58.195%)
+     Parameters: {'n_estimators': 100, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   FIRST_DIFF_CORR (best: 22.075%)
+     Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   SPIKES_IMMEDIATE.F1 (best: 8.743%)
+     Parameters: {'n_estimators': 50, 'max_depth': 7, 'max_features': 0.7, 'random_state': 42, 'n_jobs': -1}
+   DROPS_IMMEDIATE.F1 (best: 7.302%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+Progress: 70.0% (14/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 15/20
+Current Parameters: {'n_estimators': 300, 'max_depth': 10, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+================================================================================
+NEW BEST SCORES FOUND!
+   MAE: 0.373 -> 0.372 (decreased)
+   MAPE: 49.031% -> 48.709% (decreased)
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.541
+   MAE: 0.372
+   MAPE: 48.709%
+   DIR_ACCURACY: 56.280%
+   FIRST_DIFF_CORR: 19.817%
+   SPIKES_IMMEDIATE.F1: 7.616%
+   DROPS_IMMEDIATE.F1: 6.695%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.540)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAE (best: 0.372)
+     Parameters: {'n_estimators': 300, 'max_depth': 10, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   MAPE (best: 48.709%)
+     Parameters: {'n_estimators': 300, 'max_depth': 10, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   DIR_ACCURACY (best: 58.195%)
+     Parameters: {'n_estimators': 100, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   FIRST_DIFF_CORR (best: 22.075%)
+     Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   SPIKES_IMMEDIATE.F1 (best: 8.743%)
+     Parameters: {'n_estimators': 50, 'max_depth': 7, 'max_features': 0.7, 'random_state': 42, 'n_jobs': -1}
+   DROPS_IMMEDIATE.F1 (best: 7.302%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.540, {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+      MAE=0.372, {'n_estimators': 300, 'max_depth': 10, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+      MAPE=48.709%, {'n_estimators': 300, 'max_depth': 10, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+      Dir_Acc=58.195%, {'n_estimators': 100, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+      First_Diff_Corr=22.075%, {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+      Spikes_F1=8.743%, {'n_estimators': 50, 'max_depth': 7, 'max_features': 0.7, 'random_state': 42, 'n_jobs': -1}
+      Drops_F1=7.302%, {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+Progress: 75.0% (15/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 16/20
+Current Parameters: {'n_estimators': 100, 'max_depth': 7, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.555
+   MAE: 0.391
+   MAPE: 52.792%
+   DIR_ACCURACY: 52.836%
+   FIRST_DIFF_CORR: 12.126%
+   SPIKES_IMMEDIATE.F1: 8.071%
+   DROPS_IMMEDIATE.F1: 3.334%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.540)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAE (best: 0.372)
+     Parameters: {'n_estimators': 300, 'max_depth': 10, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   MAPE (best: 48.709%)
+     Parameters: {'n_estimators': 300, 'max_depth': 10, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   DIR_ACCURACY (best: 58.195%)
+     Parameters: {'n_estimators': 100, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   FIRST_DIFF_CORR (best: 22.075%)
+     Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   SPIKES_IMMEDIATE.F1 (best: 8.743%)
+     Parameters: {'n_estimators': 50, 'max_depth': 7, 'max_features': 0.7, 'random_state': 42, 'n_jobs': -1}
+   DROPS_IMMEDIATE.F1 (best: 7.302%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+Progress: 80.0% (16/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 17/20
+Current Parameters: {'n_estimators': 200, 'max_depth': 10, 'max_features': 0.3, 'random_state': 42, 'n_jobs': -1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.547
+   MAE: 0.384
+   MAPE: 51.428%
+   DIR_ACCURACY: 54.590%
+   FIRST_DIFF_CORR: 15.107%
+   SPIKES_IMMEDIATE.F1: 8.679%
+   DROPS_IMMEDIATE.F1: 3.875%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.540)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAE (best: 0.372)
+     Parameters: {'n_estimators': 300, 'max_depth': 10, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   MAPE (best: 48.709%)
+     Parameters: {'n_estimators': 300, 'max_depth': 10, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   DIR_ACCURACY (best: 58.195%)
+     Parameters: {'n_estimators': 100, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   FIRST_DIFF_CORR (best: 22.075%)
+     Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   SPIKES_IMMEDIATE.F1 (best: 8.743%)
+     Parameters: {'n_estimators': 50, 'max_depth': 7, 'max_features': 0.7, 'random_state': 42, 'n_jobs': -1}
+   DROPS_IMMEDIATE.F1 (best: 7.302%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+Progress: 85.0% (17/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 18/20
+Current Parameters: {'n_estimators': 100, 'max_depth': 10, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.541
+   MAE: 0.377
+   MAPE: 49.905%
+   DIR_ACCURACY: 55.593%
+   FIRST_DIFF_CORR: 17.866%
+   SPIKES_IMMEDIATE.F1: 7.261%
+   DROPS_IMMEDIATE.F1: 4.383%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.540)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAE (best: 0.372)
+     Parameters: {'n_estimators': 300, 'max_depth': 10, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   MAPE (best: 48.709%)
+     Parameters: {'n_estimators': 300, 'max_depth': 10, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   DIR_ACCURACY (best: 58.195%)
+     Parameters: {'n_estimators': 100, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   FIRST_DIFF_CORR (best: 22.075%)
+     Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   SPIKES_IMMEDIATE.F1 (best: 8.743%)
+     Parameters: {'n_estimators': 50, 'max_depth': 7, 'max_features': 0.7, 'random_state': 42, 'n_jobs': -1}
+   DROPS_IMMEDIATE.F1 (best: 7.302%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+Progress: 90.0% (18/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 19/20
+Current Parameters: {'n_estimators': 50, 'max_depth': 3, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.592
+   MAE: 0.420
+   MAPE: 57.499%
+   DIR_ACCURACY: 50.079%
+   FIRST_DIFF_CORR: 2.636%
+   SPIKES_IMMEDIATE.F1: 5.390%
+   DROPS_IMMEDIATE.F1: 3.147%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.540)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAE (best: 0.372)
+     Parameters: {'n_estimators': 300, 'max_depth': 10, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   MAPE (best: 48.709%)
+     Parameters: {'n_estimators': 300, 'max_depth': 10, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   DIR_ACCURACY (best: 58.195%)
+     Parameters: {'n_estimators': 100, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   FIRST_DIFF_CORR (best: 22.075%)
+     Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   SPIKES_IMMEDIATE.F1 (best: 8.743%)
+     Parameters: {'n_estimators': 50, 'max_depth': 7, 'max_features': 0.7, 'random_state': 42, 'n_jobs': -1}
+   DROPS_IMMEDIATE.F1 (best: 7.302%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+Progress: 95.0% (19/20 combinations)
+================================================================================
+
+================================================================================
+CHECKPOINT: Iteration 20/20
+Current Parameters: {'n_estimators': 50, 'max_depth': 7, 'max_features': 0.7, 'random_state': 42, 'n_jobs': -1}
+================================================================================
+
+CURRENT ITERATION RESULTS (Averages across devices):
+   RMSE: 0.552
+   MAE: 0.386
+   MAPE: 51.699%
+   DIR_ACCURACY: 53.296%
+   FIRST_DIFF_CORR: 13.643%
+   SPIKES_IMMEDIATE.F1: 8.743%
+   DROPS_IMMEDIATE.F1: 4.394%
+
+CURRENT BEST SCORES (OVERALL):
+   RMSE (best: 0.540)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   MAE (best: 0.372)
+     Parameters: {'n_estimators': 300, 'max_depth': 10, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   MAPE (best: 48.709%)
+     Parameters: {'n_estimators': 300, 'max_depth': 10, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   DIR_ACCURACY (best: 58.195%)
+     Parameters: {'n_estimators': 100, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+   FIRST_DIFF_CORR (best: 22.075%)
+     Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+   SPIKES_IMMEDIATE.F1 (best: 8.743%)
+     Parameters: {'n_estimators': 50, 'max_depth': 7, 'max_features': 0.7, 'random_state': 42, 'n_jobs': -1}
+   DROPS_IMMEDIATE.F1 (best: 7.302%)
+     Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+PER-DEVICE BEST SCORES (SUMMARY):
+   Device const: 
+      RMSE=0.540, {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+      MAE=0.372, {'n_estimators': 300, 'max_depth': 10, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+      MAPE=48.709%, {'n_estimators': 300, 'max_depth': 10, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+      Dir_Acc=58.195%, {'n_estimators': 100, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+      First_Diff_Corr=22.075%, {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+      Spikes_F1=8.743%, {'n_estimators': 50, 'max_depth': 7, 'max_features': 0.7, 'random_state': 42, 'n_jobs': -1}
+      Drops_F1=7.302%, {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+Progress: 100.0% (20/20 combinations)
+================================================================================
+
+================================================================================
+GRID SEARCH COMPLETED!
+FINAL BEST RESULTS:
+================================================================================
+BEST RMSE: 0.540
+   Best Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+BEST MAE: 0.372
+   Best Parameters: {'n_estimators': 300, 'max_depth': 10, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+
+BEST MAPE: 48.709%
+   Best Parameters: {'n_estimators': 300, 'max_depth': 10, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+
+BEST DIR_ACCURACY: 58.195%
+   Best Parameters: {'n_estimators': 100, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+BEST FIRST_DIFF_CORR: 22.075%
+   Best Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+
+BEST SPIKES_IMMEDIATE.F1: 8.743%
+   Best Parameters: {'n_estimators': 50, 'max_depth': 7, 'max_features': 0.7, 'random_state': 42, 'n_jobs': -1}
+
+BEST DROPS_IMMEDIATE.F1: 7.302%
+   Best Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+
+================================================================================
+Grid Search Completed: 2025-09-24 13:10:40
+
+PER-DEVICE BEST RESULTS:
+================================================================================
+
+Device: const
+----------------------------------------
+BEST RMSE: 0.540
+   Best Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+BEST MAE: 0.372
+   Best Parameters: {'n_estimators': 300, 'max_depth': 10, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+BEST MAPE: 48.709%
+   Best Parameters: {'n_estimators': 300, 'max_depth': 10, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+BEST DIR_ACCURACY: 58.195%
+   Best Parameters: {'n_estimators': 100, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
+BEST FIRST_DIFF_CORR: 22.075%
+   Best Parameters: {'n_estimators': 150, 'max_depth': 15, 'max_features': 1.0, 'random_state': 42, 'n_jobs': -1}
+BEST SPIKES_IMMEDIATE.F1: 8.743%
+   Best Parameters: {'n_estimators': 50, 'max_depth': 7, 'max_features': 0.7, 'random_state': 42, 'n_jobs': -1}
+BEST DROPS_IMMEDIATE.F1: 7.302%
+   Best Parameters: {'n_estimators': 300, 'max_depth': 20, 'max_features': 0.5, 'random_state': 42, 'n_jobs': -1}
