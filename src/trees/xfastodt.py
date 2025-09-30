@@ -226,14 +226,19 @@ class xFastODT(BaseTree):
 
         node = self.depths_containers[node_depth][node_index]
         if node is None:
-            node = self.__find_node(node_depth, node_index)
+            print(f"updating nodes: node_depth: {node_depth} node_index: {node_index}")
+            self.depths_containers[node_depth][node_index] = self.__find_node(node_depth, node_index, x, y)
+            node = self.depths_containers[node_depth][node_index]
         else:
             if self.mature_tree:
                 return
+            else:
+                print(f"xFastODT --> update: node_depth:{node_depth} node_index:{node_index}")
+                node.update_stats(x, y)
 
-        node.update_stats(x, y)
         best_split, _ = node.find_best_split()  # here happens hf bound calculation
         if best_split[0] is not None:
+            print(f"xFastODT -> SPLITS {node_depth}")
             depth = len(decision_vector)
 
             self.splits_features[depth] = best_split[0]
@@ -249,7 +254,7 @@ class xFastODT(BaseTree):
             else:
                 self.mature_tree = True
 
-    def __find_node(self, depth, index):
+    def __find_node(self, depth, index, x, y):
         """Finds last populated node by index."""
 
         node = self.depths_containers[depth][index]
@@ -258,10 +263,13 @@ class xFastODT(BaseTree):
             parent_node_index = (
                 index // 2
             )  # find parent index by rule that it is child index / 2 and floored to nearest integer
-            node = self.__find_node(depth - 1, parent_node_index)
+            node = self.__find_node(depth - 1, parent_node_index, x, y)
             node.index = index
             self.depths_containers[depth][index] = node
             # this is cheap trick and needs to check if we initialize nodes correclty in this case
+        else: 
+            print(f"xFastODT --> update: node_depth:{depth} node_index:{index}")
+            node.update_stats(x, y)
         return node
 
     def _attempt_split(self, node, depth: int):

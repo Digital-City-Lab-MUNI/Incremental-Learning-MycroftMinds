@@ -208,7 +208,7 @@ class FastODT(BaseTree):
             x = x[0]
         return self.predict(x)
 
-    def _update_tree(self, node: NodeHoeffdingBound, x: np.ndarray, y: float, depth: int = 0) -> None:
+    def _update_tree(self, node: NodeHoeffdingBound, x: np.ndarray, y: float, depth: int = 0, payload_print = "", debug_index = 0) -> None:
         """Update the tree with a new sample."""
         # Check if we reached the maximum depth
         if depth >= self.depth:
@@ -216,6 +216,7 @@ class FastODT(BaseTree):
 
         # if node is a leaf, update its stats and check for split
         if node.left is None and node.right is None:
+            print(payload_print + f"FastODT --> update node_depth: {depth} node_index: {debug_index}\n")
             node.update_stats(x, y)
             if node.reached_grace_period() or self.grace_period_depth < depth:  # check if grace period is over
                 self._attempt_split(node, depth)
@@ -223,9 +224,11 @@ class FastODT(BaseTree):
         # traverse the tree to reach the correct leaf
         elif node.feature is not None:
             if x[node.feature] <= node.threshold:
-                self._update_tree(node.left, x, y, depth + 1)
+                debug_index = debug_index * 2
+                self._update_tree(node.left, x, y, depth + 1, payload_print = payload_print, debug_index = debug_index)
             elif x[node.feature] > node.threshold:
-                self._update_tree(node.right, x, y, depth + 1)
+                debug_index = debug_index * 2 + 1
+                self._update_tree(node.right, x, y, depth + 1, payload_print = payload_print, debug_index = debug_index)
 
     def _attempt_split(self, node: NodeHoeffdingBound, depth: int) -> None:
         """Attempt to split the node when the Hoeffding Bound indicates a split is warranted."""
@@ -236,6 +239,7 @@ class FastODT(BaseTree):
             node.right.update_from_parent_node(node)
 
         elif best_split[0] is not None:
+            print(f"FastODT -> SPLITS depth: {depth}")
             self.splits[depth] = best_split
             node.split(best_split, self.split_confidence)
             node.left.update_from_parent_node(node)
