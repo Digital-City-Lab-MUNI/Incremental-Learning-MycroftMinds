@@ -666,6 +666,7 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
             max_bins=self.max_bins,
             inherit_bins=self.inherit_bins,
             split_criterion=self.split_criterion,
+            random_state=self.seed,
         )
 
     def _drift_detector_input(

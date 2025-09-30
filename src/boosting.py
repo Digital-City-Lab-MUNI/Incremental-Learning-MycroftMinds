@@ -104,6 +104,7 @@ class IncubationBoost:
         bin_type: str = C.HistogramType.ADAPTIVE,
         max_bins: int = 32,
         split_criterion: str = C.SplitCriterion.VR_REL,
+        random_state: int = None,
         verbose: bool = True,
     ) -> None:
         self.chain: List[FastODT] = []
@@ -121,7 +122,9 @@ class IncubationBoost:
         self.max_bins = max_bins
         self.split_criterion = split_criterion
         self.incubating_node: Optional[FastODT] = None
+        self.random_state = random_state
         self.verbose = verbose
+
         try:  # environment-adaptive progress bar
             from IPython import get_ipython  # type: ignore
 
@@ -157,6 +160,7 @@ class IncubationBoost:
                 bin_type=self.bin_type,
                 max_bins=self.max_bins,
                 split_criterion=self.split_criterion,
+                random_state=self.random_state,
             )
             self.chain.append(new_node)
 
@@ -211,6 +215,7 @@ class IncubationBoost:
                 bin_type=self.bin_type,
                 max_bins=self.max_bins,
                 split_criterion=self.split_criterion,
+                random_state=self.random_state,
             )
             self.incubating_node.partial_fit([X], residual)
             return None

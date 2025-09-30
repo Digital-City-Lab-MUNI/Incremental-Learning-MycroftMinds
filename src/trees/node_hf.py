@@ -60,6 +60,8 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
     split_criterion : callable, optional
         Function computing split quality; defaults to absolute variance
         reduction.
+    random_state : int, optional
+        Random seed for reproducibility.
 
     Attributes
     ----------
@@ -115,6 +117,8 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         Function to evaluate split quality.
     inherit_bins : bool
         Whether to inherit bins from parent.
+    random_state : int
+        Random seed for reproducibility. It has effect only when max_feature < 1.0.
 
     """
 
@@ -132,6 +136,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         max_bins: int = 32,
         inherit_bins: bool = False,
         split_criterion: callable = None,
+        random_state: int = None,
     ) -> None:
         self.tie_threshold: float = tie_threshold
         self.delta: float = split_confidence
@@ -168,6 +173,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
 
         self.split_criterion: callable = split_criterion if split_criterion is not None else variance_reduction
         self.inherit_bins: bool = inherit_bins
+        self.random_state = random_state
 
     def check_grace_period(self) -> bool:
         """Check if the grace period has expired."""
@@ -187,7 +193,9 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         # Generate random feature indices based on max_feature if not already set
         if self.feature_indices is None:
             max_feature_length = int(x.shape[0] * self.max_feature)
-            self.feature_indices = np.sort(get_unique_random_numbers(max_feature_length, x.shape[0]))
+            self.feature_indices = np.sort(
+                get_unique_random_numbers(max_feature_length, x.shape[0], self.random_state)
+                )
 
         # Select only the features that are in the feature_indices
         x_shortlisted = x[self.feature_indices]
@@ -216,6 +224,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         # self.sum_y = parent.sum_y
         # self.sum_y_squared = parent.sum_y_squared
         self.value = parent.value  # but not this
+        self.random_state = parent.random_state
 
         # if self.grace_period > 0:
         #     self.grace_period_offset = parent.samples_seen  # remove this too
@@ -298,6 +307,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
             max_bins=self.max_bins,
             inherit_bins=self.inherit_bins,
             split_criterion=self.split_criterion,
+            random_state=self.random_state,
         )
         self.right = NodeHoeffdingBound(
             split_confidence=split_confidence,
@@ -309,6 +319,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
             max_bins=self.max_bins,
             inherit_bins=self.inherit_bins,
             split_criterion=self.split_criterion,
+            random_state=self.random_state,
         )
         if self.inherit_bins and self.histograms is not None:
             self.left.histograms = {}

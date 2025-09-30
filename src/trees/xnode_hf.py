@@ -46,10 +46,15 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         Number of samples a node should observe before attempting to split.
     bin_type : class
         Histogram class to use for binning (e.g., AdaptiveHistogram, EquiWidthHistogram).
+    inherit_bins : bool
+        Whether to inherit bins from parent node on split.
     max_bins : int
         Maximum number of bins per feature per node.
     split_criterion : callable
         Function to compute split quality (default: variance reduction).
+    random_state : int
+        Random seed for reproducibility. It has effect only when max_feature < 1.0
+    
 
     Attributes
     ----------
@@ -90,8 +95,9 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         index=0,
         bin_type=AdaptiveHistogram,
         max_bins=32,
-        inherit_bins=False,
-        split_criterion=None,
+        inherit_bins: bool = False,
+        split_criterion: callable = None,
+        random_state: int = None,
     ):
         self.index: int = index
 
@@ -123,6 +129,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
 
         self.split_criterion: callable = split_criterion if split_criterion is not None else variance_reduction
         self.inherit_bins: bool = inherit_bins
+        self.random_state = random_state
 
     def check_grace_period(self):
         """Check if grace period is met."""
@@ -165,6 +172,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         # self.sum_y_squared = parent.sum_y_squared
         # !probably should get it removed properly!
         self.value = parent.value  # but not this
+        self.random_state = parent.random_state
 
         # if self.grace_period > 0:
         #     self.grace_period_offset = parent.samples_seen  # remove this too
@@ -233,6 +241,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
             max_bins=self.max_bins,
             inherit_bins=self.inherit_bins,
             split_criterion=self.split_criterion,
+            random_state=self.random_state,
         )
         right = NodeHoeffdingBound(
             split_confidence=split_confidence,
@@ -244,6 +253,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
             max_bins=self.max_bins,
             inherit_bins=self.inherit_bins,
             split_criterion=self.split_criterion,
+            random_state=self.random_state,
         )
 
         # TODO: this should be done inside histogram splitter class
