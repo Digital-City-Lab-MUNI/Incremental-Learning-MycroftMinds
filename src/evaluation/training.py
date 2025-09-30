@@ -485,6 +485,18 @@ def all_valid_splits_seq_fit_predict(
                 print(f"[! WARNING !] No validation data for device {device_id} in split {split}. Skipping.")
                 continue
 
+            if X_train.shape[1] != len(features):
+                raise ValueError(
+                    f"Feature count mismatch for device {device_id} in split {split}: "
+                    f"X has {X_train.shape[1]} features, but features list has {len(features)} entries."
+                )
+
+            if X_valid.shape[1] != X_train.shape[1]:
+                raise ValueError(
+                    f"Feature count mismatch for device {device_id} in split {split}: "
+                    f"train has {X_train.shape[1]} features, valid has {X_valid.shape[1]} features."
+                )
+
             if use_residuals:
                 # Model the residuals, not the original target
                 y_train_shifted = y_train.shift(1)  # use 1-step lag for differencing
@@ -742,6 +754,18 @@ def test_set_seq_fit_predict(
 
         # Get test data for this device
         X_test, y_test = get_device_data(test, device_id=device_id)  # Assuming test has only one split
+
+        # Validate feature dimensions
+        if X_combined.shape[1] != X_test.shape[1]:
+            raise ValueError(
+                f"Feature count mismatch for device {device_id}: "
+                f"train+valid has {X_combined.shape[1]} features, test has {X_test.shape[1]} features."
+            )
+        if X_combined.shape[1] != len(features):
+            raise ValueError(
+                f"Feature count mismatch for device {device_id}: "
+                f"X has {X_combined.shape[1]} features, but features list has {len(features)} entries."
+            )
 
         # Skip if device is not in test set
         if len(X_test) == 0:
