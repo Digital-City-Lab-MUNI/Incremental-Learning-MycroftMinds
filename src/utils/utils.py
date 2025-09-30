@@ -7,7 +7,7 @@ and keep focused, testable behavior.
 Functions
 ---------
 get_unique_random_numbers
-    Sample a set of unique integers from ``range(M)``.
+    Sample N distinct random integers from range(upper_bound) as numpy array.
 ensure_2d_array
     Guarantee an ``np.ndarray`` has 2 dimensions (row vector if originally 1D).
 aggregate_values
@@ -19,15 +19,23 @@ get_device_data
 
 import pandas as pd
 import numpy as np
-import random
 from typing import Tuple, Sequence
 
 
-def get_unique_random_numbers(N: int, upper_bound: int) -> list[int]:
-    """Sample ``N`` distinct random integers from ``range(upper_bound)``."""
+def get_unique_random_numbers(N: int, upper_bound: int, seed: int | None = None) -> np.ndarray:
+    """Sample ``N`` distinct random integers from ``range(upper_bound)`` with optional random seed."""
     if N > upper_bound:
         raise ValueError("N must be less than or equal to upper_bound")
-    return random.sample(range(upper_bound), N)
+    
+    if seed is not None:
+        # Temporarily set seed for reproducible results
+        old_state = np.random.get_state()
+        np.random.seed(seed)
+        result = np.random.choice(upper_bound, size=N, replace=False)
+        np.random.set_state(old_state)
+        return result
+    else:
+        return np.random.choice(upper_bound, size=N, replace=False)
 
 
 def ensure_2d_array(X: np.ndarray | Sequence[float]) -> np.ndarray:
