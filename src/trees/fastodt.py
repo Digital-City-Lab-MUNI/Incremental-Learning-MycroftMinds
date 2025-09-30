@@ -59,6 +59,8 @@ class FastODT(BaseTree):
         If True, child nodes receive copies of parent histograms on split.
     split_criterion : str or callable, default="vr_rel"
         Split criterion identifier or function returning merit scores.
+    random_state : int, optional
+        Random seed for reproducibility. It has effect only when max_feature < 1.0.
 
     Attributes
     ----------
@@ -84,6 +86,7 @@ class FastODT(BaseTree):
         max_bins: int = 16,
         inherit_bins: bool = False,
         split_criterion: Union[str, callable] = C.SplitCriterion.VR_REL,
+        random_state: int = None,
     ) -> None:
         self.grace_period = grace_period  # Number of samples before checking for a split
         self.split_confidence = split_confidence  # Confidence level for splitting
@@ -114,6 +117,7 @@ class FastODT(BaseTree):
             max_bins=max_bins,
             inherit_bins=inherit_bins,
             split_criterion=split_criterion,
+            random_state=random_state,
         )
 
     def measure_error(self, y_baseline: float, y_predicted: float) -> float:

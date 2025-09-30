@@ -74,6 +74,8 @@ def read_other_data(
 
             df["device_id"] = "const"
             df["serial_number"] = "const"
+            # Drop unwanted columns
+            df.drop(columns=["Sub_metering_1", "Sub_metering_2", "Sub_metering_3", 'Global_intensity'], inplace=True)
             return [df]
 
         elif name == "friedman":

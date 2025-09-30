@@ -69,31 +69,36 @@ def train_and_evaluate(
 
     Parameters
     ----------
-    model : BaseEstimator | type
+    model : BaseEstimator or type
         Either an initialized estimator instance or an estimator class. If a
         class (not yet instantiated) is provided it will be constructed with
         ``params`` for each split.
     params : dict
         Hyperparameters to apply when instantiating (or re-instantiating) the
         model for batch learners or when configuring incremental learners.
-    train : list[tuple[np.ndarray, np.ndarray]]
-        List of training split tuples ``(X, y)`` across devices.
-    valid : list[tuple[np.ndarray, np.ndarray]]
-        List of validation split tuples ``(X, y)`` across devices.
+    train : list of tuple
+        List of (X, y) training data tuples representing sequential folds, where
+        X is ndarray of shape (n_samples, n_features) and y is pandas.Series 
+        of shape (n_samples,).
+    valid : list of tuple
+        List of (X, y) validation data tuples representing sequential folds, where
+        X is ndarray of shape (n_samples, n_features) and y is pandas.Series 
+        of shape (n_samples,).
     use_residuals : bool
         If True, model the residuals (1-step differencing) instead of the original target.
     spike_prominence : float
-        Prominence used in spike / drop detection within metric calculation.
+        Minimum prominence of spikes/drops to detect.
     data_freq : str
-        Base temporal frequency of the data (e.g. 'H', '15min').
+        Original data frequency (passed to metric aggregation).
     forecast_horizon : str
-        Prediction horizon used to align model update timing (incremental
-        learners) and to filter horizon-specific engineered features.
-    features : list[str]
-        Subset of feature names to keep. If ``None`` all columns are used.
+        Time horizon string (pandas offset) specifying the minimum prediction 
+        horizon for feature filtering and model update delays.
+    features : list of str
+        Full feature name list of length n_features including index columns. 
+        Excludes the lag features violating the forecast horizon. If provided, 
+        must include ALL features available in the dataset.
     update_freq : str
-        Frequency at which batch models are retrained (or incremental models
-        are allowed to update) relative to ``forecast_horizon``.
+        Time interval between full model retrains (pandas Timedelta parsable string).
     start_split : int
         First split index (inclusive) to evaluate.
     end_split : int
@@ -101,7 +106,7 @@ def train_and_evaluate(
 
     Returns
     -------
-    dict
+    aggregated_metrics : dict
         Nested structure of aggregated validation metrics per device produced
         by ``all_time_aggregation_metrics``. Keys are device identifiers; each
         value contains aggregation levels (e.g. 'hourly', 'daily', 'weekly',
@@ -182,29 +187,35 @@ def hyperparameter_search_tuning(
         Dictionary mapping parameter names to an iterable of candidate values.
         For ``search_type='grid'`` the full Cartesian product is evaluated.
         For ``'random'`` a fixed number of combinations is sampled uniformly.
-    model : BaseEstimator | type
+    model : BaseEstimator or type
         Estimator instance or class. If a class is provided it is (re)created per
         split for batch models. Incremental / online models can be reused.
-    train : list[tuple[np.ndarray, np.ndarray]]
-        Training splits per device ``[(X_device_i, y_device_i), ...]``.
-    valid : list[tuple[np.ndarray, np.ndarray]]
-        Validation splits per device aligned with ``train``.
+    train : list of tuple
+        List of (X, y) training data tuples representing sequential folds, where
+        X is ndarray of shape (n_samples, n_features) and y is pandas.Series 
+        of shape (n_samples,).
+    valid : list of tuple
+        List of (X, y) validation data tuples representing sequential folds, where
+        X is ndarray of shape (n_samples, n_features) and y is pandas.Series 
+        of shape (n_samples,).
     use_residuals : bool
         If True, model the residuals (1-step differencing) instead of the original target.
     spike_prominence : float
-        Prominence passed through to spike / drop detection in metrics.
+        Minimum prominence of spikes/drops to detect.
     aggregation : str, default 'hourly'
         Aggregation key to select from the metric dictionary for scoring (e.g.
         'hourly', 'daily', 'weekly').
     data_freq : str, default 'H'
-        Native data sampling frequency (Pandas offset alias).
+        Original data frequency (passed to metric aggregation).
     forecast_horizon : str, default '1h'
-        Prediction horizon used for feature filtering & update cadence gating.
-    features : list[str] or None, optional
-        Subset of features to retain; ``None`` keeps all provided columns.
+        Time horizon string (pandas offset) specifying the minimum prediction 
+        horizon for feature filtering and model update delays.
+    features : list of str, optional
+        Full feature name list of length n_features including index columns. 
+        Excludes the lag features violating the forecast horizon. If provided, 
+        must include ALL features available in the dataset.
     update_freq : str, default '1h'
-        Frequency at which batch models are retrained or incremental models may
-        update. Typically equals the forecast horizon for pure one-step ahead.
+        Time interval between full model retrains (pandas Timedelta parsable string).
     start_split : int, default 0
         First split index (inclusive) to include in tuning.
     end_split : int or None, optional
@@ -228,13 +239,13 @@ def hyperparameter_search_tuning(
 
     Returns
     -------
-    dict
+    results : dict
         Dictionary with two top-level keys:
 
-        ``overall``
+        overall : dict
             Contains ``best_params`` and ``best_scores`` (each a mapping from
             metric name to the parameter dict / best scalar value).
-        ``per_device``
+        per_device : dict
             Contains four dictionaries tracking best parameters and scores for
             lower-better and higher-better metrics keyed by device id.
 

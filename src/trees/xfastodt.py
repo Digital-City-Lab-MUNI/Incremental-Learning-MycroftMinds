@@ -28,6 +28,7 @@ class xFastODT(BaseTree):
         max_bins: int = 16,
         inherit_bins: bool = False,
         split_criterion: str = "vr_rel",
+        random_state: int = None,
     ):
         """
         Initialize the FastODT tree model with parameters.
@@ -63,6 +64,9 @@ class xFastODT(BaseTree):
 
         split_criterion : str or callable, optional (default=None)
             String name of split criterion (e.g., 'variance') or a callable. If None, uses default for node type.
+
+        random_state : int, optional
+            Random seed for reproducibility. It has effect only when max_feature < 1.0.
 
         Attributes:
         ----------
@@ -103,6 +107,8 @@ class xFastODT(BaseTree):
         for d in range(self.depth):
             self.depths_containers.append(defaultdict(lambda: None))
 
+        self.random_state = random_state
+
         self.depths_containers[0][0] = NodeHoeffdingBound(
             split_confidence=self.split_confidence,
             tie_threshold=self.tie_threshold,
@@ -112,6 +118,7 @@ class xFastODT(BaseTree):
             max_bins=max_bins,
             inherit_bins=inherit_bins,
             split_criterion=split_criterion,
+            random_state=self.random_state,
         )
 
     def partial_fit(self, X: np.ndarray, y: np.ndarray, verbose: bool = False):

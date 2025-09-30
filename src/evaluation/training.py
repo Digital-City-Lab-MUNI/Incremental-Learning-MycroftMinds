@@ -60,9 +60,9 @@ def _partial_fit_model(model: BaseEstimator, X: np.ndarray, Y: pd.Series) -> Non
     ----------
     model : BaseEstimator
         Estimator supporting either ``partial_fit`` or (River) ``learn_one``.
-    X : numpy.ndarray of shape (n_samples, n_features)
+    X : ndarray of shape (n_samples, n_features)
         Feature matrix.
-    Y : pandas.Series
+    Y : pandas.Series of shape (n_samples,)
         Target values aligned with ``X`` rows.
     """
     if hasattr(model, "partial_fit"):
@@ -81,12 +81,12 @@ def _predict_model(model: BaseEstimator, X: np.ndarray) -> np.ndarray:
     ----------
     model : BaseEstimator
         Estimator supporting ``predict`` or (River) ``predict_one``.
-    X : numpy.ndarray
+    X : ndarray of shape (n_samples, n_features)
         Feature matrix.
 
     Returns
     -------
-    numpy.ndarray
+    ndarray of shape (n_samples,)
         Model predictions in original target scale.
     """
     if hasattr(model, "predict"):
@@ -121,30 +121,37 @@ def seq_fit_predict_batch_model(
     ----------
     model : BaseEstimator
         Batch learning model with ``fit`` and ``predict``.
-    X_train, y_train : array-like, pandas.Series
-        Initial training feature matrix / target series.
-    X_valid, y_valid : array-like, pandas.Series
-        Validation feature matrix / target to predict sequentially.
+    X_train : ndarray of shape (n_train_samples, n_features)
+        Initial training feature matrix.
+    y_train : pandas.Series of shape (n_train_samples,)
+        Initial training target series.
+    X_valid : ndarray of shape (n_valid_samples, n_features)
+        Validation feature matrix to predict sequentially.
+    y_valid : pandas.Series of shape (n_valid_samples,)
+        Validation target series to predict sequentially.
     forecast_horizon : str
-        Horizon string (pandas offset) used only for optional feature filtering.
+        Time horizon string (pandas offset) specifying the minimum prediction
+        horizon for feature filtering and model update delays.
     update_freq : str, default='14 days'
-        Interval between full retrains (pandas Timedelta parsable string).
-    features : list[str], optional
-        Complete list of column names (including index columns) used to map
-        feature indices for filtering.
+        Time interval between full model retrains (pandas Timedelta parsable string).
+    features : list of str, optional
+        Full feature name list of length n_features including index columns. 
+        Excludes the lag features violating the forecast horizon. If provided, 
+        must include ALL features available in the dataset.
     predict_train : bool, default=True
-        If True, also generate in-sample predictions on original training data.
+        Whether to generate in-sample predictions on the training data.
     index_cols : int, default=2
-        Number of leading columns in ``X`` that are non-feature indices (e.g.,
-        timestamp, device id).
+        Number of leading columns in feature matrices that contain non-feature
+        metadata (e.g., timestamp, device_id).
     verbose : int, default=0
-        Verbosity level (0 silent, 1 progress, 2 detailed).
+        Verbosity level for output (0=silent, 1=progress info, 2=detailed).
 
     Returns
     -------
-    (pd.Series | None, pd.Series)
-        ``(y_pred_train, y_pred_valid)`` where the first element is ``None`` if
-        ``predict_train`` is False.
+    y_pred_train : pandas.Series or None
+        Training predictions if ``predict_train`` is True, otherwise None.
+    y_pred_valid : pandas.Series
+        Validation predictions.
     """
     # Initialize predictions list
     y_pred_train = [] if predict_train else None
@@ -260,23 +267,35 @@ def seq_fit_predict_incremental_model(
     model : BaseEstimator
         Incremental estimator supporting ``partial_fit`` / ``learn_one`` and
         prediction.
-    X_train, y_train, X_valid, y_valid : see batch variant
-        Same semantics as :func:`seq_fit_predict_batch_model`.
+    X_train : ndarray of shape (n_train_samples, n_features)
+        Initial training feature matrix.
+    y_train : pandas.Series of shape (n_train_samples,)
+        Initial training target series.
+    X_valid : ndarray of shape (n_valid_samples, n_features)
+        Validation feature matrix to predict sequentially.
+    y_valid : pandas.Series of shape (n_valid_samples,)
+        Validation target series to predict sequentially.
     forecast_horizon : str
-        Minimum time gap before incorporating a newly observed target.
-    features : list[str], optional
-        Feature names aligned with columns of ``X`` if filtering is desired.
+        Time horizon string (pandas offset) specifying the minimum prediction
+        horizon for feature filtering and model update delays.
+    features : list of str, optional
+        Full feature name list of length n_features including index columns. 
+        Excludes the lag features violating the forecast horizon. If provided, 
+        must include ALL features available in the dataset.
     predict_train : bool, default=True
-        Whether to produce in-sample training predictions.
+        Whether to generate in-sample predictions on the training data.
     index_cols : int, default=2
-        Non-feature leading columns count.
+        Number of leading columns in feature matrices that contain non-feature
+        metadata (e.g., timestamp, device_id).
     verbose : int, default=0
-        Verbosity level.
+        Verbosity level for output (0=silent, 1=progress info, 2=detailed).
 
     Returns
     -------
-    (pd.Series | None, pd.Series)
-        Training predictions (optional) and validation predictions.
+    y_pred_train : pandas.Series or None
+        Training predictions if ``predict_train`` is True, otherwise None.
+    y_pred_valid : pandas.Series
+        Validation predictions.
     """
     # Initialize predictions lists
     y_pred_train = [] if predict_train else None
@@ -387,8 +406,14 @@ def all_valid_splits_seq_fit_predict(
         Estimator class to instantiate per device per split.
     model_params : dict
         Constructor parameters for the estimator.
-    train, valid : list[tuple]
-        Lists of (X, y) arrays representing sequential folds.
+    train : list of tuple
+        List of (X, y) training data tuples representing sequential folds, where
+        X is ndarray of shape (n_samples, n_features) and y is pandas.Series 
+        of shape (n_samples,).
+    valid : list of tuple
+        List of (X, y) validation data tuples representing sequential folds, where
+        X is ndarray of shape (n_samples, n_features) and y is pandas.Series 
+        of shape (n_samples,).
     use_residuals : bool
         If True, model the residuals (1-step differencing) instead of the original target.
     incremental : bool
@@ -396,29 +421,38 @@ def all_valid_splits_seq_fit_predict(
     data_freq : str
         Original data frequency (passed to metric aggregation).
     forecast_horizon : str
-        Horizon spec for feature filtering / incremental delay logic.
-    features : list[str], optional
-        Full feature name list including index columns.
+        Time horizon string (pandas offset) specifying the minimum prediction
+        horizon for feature filtering and model update delays.
+    features : list of str, optional
+        Full feature name list of length n_features including index columns. 
+        Excludes the lag features violating the forecast horizon. If provided, 
+        must include ALL features available in the dataset.
     update_freq : str, default='14D'
-        Batch retrain interval.
+        Time interval between full model retrains (pandas Timedelta parsable string).
     spike_prominence, normalize_robust : see metrics module
         Parameters forwarded to spike/drop evaluation.
     start_split, end_split : int, optional
         Subset range of splits (``end_split`` exclusive) to process.
     predict_train : bool, default=True
-        Whether to include training predictions & metrics.
+        Whether to generate in-sample predictions on the training data.
     index_cols : int, default=2
-        Number of leading non-feature columns.
+        Number of leading columns in feature matrices that contain non-feature
+        metadata (e.g., timestamp, device_id).
     verbose : int, default=1
-        Verbosity level passed to lower-level routines.
+        Verbosity level for output (0=silent, 1=progress info, 2=detailed).
     tqdm_on : bool, default=True
         If False, disable progress bars.
 
     Returns
     -------
-    tuple of dict
-        (train_preds, valid_preds, train_metrics, valid_metrics) each mapping
-        device_id -> list of period dictionaries.
+    device_train_period_predictions : dict
+        Training predictions per device and period.
+    device_valid_period_predictions : dict
+        Validation predictions per device and period.
+    device_train_period_metrics : dict
+        Training metrics per device and period.
+    device_valid_period_metrics : dict
+        Validation metrics per device and period.
     """
     device_train_period_metrics = {}
     device_train_period_predictions = {}
@@ -450,6 +484,18 @@ def all_valid_splits_seq_fit_predict(
             if X_valid.shape[0] == 0:
                 print(f"[! WARNING !] No validation data for device {device_id} in split {split}. Skipping.")
                 continue
+
+            if X_train.shape[1] != len(features):
+                raise ValueError(
+                    f"Feature count mismatch for device {device_id} in split {split}: "
+                    f"X has {X_train.shape[1]} features, but features list has {len(features)} entries."
+                )
+
+            if X_valid.shape[1] != X_train.shape[1]:
+                raise ValueError(
+                    f"Feature count mismatch for device {device_id} in split {split}: "
+                    f"train has {X_train.shape[1]} features, valid has {X_valid.shape[1]} features."
+                )
 
             if use_residuals:
                 # Model the residuals, not the original target
@@ -622,38 +668,59 @@ def test_set_seq_fit_predict(
 
     Parameters
     ----------
-    model_class, model_params : see previous functions
-        Estimator class and constructor keyword args.
-    train, valid, test : list[tuple]
-        Data splits (arrays) with consistent formatting.
+    model_class : Type[BaseEstimator]
+        Estimator class to instantiate per device per split.
+    model_params : dict
+        Constructor parameters for the estimator.
+    train : list of tuple
+        List of (X, y) training data tuples representing sequential folds, where
+        X is ndarray of shape (n_samples, n_features) and y is pandas.Series 
+        of shape (n_samples,).
+    valid : list of tuple
+        List of (X, y) validation data tuples representing sequential folds, where
+        X is ndarray of shape (n_samples, n_features) and y is pandas.Series 
+        of shape (n_samples,).
+    test : list of tuple
+        List of (X, y) test data tuples, where X is ndarray of shape (n_samples, 
+        n_features) and y is pandas.Series of shape (n_samples,).
     use_residuals : bool
         If True, model the residuals (1-step differencing) instead of the original target.
     incremental : bool
-        Incremental vs batch behavior.
+        If True use incremental mode, else batch mode.
     data_freq : str
-        Original sampling frequency for downstream metrics.
+        Original data frequency (passed to metric aggregation).
     forecast_horizon : str
-        Horizon spec for feature filtering / incremental delay.
-    features : list[str], optional
-        Feature names for optional filtering.
+        Time horizon string (pandas offset) specifying the minimum prediction
+        horizon for feature filtering and model update delays.
+    features : list of str, optional
+        Full feature name list of length n_features including index columns. 
+        Excludes the lag features violating the forecast horizon. If provided, 
+        must include ALL features available in the dataset.
     update_freq : str, default='14D'
-        Batch retrain cadence.
+        Time interval between full model retrains (pandas Timedelta parsable string).
     spike_prominence : float, default=10.0
         Minimum prominence of spikes to detect.
     normalize_robust : bool, default=True
         Whether to apply robust normalization to the ``y_true`` and ``y_pred``
         for spike detection.
     predict_train : bool, default=False
-        Whether to produce predictions/metrics on combined train set.
+        Whether to generate in-sample predictions on the training data.
     index_cols : int, default=2
-        Non-feature leading column count.
+        Number of leading columns in feature matrices that contain non-feature
+        metadata (e.g., timestamp, device_id).
     verbose : int, default=1
-        Verbosity level.
+        Verbosity level for output (0=silent, 1=progress info, 2=detailed).
 
     Returns
     -------
-    tuple of dict
-        (train_preds, test_preds, train_metrics, test_metrics).
+    device_train_period_predictions : dict
+        Training predictions per device and period.
+    device_test_period_predictions : dict
+        Test predictions per device and period.
+    device_train_period_metrics : dict
+        Training metrics per device and period.
+    device_test_period_metrics : dict
+        Test metrics per device and period.
     """
     device_train_period_metrics = {}
     device_train_period_predictions = {}
@@ -687,6 +754,18 @@ def test_set_seq_fit_predict(
 
         # Get test data for this device
         X_test, y_test = get_device_data(test, device_id=device_id)  # Assuming test has only one split
+
+        # Validate feature dimensions
+        if X_combined.shape[1] != X_test.shape[1]:
+            raise ValueError(
+                f"Feature count mismatch for device {device_id}: "
+                f"train+valid has {X_combined.shape[1]} features, test has {X_test.shape[1]} features."
+            )
+        if X_combined.shape[1] != len(features):
+            raise ValueError(
+                f"Feature count mismatch for device {device_id}: "
+                f"X has {X_combined.shape[1]} features, but features list has {len(features)} entries."
+            )
 
         # Skip if device is not in test set
         if len(X_test) == 0:
