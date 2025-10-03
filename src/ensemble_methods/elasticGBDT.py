@@ -121,7 +121,9 @@ class ElasticGBDT(BaseEstimator, RegressorMixin):
         grow_back: bool = True,
         backfill_estimator=None,                # class (e.g., DecisionTreeRegressor)
         backfill_params: Optional[dict] = None,
-        preserve_ensemble: bool = True,
+        preserve_ensemble: bool = False,
+        verbose: int = 0,
+
     ) -> None:
         # base params
         self.n_estimators = n_estimators
@@ -161,14 +163,31 @@ class ElasticGBDT(BaseEstimator, RegressorMixin):
         self.prune_holdout_frac = prune_holdout_frac
         self.preserve_ensemble = preserve_ensemble
 
+         # ---- runtime stats (for debugging/monitoring) ----
+        self._last_pre_err: Optional[float] = None
+        self._last_post_err: Optional[float] = None
+        self._last_removed: int = 0
+        self._last_grown: int = 0
+        self._last_ratios: list[float] = []
+        self._total_pruned: int = 0
+        self._total_grown: int = 0
+        self.verbose = verbose
+
+
+    # small helper
+    def _log(self, msg: str) -> None:
+        if getattr(self, "verbose", 0):
+            print(f"[ElasticGBDT] {msg}")
+
     # ------------------- sklearn API -------------------
 
     def fit(self, X: pd.DataFrame | np.ndarray, y: Iterable[float]) -> "ElasticGBDT":
         X_arr = X.values if isinstance(X, pd.DataFrame) else X
         y_arr = np.asarray(list(y), dtype=float)
 
-        # Case A: first fit (no model yet) -> build base GBDT
+        # -------- Case A: no model yet → full initial build --------
         if self._gbdt is None or len(self._trees) == 0:
+            self._log("fit: Case A (initial full train)")
             self._gbdt = GradientBoostingRegressor(
                 n_estimators=self.n_estimators,
                 learning_rate=self.learning_rate,
@@ -179,26 +198,27 @@ class ElasticGBDT(BaseEstimator, RegressorMixin):
             self._gbdt.fit(X_arr, y_arr)
             self._extract_from_gbdt()
 
-            # Optionally prune/grow-back on the full batch immediately
             if self.prune_on_fit:
+                self._log("fit: prune_on_fit=True → applying update strategy on full batch")
                 self._apply_update_strategy(X_arr, y_arr)
 
-            # refresh reporting error (post state)
             y_pred = self.predict(X_arr)
             self._last_error = self.error_metric(y_arr, y_pred)
+            self._log(f"fit: done | trees={len(self._trees)}")
             return self
 
-        # Case B: model already exists
+        # -------- Case B: model exists --------
         if self.preserve_ensemble:
-            # Do NOT rebuild GBDT — treat this as an "update on full batch":
-            # compute pre-batch err, prune by strategy, grow-back k trees on residuals
+            # treat as in-place update (no fresh GBDT rebuild)
+            self._log("fit: Case B (preserve_ensemble=True → in-place prune/grow on full batch)")
             self._apply_update_strategy(X_arr, y_arr)
-            # refresh reporting error (post state)
             y_pred = self.predict(X_arr)
             self._last_error = self.error_metric(y_arr, y_pred)
+            self._log(f"fit: done | trees={len(self._trees)}")
             return self
 
-        # Case C: explicitly reinitialize each chunk (stateless batch mode)
+        # -------- Case C: stateless batch mode (fresh rebuild every fit) --------
+        self._log("fit: Case C (preserve_ensemble=False → fresh GBDT rebuild)")
         self._gbdt = GradientBoostingRegressor(
             n_estimators=self.n_estimators,
             learning_rate=self.learning_rate,
@@ -208,11 +228,16 @@ class ElasticGBDT(BaseEstimator, RegressorMixin):
         )
         self._gbdt.fit(X_arr, y_arr)
         self._extract_from_gbdt()
+
         if self.prune_on_fit:
+            self._log("fit: prune_on_fit=True → applying update strategy on full batch")
             self._apply_update_strategy(X_arr, y_arr)
+
         y_pred = self.predict(X_arr)
         self._last_error = self.error_metric(y_arr, y_pred)
+        self._log(f"fit: done | trees={len(self._trees)}")
         return self
+
 
 
     def partial_fit(self, X: pd.DataFrame | np.ndarray, y: Iterable[float]) -> "ElasticGBDT":
@@ -344,10 +369,11 @@ class ElasticGBDT(BaseEstimator, RegressorMixin):
             pred_pre += lr * t.predict(X)
         pre_err = self.error_metric(y, pred_pre)
         self._error_history.append(pre_err)
+        self._last_pre_err = pre_err
 
         n_before = len(self._trees)
 
-        # ---- STRATEGY (no history writes here) ----
+        # ---- STRATEGY ----
         strategy = self.update_strategy.lower()
         if strategy == "index":
             self._update_index(X, y)
@@ -358,20 +384,31 @@ class ElasticGBDT(BaseEstimator, RegressorMixin):
         else:
             raise ValueError("Unknown update_strategy. Use one of: 'index', 'contribution', 'ratio'.")
 
-        # ---- GROW-BACK same count ----
         pruned = max(0, n_before - len(self._trees))
-        if self.grow_back and pruned > 0:
-            self._backfill_trees(X, y, pruned)
+        self._last_removed = pruned
+        self._total_pruned += pruned
 
-        # ---- (Optional) post-batch error for monitoring only ----
+        grown = 0
+        if self.grow_back and pruned > 0:
+            grown = self._backfill_trees(X, y, pruned)
+            self._last_grown = grown
+            self._total_grown += grown
+
+        # ---- POST-BATCH ERROR (monitoring only) ----
         pred_post = np.full(y.shape, self._initial_pred, dtype=float)
         for t in self._trees:
             pred_post += lr * t.predict(X)
         post_err = self.error_metric(y, pred_post)
+        self._last_post_err = post_err
 
-        # keep _last_error as the *pre-batch* error since that’s what drives ratios
+        # keep _last_error as the pre-batch error (driver)
         self._last_error = pre_err
-        # do NOT append post_err to history to keep semantics clean
+
+        # ---- concise prints ----
+        self._log(
+            f"strategy={strategy} | pre_err={pre_err:.6f} -> post_err={post_err:.6f} | "
+            f"pruned={pruned}, grown={grown}, trees: {n_before}→{len(self._trees)}"
+        )
 
 
     # ------------- strategy: ratio (with adapt) -------------
@@ -445,53 +482,75 @@ class ElasticGBDT(BaseEstimator, RegressorMixin):
     # ------------- strategy: ratio (with adapt, weighted history) -------------
     def _update_ratio(self, X: np.ndarray, y: np.ndarray) -> None:
         """
-        Decide pruning via a weighted sum of recent pre-batch error ratios stored in `_error_history`.
-
-            removal_count ≈ Σ_{k=1..H} [ fixed_multiplier * (ratio_decay**(k-1)) * (e_{t-k+1} / e_{t-k}) ]
-
-        - Uses class fields: `ratio_history` (H), `ratio_decay`, `fixed_multiplier`, `adapt`.
-        - Requires that the dispatcher has already appended the current **pre-batch** error to `_error_history`.
-        - If `adapt` is True and the latest ratio < 1, removal becomes 0.
-        - If pruning would leave fewer than `m_threshold` trees, retrain on (X, y).
-
-        Side-effect free w.r.t. error history.
+        Prune count derived from weighted recent error ratios with guards:
+        - clips/validates decay ∈ [0,1]
+        - ignores non-positive or NaN/Inf ratios
+        - enforces min-ensemble size (m_threshold)
         """
         self._ensure_fitted()
 
-        # Need at least two pre-batch errors to form one ratio
         if len(self._error_history) < 2:
             return
 
+        # hyperparams & guards
         H = max(1, int(self.ratio_history))
         decay = float(self.ratio_decay)
+        if not np.isfinite(decay) or decay < 0.0:
+            decay = 0.0
+        if decay > 1.0:
+            decay = 1.0
+
         alpha = float(self.fixed_multiplier)
+        if not np.isfinite(alpha):
+            alpha = 1.0
+
         adapt = bool(self.adapt)
 
-        # Weighted sum of the last H ratios (newest first)
-        removal_val = 0.0
+        # collect up to H most-recent ratios (newest first)
+        ratios: list[float] = []
         n_hist = min(len(self._error_history) - 1, H)
         for k in range(1, n_hist + 1):
-            err_curr = self._error_history[-k]     # e_{t-k+1}
-            err_prev = self._error_history[-k - 1] # e_{t-k}
+            err_curr = self._error_history[-k]       # e_{t-k+1}
+            err_prev = self._error_history[-k - 1]   # e_{t-k}
             if err_prev <= 0:
                 continue
-            ratio = float(err_curr) / float(err_prev)
-            removal_val += alpha * (decay ** (k - 1)) * ratio
+            r = float(err_curr) / float(err_prev)
+            if np.isfinite(r) and r >= 0:  # ignore NaN/Inf/negatives
+                ratios.append(r)
 
-        # Adaptive safeguard on the latest ratio
+        self._last_ratios = ratios[:]  # store for inspection
+
+        if not ratios:
+            # no valid ratios -> nothing to do
+            return
+
+        # adaptive safeguard on latest ratio
         latest_prev = self._error_history[-2]
         latest_curr = self._error_history[-1]
         if adapt and latest_prev > 0 and (latest_curr / latest_prev) < 1.0:
-            removal = 0
-        else:
-            removal = int(round(removal_val))
-
-        # Clamp by m_threshold
-        n = len(self._trees)
-        if removal == 0:
+            self._last_removed = 0
             return
 
-        # Score per-tree marginal contributions on this batch, prune the worst `removal`
+        # weighted sum: alpha * Σ decay^(k-1) * ratio_k
+        removal_val = 0.0
+        for idx, r in enumerate(ratios, start=1):
+            removal_val += alpha * (decay ** (idx - 1)) * r
+
+        # turn into integer count, then clamp to preserve min ensemble
+        removal = int(round(removal_val))
+        n = len(self._trees)
+        min_keep = max(1, int(self.m_threshold))
+        max_removal = max(0, n - min_keep)
+        removal = max(0, min(removal, max_removal))
+
+        if removal == 0:
+            self._log(
+                f"[ratio] no-prune: removal_val≈{removal_val:.3f}, "
+                f"ratios={np.round(ratios, 4).tolist()}"
+            )
+            return
+
+        # compute marginal contributions on this batch and drop the worst `removal`
         lr = self.alpha if self.alpha is not None else self.learning_rate
         contribs: list[float] = []
         running = np.full(y.shape, self._initial_pred, dtype=float)
@@ -499,13 +558,34 @@ class ElasticGBDT(BaseEstimator, RegressorMixin):
         for t in self._trees:
             running = running + lr * t.predict(X)
             new_err = self.error_metric(y, running)
-            contribs.append(prev_err - new_err)
+            contribs.append(prev_err - new_err)  # positive => helped
             prev_err = new_err
 
-        worst_idx = np.argsort(contribs)[:removal]
-        keep = [i for i in range(n) if i not in set(worst_idx.tolist())]
+        contribs_np = np.asarray(contribs, dtype=float)
+        # safety on weird numerics
+        contribs_np = np.where(np.isfinite(contribs_np), contribs_np, -np.inf)
 
+        worst_idx = np.argsort(contribs_np)[:removal].tolist()
+        keep = [i for i in range(n) if i not in set(worst_idx)]
+        keep_count = len(keep)
+
+        # final safeguard before applying
+        if keep_count < min_keep:
+            self._log(
+                f"[ratio] retrain triggered: requested removal={removal} would keep {keep_count} < m_threshold={min_keep}"
+            )
+            self._retrain(X, y)
+            return
+
+        # apply pruning
         self._trees = [self._trees[i] for i in keep]
+
+        # brief stats print
+        self._log(
+            f"[ratio] removal={removal} (val≈{removal_val:.3f}, ratios={np.round(ratios,4).tolist()}, "
+            f"decay={decay}, α={alpha})"
+        )
+
 
 
     # ---------------- utility / maintenance ----------------
@@ -517,28 +597,28 @@ class ElasticGBDT(BaseEstimator, RegressorMixin):
         return est_cls(**params)
 
 
-    def _backfill_trees(self, X: np.ndarray, y: np.ndarray, k: int) -> None:
-        """
-        Train `k` new base trees on residuals of the *current* pruned ensemble,
-        and append them stage-wise.
-        """
+    def _backfill_trees(self, X: np.ndarray, y: np.ndarray, k: int) -> int:
         if k <= 0:
-            return
-
+            return 0
         lr = self.alpha if self.alpha is not None else self.learning_rate
 
-        # current predictions after pruning
         pred = np.full(y.shape, self._initial_pred, dtype=float)
         for t in self._trees:
             pred += lr * t.predict(X)
 
-        # sequentially fit k residual trees and append
+        grown = 0
         for _ in range(k):
             residual = y - pred
             base = self._make_backfill_estimator()
             base.fit(X, residual)
             self._trees.append(base)
             pred += lr * base.predict(X)
+            grown += 1
+
+        self._log(f"[grow-back] built {grown} tree(s)")
+        return grown
+
+
 
 
     # ---------------- utility / maintenance ----------------
