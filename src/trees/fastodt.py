@@ -216,8 +216,9 @@ class FastODT(BaseTree):
 
         # if node is a leaf, update its stats and check for split
         if node.left is None and node.right is None:
-            print(payload_print + f"FastODT --> update node_depth: {depth} node_index: {debug_index}\n")
+            print(f"[Before] FastODT --> update node_depth: {depth} node_index: {debug_index} node_value: {node.value}")
             node.update_stats(x, y)
+            print(f"[After] FastODT --> update node_depth: {depth} node_index: {debug_index} node_value: {node.value}\n")
             if node.reached_grace_period() or self.grace_period_depth < depth:  # check if grace period is over
                 self._attempt_split(node, depth)
 

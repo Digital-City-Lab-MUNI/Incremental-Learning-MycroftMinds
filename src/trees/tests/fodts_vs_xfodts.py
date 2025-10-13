@@ -36,6 +36,9 @@ def model_check(fast_model, xfast_model, depth, erron = False):
     fodt_index_nodes(fast_model.root, depth, fast_model_indexed)
 
     for d in range(depth):
+        if not similar:
+            break
+
         if not erron:
             print(f"^^^^^^^^^ {d} ^^^^^^^^^^")
         max_nodes = 2**d
@@ -47,21 +50,23 @@ def model_check(fast_model, xfast_model, depth, erron = False):
 
             if not erron:
                 print(f"                             ")
-                print(f"-------max_depth: {depth} d: {d} max_n: {max_nodes} n: {n} parent {n // 2}---------")
+                print(f"-------max_depth: {depth} d: {d} max_n: {max_nodes} n: {n} parent {n // 2}--------- 1")
 
             if not fast_node and x_fast_node:
                 if erron:
-                        print(f"-------max_depth: {depth} d: {d} max_n: {2**d} n: {n} parent {n // 2}---------")
-                print("nodes are different")
-                print("x_fast_node exists but no fast_node")
-                similar = False
+                    print(f"-------max_depth: {depth} d: {d} max_n: {2**d} n: {n} parent {n // 2}--------- 2")
+                if x_fast_node.threshold and x_fast_node.feature:
+                    print("nodes are different")
+                    print("x_fast_node exists but no fast_node")
+                    similar = False
 
             elif fast_node and not x_fast_node:    
                 if erron:
-                        print(f"-------max_depth: {depth} d: {d} max_n: {2**d} n: {n} parent {n // 2}---------")
-                print("nodes are different")
-                print("fast_node exists but no x_fast_node")
-                similar = False
+                    print(f"-------max_depth: {depth} d: {d} max_n: {2**d} n: {n} parent {n // 2}--------- 3")
+                if fast_node.threshold and fast_node.feature:
+                    print("nodes are different")
+                    print("fast_node exists but no x_fast_node")
+                    similar = False
 
             elif not fast_node and not x_fast_node:
                 if not erron:
@@ -73,7 +78,7 @@ def model_check(fast_model, xfast_model, depth, erron = False):
                         print(f"{GREEN}value is same: {fast_node.value == x_fast_node.value}{RESET}")
                 else:
                     if erron:
-                        print(f"-------max_depth: {depth} d: {d} max_n: {2**d} n: {n} parent {n // 2}---------")
+                        print(f"-------max_depth: {depth} d: {d} max_n: {2**d} n: {n} parent {n // 2}--------- 4")
 
                     print(f"{RED}value is same: {fast_node.value == x_fast_node.value}{RESET}")
                     print(f"x_fast_node: {x_fast_node.value}")
@@ -86,7 +91,7 @@ def model_check(fast_model, xfast_model, depth, erron = False):
                             print(f"{GREEN}feature is same: {fast_node.feature == x_fast_node.feature}{RESET}")
                     else:
                         if erron:
-                            print(f"-------max_depth: {depth} d: {d} max_n: {2**d} n: {n} parent {n // 2}---------")
+                            print(f"-------max_depth: {depth} d: {d} max_n: {2**d} n: {n} parent {n // 2}--------- 5")
                         if fast_node.feature is None or x_fast_node.feature is None:
                             print(f"{YELLOW}feature is same: {fast_node.feature == x_fast_node.feature}{RESET}")
                         else:
@@ -100,7 +105,7 @@ def model_check(fast_model, xfast_model, depth, erron = False):
                             print(f"{GREEN}threshold is same: {fast_node.threshold == x_fast_node.threshold}{RESET}")
                     else:
                         if erron:
-                            print(f"-------max_depth: {depth} d: {d} max_n: {2**d} n: {n} parent {n // 2}---------")
+                            print(f"-------max_depth: {depth} d: {d} max_n: {2**d} n: {n} parent {n // 2}--------- 6")
                         if fast_node.threshold is None or x_fast_node.threshold is None:
                             print(f"{YELLOW}threshold is same: {fast_node.threshold == x_fast_node.threshold}{RESET}")
                         else:

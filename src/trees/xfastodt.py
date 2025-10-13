@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import tqdm
 import time
+import copy
 import os
 
 MAX_TREE_DEPTH = 999_999_999_999_999
@@ -226,15 +227,15 @@ class xFastODT(BaseTree):
 
         node = self.depths_containers[node_depth][node_index]
         if node is None:
-            print(f"updating nodes: node_depth: {node_depth} node_index: {node_index}")
             self.depths_containers[node_depth][node_index] = self.__find_node(node_depth, node_index, x, y)
             node = self.depths_containers[node_depth][node_index]
         else:
             if self.mature_tree:
                 return
             else:
-                print(f"xFastODT --> update: node_depth:{node_depth} node_index:{node_index}")
+                print(f"[Before] xFastODTs --> updating nodes: node_depth: {node_depth} node_index: {node_index} node_value: {node.value}")
                 node.update_stats(x, y)
+                print(f"[After] xFastODTs --> updating nodes: node_depth: {node_depth} node_index: {node_index} node_value: {node.value}")
 
         best_split, _ = node.find_best_split()  # here happens hf bound calculation
         if best_split[0] is not None:
@@ -266,10 +267,15 @@ class xFastODT(BaseTree):
             node = self.__find_node(depth - 1, parent_node_index, x, y)
             node.index = index
             self.depths_containers[depth][index] = node
+            node = copy.copy(node)
+            node.reset()
             # this is cheap trick and needs to check if we initialize nodes correclty in this case
         else: 
-            print(f"xFastODT --> update: node_depth:{depth} node_index:{index}")
+            node = copy.copy(node)
+            node.reset()
             node.update_stats(x, y)
+            node.threshold = self.splits_values[depth]
+            node.feature = self.splits_features[depth]
         return node
 
     def _attempt_split(self, node, depth: int):

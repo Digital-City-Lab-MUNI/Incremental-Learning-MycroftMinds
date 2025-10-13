@@ -201,6 +201,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         x_shortlisted = x[self.feature_indices]
 
         # Update node statistics
+        print(f"statistics before: sum_y:{self.sum_y} value:{self.value}")
         self.samples_seen += 1
         self.y_max = max(self.y_max, y)
         self.y_min = min(self.y_min, y)
@@ -210,6 +211,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
 
         # Initialize histograms if needed
         if self.histograms is None:
+            print("histograms are none")
             self.histograms = {}
             for feature in self.feature_indices:
                 self.histograms[feature] = self.bin_type(max_bins=self.max_bins)
