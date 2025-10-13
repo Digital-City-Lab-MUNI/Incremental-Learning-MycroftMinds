@@ -157,6 +157,8 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         self.sum_y = 0
         self.sum_y_squared = 0
         self.histograms = None
+        self.threshold = 0
+        self.feature = None
 
     def check_grace_period(self):
         """Check if grace period is met."""

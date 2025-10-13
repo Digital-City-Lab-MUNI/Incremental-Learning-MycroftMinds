@@ -227,8 +227,10 @@ class xFastODT(BaseTree):
 
         node = self.depths_containers[node_depth][node_index]
         if node is None:
+            print(f"[Before] xFastODTs --> updating nodes: node_depth: {node_depth} node_index: {node_index} node_value: {None}")
             self.depths_containers[node_depth][node_index] = self.__find_node(node_depth, node_index, x, y)
             node = self.depths_containers[node_depth][node_index]
+            print(f"[After] xFastODTs --> updating nodes: node_depth: {node_depth} node_index: {node_index} node_value: {node.value}")
         else:
             if self.mature_tree:
                 return
@@ -239,7 +241,7 @@ class xFastODT(BaseTree):
 
         best_split, _ = node.find_best_split()  # here happens hf bound calculation
         if best_split[0] is not None:
-            print(f"xFastODT -> SPLITS {node_depth}")
+            print(f"||||||||||||||||| xFastODT -> SPLITS {node_depth} |||||||||||||||||")
             depth = len(decision_vector)
 
             self.splits_features[depth] = best_split[0]
@@ -268,7 +270,7 @@ class xFastODT(BaseTree):
             node.index = index
             self.depths_containers[depth][index] = node
             node = copy.copy(node)
-            node.reset()
+            # node.reset()
             # this is cheap trick and needs to check if we initialize nodes correclty in this case
         else: 
             node = copy.copy(node)

@@ -30,17 +30,18 @@ def fodt_index_nodes(node, depth, result, current_depth=0, erron = True):
         fodt_index_nodes(node.left, depth, result, current_depth + 1)
         fodt_index_nodes(node.right, depth, result, current_depth + 1)
 
-def model_check(fast_model, xfast_model, depth, erron = False):
+def model_check(fast_model, xfast_model, depth, erron = False, similarity_break = True):
     similar = True
     fast_model_indexed = []
     fodt_index_nodes(fast_model.root, depth, fast_model_indexed)
 
     for d in range(depth):
-        if not similar:
+        if not similar and similarity_break:
             break
 
         if not erron:
             print(f"^^^^^^^^^ {d} ^^^^^^^^^^")
+
         max_nodes = 2**d
         for n in range(max_nodes):
 
@@ -134,7 +135,7 @@ if __name__ == "__main__":
     print('Y stats -> min:', float(np.min(Y)), 'max:', float(np.max(Y)))
 
     # hyperparams for trees
-    depth = 5
+    depth = 7
     grace_period = 10
     split_confidence = 0.01
     tie_threshold = 0.05
