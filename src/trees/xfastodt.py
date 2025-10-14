@@ -264,13 +264,13 @@ class xFastODT(BaseTree):
             node = self.__find_node(depth - 1, parent_node_index, x, y, no_stats_update)
             node.index = index
             self.depths_containers[depth][index] = node
-            node = copy.copy(node)
+            node = node.copy()
             if not no_stats_update:
                 node.feature = None
                 node.threshold = None
 
         else: 
-            node = copy.copy(node)
+            node = node.copy()
             if not no_stats_update:
                 node.reset()
                 node.update_stats(x, y)
@@ -283,7 +283,6 @@ class xFastODT(BaseTree):
         """Attempts splitting and producing two new nodes."""
 
         best_split, _ = node.find_best_split()  # here happens hf bound calculation
-        print(f"best split: {best_split}")
         if self.splits_features[depth] is not None:
             node.split(self.splits_features[depth], self.split_confidence)
             node.left.update_from_parent_node(node)
