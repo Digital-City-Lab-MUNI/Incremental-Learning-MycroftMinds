@@ -175,6 +175,7 @@ if __name__ == "__main__":
 
     it = 0
     for x,y in zip(X,Y):
+        print("========================================================")
         print(f'#{it}. Fitting sample x:', x[:5], 'y:', y)
         fast_model.learn_one(x, y)
         xfast_model.learn_one(x, y)

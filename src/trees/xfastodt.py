@@ -197,7 +197,7 @@ class xFastODT(BaseTree):
 
             node = self.depths_containers[node_depth][node_index]
             if node is None:
-                node = self.__find_node(node_depth, node_index)
+                node = self.__find_node(node_depth, node_index, x, no_stats_update=True)
             return_vector.append(node.value)
         return return_vector
 
@@ -227,21 +227,16 @@ class xFastODT(BaseTree):
 
         node = self.depths_containers[node_depth][node_index]
         if node is None:
-            print(f"[Before] xFastODTs --> updating nodes: node_depth: {node_depth} node_index: {node_index} node_value: {None}")
             self.depths_containers[node_depth][node_index] = self.__find_node(node_depth, node_index, x, y)
             node = self.depths_containers[node_depth][node_index]
-            print(f"[After] xFastODTs --> updating nodes: node_depth: {node_depth} node_index: {node_index} node_value: {node.value}")
         else:
             if self.mature_tree:
                 return
             else:
-                print(f"[Before] xFastODTs --> updating nodes: node_depth: {node_depth} node_index: {node_index} node_value: {node.value}")
                 node.update_stats(x, y)
-                print(f"[After] xFastODTs --> updating nodes: node_depth: {node_depth} node_index: {node_index} node_value: {node.value}")
 
         best_split, _ = node.find_best_split()  # here happens hf bound calculation
         if best_split[0] is not None:
-            print(f"||||||||||||||||| xFastODT -> SPLITS {node_depth} |||||||||||||||||")
             depth = len(decision_vector)
 
             self.splits_features[depth] = best_split[0]
@@ -257,7 +252,7 @@ class xFastODT(BaseTree):
             else:
                 self.mature_tree = True
 
-    def __find_node(self, depth, index, x, y):
+    def __find_node(self, depth, index, x, y = 0, no_stats_update = False):
         """Finds last populated node by index."""
 
         node = self.depths_containers[depth][index]
@@ -266,24 +261,29 @@ class xFastODT(BaseTree):
             parent_node_index = (
                 index // 2
             )  # find parent index by rule that it is child index / 2 and floored to nearest integer
-            node = self.__find_node(depth - 1, parent_node_index, x, y)
+            node = self.__find_node(depth - 1, parent_node_index, x, y, no_stats_update)
             node.index = index
             self.depths_containers[depth][index] = node
             node = copy.copy(node)
-            # node.reset()
-            # this is cheap trick and needs to check if we initialize nodes correclty in this case
+            if not no_stats_update:
+                node.feature = None
+                node.threshold = None
+
         else: 
             node = copy.copy(node)
-            node.reset()
-            node.update_stats(x, y)
+            if not no_stats_update:
+                node.reset()
+                node.update_stats(x, y)
             node.threshold = self.splits_values[depth]
             node.feature = self.splits_features[depth]
+
         return node
 
     def _attempt_split(self, node, depth: int):
         """Attempts splitting and producing two new nodes."""
 
         best_split, _ = node.find_best_split()  # here happens hf bound calculation
+        print(f"best split: {best_split}")
         if self.splits_features[depth] is not None:
             node.split(self.splits_features[depth], self.split_confidence)
             node.left.update_from_parent_node(node)
@@ -299,12 +299,9 @@ class xFastODT(BaseTree):
 if __name__ == "__main__":
     X = np.load("./smoke_data/X.npy", allow_pickle=True)
     Y = np.load("./smoke_data/y.npy", allow_pickle=True)
-    print(X.shape, Y.shape)
     X = X[:, 2:]
-    # print(type(X), type(Y), X[0])
-
+    
     # Test if model will be partially filled after receiving only one sample
-    start = time.time()
     model_hf = xFastODT(depth=50, grace_period=10, split_confidence=0.0001)
     start = time.time()
     model_hf.partial_fit(X[:, :], Y, verbose=True)
