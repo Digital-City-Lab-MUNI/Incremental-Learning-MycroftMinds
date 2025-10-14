@@ -150,7 +150,12 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         self.inherit_bins: bool = inherit_bins
         self.rng: np.random.Generator = rng
 
+    def __copy__(self):
+        # to use for shallow copies
+        return self.copy()
+
     def copy(self):
+        """ Custom copy function to perform fast copy of new node based on parent node """
         # Create new instance using constructor
         new_node = NodeHoeffdingBound(
             split_confidence=self.delta,
@@ -179,14 +184,12 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
             self.feature_indices.copy() if self.feature_indices is not None else None
         )
 
-        # Histograms are shallow copied — hist objects are shared
-        # new_node.histograms = self.histograms.copy() if self.histograms is not None else None
-
         new_node.grace_period_offset = self.grace_period_offset
 
         return new_node
 
     def reset(self):
+        """ Reset function, reseting key parameters. """
         self.samples_seen = 0
         self.y_max = 0
         self.y_min = 0
