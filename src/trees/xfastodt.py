@@ -54,7 +54,8 @@ class xFastODT(BaseTree):
             If set to -1, this feature is disabled (set to over 999999999999999 internally).
 
         bin_type : str or class, optional (default='adaptive')
-            String name of histogram type (e.g., 'adaptive', 'equiwidth', 'mean') or a histogram class. If None or 'adaptive', uses AdaptiveHistogram.
+            String name of histogram type (e.g., 'adaptive', 'equiwidth', 'mean') or a histogram class. 
+            If None or 'adaptive', uses AdaptiveHistogram.
 
         max_bins : int, optional (default=32)
             Maximum number of bins per feature per node.
@@ -66,7 +67,9 @@ class xFastODT(BaseTree):
             String name of split criterion (e.g., 'variance') or a callable. If None, uses default for node type.
 
         random_state : int, optional
-            Random seed for reproducibility. It has effect only when max_feature < 1.0.
+            Random generator or random seed for reproducibility. It has effect only when
+            `max_feature` < 1.0. Pass a generator when xFastODT is used in an ensemble.
+            If None, the global NumPy RNG is used.
 
         Attributes:
         ----------

@@ -43,25 +43,25 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
     ----------
     split_confidence : float
         Confidence parameter ``delta`` for Hoeffding test.
-    tie_threshold : float, default=0.05
+    tie_threshold : float, optional, default=0.05
         Tie-breaking threshold when best and second-best gains are close.
-    max_feature : float, default=1.0
+    max_feature : float, optional, default=1.0
         Fraction of features randomly sampled for this node (``(0,1]``).
-    eagerness : float, default=0.0
+    eagerness : float, optional, default=0.0
         Factor controlling speed of splitting (increases effective attempts).
-    grace_period : int, default=0
+    grace_period : int, optional, default=0
         Minimum samples observed before considering a split.
-    bin_type : type, default=AdaptiveHistogram
+    bin_type : type, optional, default=AdaptiveHistogram
         Histogram class (AdaptiveHistogram, EquiWidthHistogram, MeanSplitter...).
-    max_bins : int, default=32
+    max_bins : int, optional, default=32
         Maximum bins per feature histogram.
-    inherit_bins : bool, default=False
+    inherit_bins : bool, optional, default=False
         If True children receive partitioned / copied parent histograms.
-    split_criterion : callable, optional
+    split_criterion : callable, optional, default=None
         Function computing split quality; defaults to absolute variance
         reduction.
-    random_state : int, optional
-        Random seed for reproducibility.
+    rng : np.random.Generator, optional, default=None
+        Random number generator for reproducibility. It has effect only when max_feature < 1.0.
 
     Attributes
     ----------
@@ -117,8 +117,8 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         Function to evaluate split quality.
     inherit_bins : bool
         Whether to inherit bins from parent.
-    random_state : int
-        Random seed for reproducibility. It has effect only when max_feature < 1.0.
+    rng : np.random.Generator
+        Random number generator for reproducibility. It has effect only when max_feature < 1.0.
 
     """
 
@@ -220,14 +220,8 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
 
     def update_from_parent_node(self, parent: "NodeHoeffdingBound") -> None:
         """Initialize from a parent node (only value retained)."""
-        # self.samples_seen = parent.samples_seen
-        # self.sum_y = parent.sum_y
-        # self.sum_y_squared = parent.sum_y_squared
-        self.value = parent.value  # but not this
-        self.random_state = parent.random_state
-
-        # if self.grace_period > 0:
-        #     self.grace_period_offset = parent.samples_seen  # remove this too
+        self.value = parent.value
+        self.rng = parent.rng
 
     def _hoeffding_R(self) -> float:
         """

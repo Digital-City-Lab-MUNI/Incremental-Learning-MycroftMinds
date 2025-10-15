@@ -20,14 +20,6 @@ def hoeffding_bound(R: float, n: int, delta: float) -> float:
         confidence level (e.g., 0.01 for 99% confidence)
     """
     return np.sqrt((R**2) * np.log(1 / delta) / (2 * n))
-    # harmonic_mean_n = 0
-    # if n_left == 0:
-    #     harmonic_mean_n = n_right
-    # if n_right == 0:
-    #     harmonic_mean_n = n_left
-    # if n_left > 0 and n_right > 0:
-    #     harmonic_mean_n = 1/((1/n_left)+(1/n_right))
-    # return math.sqrt(1/(2*harmonic_mean_n) / delta)
 
 
 class NodeHoeffdingBound:  # one leaf of the FastODT
@@ -42,24 +34,43 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         Threshold for tie-breaking in split selection. Default is 0.05.
     max_feature : float
         Fraction of features to consider for splitting at each node.
+    eagerness : float
+        Eagerness parameter (currently unused). Default is 0.0.
     grace_period : int
         Number of samples a node should observe before attempting to split.
+    index : int
+        Node index in the tree structure. Default is 0.
     bin_type : class
         Histogram class to use for binning (e.g., AdaptiveHistogram, EquiWidthHistogram).
-    inherit_bins : bool
-        Whether to inherit bins from parent node on split.
     max_bins : int
         Maximum number of bins per feature per node.
+    inherit_bins : bool
+        Whether to inherit bins from parent node on split.
     split_criterion : callable
         Function to compute split quality (default: variance reduction).
-    random_state : int
-        Random seed for reproducibility. It has effect only when max_feature < 1.0
-    
+    rng : np.random.Generator
+        Random number generator for reproducibility. It has effect only when max_feature < 1.0
 
     Attributes
     ----------
-    histograms : dict
-        Per-feature histograms for binning and split candidate generation.
+    index : int
+        Node index in the tree structure.
+    tie_threshold : float
+        Threshold for tie-breaking in split selection.
+    delta : float
+        Confidence level for the Hoeffding bound (same as split_confidence).
+    samples_seen : int
+        Total number of samples seen by this node.
+    y_max : float
+        Maximum target value seen by this node.
+    y_min : float
+        Minimum target value seen by this node.
+    sum_y : float
+        Sum of target values for samples seen by this node.
+    sum_y_squared : float
+        Sum of squared target values for samples seen by this node.
+    value : float
+        Average target value for samples seen by this node.
     left : NodeHoeffdingBound
         Left child node (None if leaf).
     right : NodeHoeffdingBound
@@ -68,18 +79,26 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         Index of the feature used for splitting.
     threshold : float
         Threshold value for the split on the feature.
-    samples_seen : int
-        Total number of samples seen by this node.
-    sum_y : float
-        Sum of target values for samples seen by this node.
-    sum_y_squared : float
-        Sum of squared target values for samples seen by this node.
-    value : float
-        Average target value for samples seen by this node.
+    grace_period : int
+        Number of samples a node should observe before attempting to split.
     grace_period_offset : int
         Offset for the grace period, used to determine when to split.
+    max_feature : float
+        Fraction of features to consider for splitting at each node.
     feature_indices : np.ndarray
         Randomly selected feature indices based on `max_feature`.
+    bin_type : callable
+        Histogram class to use for binning.
+    max_bins : int
+        Maximum number of bins per feature per node.
+    histograms : dict
+        Per-feature histograms for binning and split candidate generation.
+    split_criterion : callable
+        Function to compute split quality.
+    inherit_bins : bool
+        Whether to inherit bins from parent node on split.
+    rng : np.random.Generator
+        Random number generator for reproducibility.
     """
 
     # TODO:
@@ -168,16 +187,8 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
 
     def update_from_parent_node(self, parent) -> None:
         """Update this node's statistics from a parent node."""
-        # !probably should get it removed properly!
-        # self.samples_seen = parent.samples_seen
-        # self.sum_y = parent.sum_y
-        # self.sum_y_squared = parent.sum_y_squared
-        # !probably should get it removed properly!
-        self.value = parent.value  # but not this
-        self.random_state = parent.random_state
-
-        # if self.grace_period > 0:
-        #     self.grace_period_offset = parent.samples_seen  # remove this too
+        self.value = parent.value
+        self.rng = parent.rng
 
     def _hoeffding_R(self) -> float:
         """
