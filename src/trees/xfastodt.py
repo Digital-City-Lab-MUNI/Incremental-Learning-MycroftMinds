@@ -54,7 +54,7 @@ class xFastODT(BaseTree):
             If set to -1, this feature is disabled (set to over 999999999999999 internally).
 
         bin_type : str or class, optional (default='adaptive')
-            String name of histogram type (e.g., 'adaptive', 'equiwidth', 'mean') or a histogram class. 
+            String name of histogram type (e.g., 'adaptive', 'equiwidth', 'mean') or a histogram class.
             If None or 'adaptive', uses AdaptiveHistogram.
 
         max_bins : int, optional (default=32)

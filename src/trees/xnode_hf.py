@@ -162,7 +162,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
             max_feature_length = int(x.shape[0] * self.max_feature)
             self.feature_indices = np.sort(
                 get_unique_random_numbers(max_feature_length, x.shape[0], self.rng.integers(1e6) if self.rng else None)
-                )
+            )
 
         # Select only the features that are in the feature_indices
         x_shortlisted = x[self.feature_indices]

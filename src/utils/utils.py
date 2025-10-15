@@ -26,7 +26,7 @@ def get_unique_random_numbers(N: int, upper_bound: int, seed: int | None = None)
     """Sample ``N`` distinct random integers from ``range(upper_bound)`` with optional random seed."""
     if N > upper_bound:
         raise ValueError("N must be less than or equal to upper_bound")
-    
+
     rng = np.random.default_rng(seed)  # Creates a local Generator instance
     return rng.choice(upper_bound, size=N, replace=False)
 

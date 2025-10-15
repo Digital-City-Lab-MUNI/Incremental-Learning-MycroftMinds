@@ -60,7 +60,7 @@ class FastODT(BaseTree):
     split_criterion : str or callable, optional, default="vr_rel"
         Split criterion identifier or function returning merit scores.
     random_state : {None, int, `numpy.random.Generator`}, optional
-        Random generator or random seed for reproducibility. It has effect only 
+        Random generator or random seed for reproducibility. It has effect only
         when `max_feature` < 1.0. Pass a generator when FastODT is used in an ensemble.
         If None (default), the global NumPy RNG is used.
 
