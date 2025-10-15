@@ -86,7 +86,7 @@ class FastODT(BaseTree):
         max_bins: int = 16,
         inherit_bins: bool = False,
         split_criterion: Union[str, callable] = C.SplitCriterion.VR_REL,
-        random_state: int = None,
+        random_state: np.random.Generator | int = None,
     ) -> None:
         self.grace_period = grace_period  # Number of samples before checking for a split
         self.split_confidence = split_confidence  # Confidence level for splitting
@@ -106,6 +106,10 @@ class FastODT(BaseTree):
 
         if isinstance(split_criterion, str):
             split_criterion = get_split_criterion(split_criterion)
+
+        # Initialize local RNG
+        self.rng = np.random.default_rng(random_state)
+
         # create the root node
         self.root = NodeHoeffdingBound(
             split_confidence=self.split_confidence,
@@ -117,7 +121,7 @@ class FastODT(BaseTree):
             max_bins=max_bins,
             inherit_bins=inherit_bins,
             split_criterion=split_criterion,
-            random_state=random_state,
+            rng=self.rng,
         )
 
     def measure_error(self, y_baseline: float, y_predicted: float) -> float:

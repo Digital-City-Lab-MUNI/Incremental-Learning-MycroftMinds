@@ -27,15 +27,8 @@ def get_unique_random_numbers(N: int, upper_bound: int, seed: int | None = None)
     if N > upper_bound:
         raise ValueError("N must be less than or equal to upper_bound")
     
-    if seed is not None:
-        # Temporarily set seed for reproducible results
-        old_state = np.random.get_state()
-        np.random.seed(seed)
-        result = np.random.choice(upper_bound, size=N, replace=False)
-        np.random.set_state(old_state)
-        return result
-    else:
-        return np.random.choice(upper_bound, size=N, replace=False)
+    rng = np.random.default_rng(seed)  # Creates a local Generator instance
+    return rng.choice(upper_bound, size=N, replace=False)
 
 
 def ensure_2d_array(X: np.ndarray | Sequence[float]) -> np.ndarray:

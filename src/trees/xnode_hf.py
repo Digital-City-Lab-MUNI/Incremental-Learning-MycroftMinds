@@ -97,7 +97,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         max_bins=32,
         inherit_bins: bool = False,
         split_criterion: callable = None,
-        random_state: int = None,
+        rng: np.random.Generator = None,
     ):
         self.index: int = index
 
@@ -129,7 +129,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
 
         self.split_criterion: callable = split_criterion if split_criterion is not None else variance_reduction
         self.inherit_bins: bool = inherit_bins
-        self.random_state = random_state
+        self.rng: np.random.Generator = rng
 
     def check_grace_period(self):
         """Check if grace period is met."""
@@ -141,7 +141,9 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         # Generate random feature indices based on max_feature if not already set
         if self.feature_indices is None:
             max_feature_length = int(x.shape[0] * self.max_feature)
-            self.feature_indices = np.sort(get_unique_random_numbers(max_feature_length, x.shape[0]))
+            self.feature_indices = np.sort(
+                get_unique_random_numbers(max_feature_length, x.shape[0], self.rng.integers(1e6) if self.rng else None)
+                )
 
         # Select only the features that are in the feature_indices
         x_shortlisted = x[self.feature_indices]
@@ -241,7 +243,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
             max_bins=self.max_bins,
             inherit_bins=self.inherit_bins,
             split_criterion=self.split_criterion,
-            random_state=self.random_state,
+            rng=self.rng,
         )
         right = NodeHoeffdingBound(
             split_confidence=split_confidence,
@@ -253,7 +255,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
             max_bins=self.max_bins,
             inherit_bins=self.inherit_bins,
             split_criterion=self.split_criterion,
-            random_state=self.random_state,
+            rng=self.rng,
         )
 
         # TODO: this should be done inside histogram splitter class
