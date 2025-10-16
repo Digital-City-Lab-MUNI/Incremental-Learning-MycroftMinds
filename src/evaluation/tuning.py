@@ -78,11 +78,11 @@ def train_and_evaluate(
         model for batch learners or when configuring incremental learners.
     train : list of tuple
         List of (X, y) training data tuples representing sequential folds, where
-        X is ndarray of shape (n_samples, n_features) and y is pandas.Series 
+        X is ndarray of shape (n_samples, n_features) and y is pandas.Series
         of shape (n_samples,).
     valid : list of tuple
         List of (X, y) validation data tuples representing sequential folds, where
-        X is ndarray of shape (n_samples, n_features) and y is pandas.Series 
+        X is ndarray of shape (n_samples, n_features) and y is pandas.Series
         of shape (n_samples,).
     use_residuals : bool
         If True, model the residuals (1-step differencing) instead of the original target.
@@ -91,11 +91,11 @@ def train_and_evaluate(
     data_freq : str
         Original data frequency (passed to metric aggregation).
     forecast_horizon : str
-        Time horizon string (pandas offset) specifying the minimum prediction 
+        Time horizon string (pandas offset) specifying the minimum prediction
         horizon for feature filtering and model update delays.
     features : list of str
-        Full feature name list of length n_features including index columns. 
-        Excludes the lag features violating the forecast horizon. If provided, 
+        Full feature name list of length n_features including index columns.
+        Excludes the lag features violating the forecast horizon. If provided,
         must include ALL features available in the dataset.
     update_freq : str
         Time interval between full model retrains (pandas Timedelta parsable string).
@@ -192,11 +192,11 @@ def hyperparameter_search_tuning(
         split for batch models. Incremental / online models can be reused.
     train : list of tuple
         List of (X, y) training data tuples representing sequential folds, where
-        X is ndarray of shape (n_samples, n_features) and y is pandas.Series 
+        X is ndarray of shape (n_samples, n_features) and y is pandas.Series
         of shape (n_samples,).
     valid : list of tuple
         List of (X, y) validation data tuples representing sequential folds, where
-        X is ndarray of shape (n_samples, n_features) and y is pandas.Series 
+        X is ndarray of shape (n_samples, n_features) and y is pandas.Series
         of shape (n_samples,).
     use_residuals : bool
         If True, model the residuals (1-step differencing) instead of the original target.
@@ -208,11 +208,11 @@ def hyperparameter_search_tuning(
     data_freq : str, default 'H'
         Original data frequency (passed to metric aggregation).
     forecast_horizon : str, default '1h'
-        Time horizon string (pandas offset) specifying the minimum prediction 
+        Time horizon string (pandas offset) specifying the minimum prediction
         horizon for feature filtering and model update delays.
     features : list of str, optional
-        Full feature name list of length n_features including index columns. 
-        Excludes the lag features violating the forecast horizon. If provided, 
+        Full feature name list of length n_features including index columns.
+        Excludes the lag features violating the forecast horizon. If provided,
         must include ALL features available in the dataset.
     update_freq : str, default '1h'
         Time interval between full model retrains (pandas Timedelta parsable string).

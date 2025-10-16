@@ -26,6 +26,7 @@ from src.trees.fastodt import FastODT
 import src.trees.constants as C
 from sklearn.base import BaseEstimator
 import tqdm
+import numpy as np
 
 BaseLearnerT = Type[BaseEstimator]
 
@@ -35,43 +36,46 @@ class IncubationBoost:
 
     Parameters
     ----------
-    length : int, default=5
-        Maximum number of learners (ensemble size upper bound). Default is 5.
-    learning_rate : float, default=1.0
-        Shrinkage factor applied to all learners except the first. Default is
-        1.0.
-    depth : int, optional
+    length : int, optional, default=5
+        Maximum number of learners (ensemble size upper bound).
+    learning_rate : float, optional, default=1.0
+        Shrinkage factor applied to all learners except the first.
+    depth : int, optional, default=15
         Maximum tree depth for the base learner. Forwarded to the base learner
-        constructor. Default is 15.
-    grace_period : int, optional
+        constructor.
+    grace_period : int, optional, default=10
         Number of samples a leaf should observe between split attempts.
-        Forwarded to the base learner. Default is 10.
-    split_confidence : float, optional
+        Forwarded to the base learner.
+    split_confidence : float, optional, default=0.01
         Hoeffding bound confidence (smaller values -> more eager splitting).
-        Also known as ``delta``. Default is 0.01.
-    tie_threshold : float, optional
+        Also known as ``delta``.
+    tie_threshold : float, optional, default=0.05
         Threshold below which competing splits are forced to break ties. Forwarded to the base
-        learner. Also known as ``tau``. Default is 0.05.
-    max_feature : float, optional
+        learner. Also known as ``tau``.
+    max_feature : float, optional, default=1.0
         Fraction of features to consider per split (e.g., random subspace).
-        Forwarded to the base learner. Default is 1.0.
-    grace_period_depth : int, optional
+        Forwarded to the base learner.
+    grace_period_depth : int, optional, default=-1
         Depth at which to change the grace period behavior (implementation
-        specific). Forwarded to the base learner. Default is -1.
-    eagerness : float, optional
+        specific). Forwarded to the base learner.
+    eagerness : float, optional, default=0.0
         Controls eagerness of splitting (implementation specific). Forwarded to
-        the base learner. Default is 0.0.
-    bin_type : str, optional
+        the base learner.
+    bin_type : str, optional, default='adaptive'
         Binning strategy for histograms (e.g., ``"adaptive"``). Forwarded to
-        the base learner. Default is ``"adaptive"``.
-    max_bins : int, optional
+        the base learner.
+    max_bins : int, optional, default=32
         Maximum number of bins per feature for histogram-based splits.
-        Forwarded to the base learner. Default is 32.
-    split_criterion : str, optional
+        Forwarded to the base learner.
+    split_criterion : str, optional, default='vr_rel'
         Split criterion identifier (e.g., ``"vr_rel"``). Forwarded to the base
-        learner. Default is ``"vr_rel"``.
-    verbose : bool, default=True
-        If True, display a progress bar during ``partial_fit``. Default is True.
+        learner.
+    random_state : int, optional, default=None
+        Random state for reproducibility. Created RNG is forwarded to the base learner.
+        It has effect only when `max_feature` < 1.0. If None, the global NumPy
+        RNG is used.
+    verbose : bool, optional, default=True
+        If True, display a progress bar during ``partial_fit``.
 
     Notes
     -----
@@ -122,7 +126,8 @@ class IncubationBoost:
         self.max_bins = max_bins
         self.split_criterion = split_criterion
         self.incubating_node: Optional[FastODT] = None
-        self.random_state = random_state
+        # Initialize local RNG
+        self.rng = np.random.default_rng(random_state)
         self.verbose = verbose
 
         try:  # environment-adaptive progress bar
@@ -160,7 +165,7 @@ class IncubationBoost:
                 bin_type=self.bin_type,
                 max_bins=self.max_bins,
                 split_criterion=self.split_criterion,
-                random_state=self.random_state,
+                random_state=self.rng,
             )
             self.chain.append(new_node)
 
@@ -215,7 +220,7 @@ class IncubationBoost:
                 bin_type=self.bin_type,
                 max_bins=self.max_bins,
                 split_criterion=self.split_criterion,
-                random_state=self.random_state,
+                random_state=self.rng,
             )
             self.incubating_node.partial_fit([X], residual)
             return None

@@ -63,6 +63,7 @@ class BaseForest(base.Ensemble):
         self.seed = seed
 
         self._rng = random.Random(self.seed)
+        self._rng_np = np.random.default_rng(self.seed)
 
         self._warning_detectors: list[base.DriftDetector]
         self._warning_detection_disabled = True
@@ -666,7 +667,7 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
             max_bins=self.max_bins,
             inherit_bins=self.inherit_bins,
             split_criterion=self.split_criterion,
-            random_state=self.seed,
+            random_state=self._rng_np,
         )
 
     def _drift_detector_input(

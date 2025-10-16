@@ -35,32 +35,34 @@ class FastODT(BaseTree):
 
     Parameters
     ----------
-    depth : int, default=25
+    depth : int, optional, default=25
         Maximum depth (root at depth 0). Nodes at or beyond this depth are
         treated as leaves.
-    grace_period : int, default=10
+    grace_period : int, optional, default=10
         Minimum number of samples a leaf observes before evaluating a split.
-    split_confidence : float, default=0.01
+    split_confidence : float, optional, default=0.01
         Hoeffding bound confidence (smaller values -> more eager splitting).
-    tie_threshold : float, default=0.05
+    tie_threshold : float, optional, default=0.05
         Threshold below which competing splits are forced to break ties.
-    max_feature : float, default=1.0
+    max_feature : float, optional, default=1.0
         Fraction (0,1] of features considered per split; 1.0 = all features.
-    eagerness : float, default=0.0
+    eagerness : float, optional, default=0.0
         Additional factor influencing node split aggressiveness (passed down to
         node implementation).
-    grace_period_depth : int, default=-1
+    grace_period_depth : int, optional, default=-1
         Depth up to which the grace period applies. ``-1`` disables the limit.
-    bin_type : str or type, default="adaptive"
+    bin_type : str or callable, optional, default="adaptive"
         Histogram strategy identifier or class implementing the required API.
-    max_bins : int, default=16
+    max_bins : int, optional, default=16
         Maximum bins per feature histogram.
-    inherit_bins : bool, default=False
+    inherit_bins : bool, optional, default=False
         If True, child nodes receive copies of parent histograms on split.
-    split_criterion : str or callable, default="vr_rel"
+    split_criterion : str or callable, optional, default="vr_rel"
         Split criterion identifier or function returning merit scores.
-    random_state : int, optional
-        Random seed for reproducibility. It has effect only when max_feature < 1.0.
+    random_state : {None, int, `numpy.random.Generator`}, optional
+        Random generator or random seed for reproducibility. It has effect only
+        when `max_feature` < 1.0. Pass a generator when FastODT is used in an ensemble.
+        If None (default), the global NumPy RNG is used.
 
     Attributes
     ----------
@@ -69,8 +71,22 @@ class FastODT(BaseTree):
     splits : list
         Cached best split (feature, threshold, ...) per depth to encourage
         consistency among nodes at the same depth.
-    error_rates : list[float]
+    error_rates : list of float
         Rolling window (length 20) of recent absolute errors for monitoring.
+    grace_period : int
+        Number of samples before checking for a split at each node.
+    split_confidence : float
+        Confidence level for splitting.
+    depth : int
+        Maximum depth of the tree.
+    max_feature : float
+        Fraction of features considered at each split.
+    grace_period_depth : int
+        Depth up to which the grace period applies.
+    tie_threshold : float
+        Threshold for tie-breaking between splits.
+    rng : numpy.random.Generator
+        Random number generator used for feature subsampling.
     """
 
     def __init__(
@@ -86,7 +102,7 @@ class FastODT(BaseTree):
         max_bins: int = 16,
         inherit_bins: bool = False,
         split_criterion: Union[str, callable] = C.SplitCriterion.VR_REL,
-        random_state: int = None,
+        random_state: np.random.Generator | int = None,
     ) -> None:
         self.grace_period = grace_period  # Number of samples before checking for a split
         self.split_confidence = split_confidence  # Confidence level for splitting
@@ -106,6 +122,10 @@ class FastODT(BaseTree):
 
         if isinstance(split_criterion, str):
             split_criterion = get_split_criterion(split_criterion)
+
+        # Initialize local RNG
+        self.rng = np.random.default_rng(random_state)
+
         # create the root node
         self.root = NodeHoeffdingBound(
             split_confidence=self.split_confidence,
@@ -117,7 +137,7 @@ class FastODT(BaseTree):
             max_bins=max_bins,
             inherit_bins=inherit_bins,
             split_criterion=split_criterion,
-            random_state=random_state,
+            rng=self.rng,
         )
 
     def measure_error(self, y_baseline: float, y_predicted: float) -> float:

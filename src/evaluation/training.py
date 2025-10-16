@@ -135,8 +135,8 @@ def seq_fit_predict_batch_model(
     update_freq : str, default='14 days'
         Time interval between full model retrains (pandas Timedelta parsable string).
     features : list of str, optional
-        Full feature name list of length n_features including index columns. 
-        Excludes the lag features violating the forecast horizon. If provided, 
+        Full feature name list of length n_features including index columns.
+        Excludes the lag features violating the forecast horizon. If provided,
         must include ALL features available in the dataset.
     predict_train : bool, default=True
         Whether to generate in-sample predictions on the training data.
@@ -279,8 +279,8 @@ def seq_fit_predict_incremental_model(
         Time horizon string (pandas offset) specifying the minimum prediction
         horizon for feature filtering and model update delays.
     features : list of str, optional
-        Full feature name list of length n_features including index columns. 
-        Excludes the lag features violating the forecast horizon. If provided, 
+        Full feature name list of length n_features including index columns.
+        Excludes the lag features violating the forecast horizon. If provided,
         must include ALL features available in the dataset.
     predict_train : bool, default=True
         Whether to generate in-sample predictions on the training data.
@@ -408,11 +408,11 @@ def all_valid_splits_seq_fit_predict(
         Constructor parameters for the estimator.
     train : list of tuple
         List of (X, y) training data tuples representing sequential folds, where
-        X is ndarray of shape (n_samples, n_features) and y is pandas.Series 
+        X is ndarray of shape (n_samples, n_features) and y is pandas.Series
         of shape (n_samples,).
     valid : list of tuple
         List of (X, y) validation data tuples representing sequential folds, where
-        X is ndarray of shape (n_samples, n_features) and y is pandas.Series 
+        X is ndarray of shape (n_samples, n_features) and y is pandas.Series
         of shape (n_samples,).
     use_residuals : bool
         If True, model the residuals (1-step differencing) instead of the original target.
@@ -424,8 +424,8 @@ def all_valid_splits_seq_fit_predict(
         Time horizon string (pandas offset) specifying the minimum prediction
         horizon for feature filtering and model update delays.
     features : list of str, optional
-        Full feature name list of length n_features including index columns. 
-        Excludes the lag features violating the forecast horizon. If provided, 
+        Full feature name list of length n_features including index columns.
+        Excludes the lag features violating the forecast horizon. If provided,
         must include ALL features available in the dataset.
     update_freq : str, default='14D'
         Time interval between full model retrains (pandas Timedelta parsable string).
@@ -674,14 +674,14 @@ def test_set_seq_fit_predict(
         Constructor parameters for the estimator.
     train : list of tuple
         List of (X, y) training data tuples representing sequential folds, where
-        X is ndarray of shape (n_samples, n_features) and y is pandas.Series 
+        X is ndarray of shape (n_samples, n_features) and y is pandas.Series
         of shape (n_samples,).
     valid : list of tuple
         List of (X, y) validation data tuples representing sequential folds, where
-        X is ndarray of shape (n_samples, n_features) and y is pandas.Series 
+        X is ndarray of shape (n_samples, n_features) and y is pandas.Series
         of shape (n_samples,).
     test : list of tuple
-        List of (X, y) test data tuples, where X is ndarray of shape (n_samples, 
+        List of (X, y) test data tuples, where X is ndarray of shape (n_samples,
         n_features) and y is pandas.Series of shape (n_samples,).
     use_residuals : bool
         If True, model the residuals (1-step differencing) instead of the original target.
@@ -693,8 +693,8 @@ def test_set_seq_fit_predict(
         Time horizon string (pandas offset) specifying the minimum prediction
         horizon for feature filtering and model update delays.
     features : list of str, optional
-        Full feature name list of length n_features including index columns. 
-        Excludes the lag features violating the forecast horizon. If provided, 
+        Full feature name list of length n_features including index columns.
+        Excludes the lag features violating the forecast horizon. If provided,
         must include ALL features available in the dataset.
     update_freq : str, default='14D'
         Time interval between full model retrains (pandas Timedelta parsable string).
