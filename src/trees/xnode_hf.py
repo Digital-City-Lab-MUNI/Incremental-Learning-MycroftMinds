@@ -155,7 +155,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         return self.copy()
 
     def copy(self):
-        """ Custom copy function to perform fast copy of new node based on parent node """
+        """Custom copy function to perform fast copy of new node based on parent node"""
         # Create new instance using constructor
         new_node = NodeHoeffdingBound(
             split_confidence=self.delta,
@@ -180,16 +180,14 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
 
         new_node.feature = self.feature
         new_node.threshold = self.threshold
-        new_node.feature_indices = (
-            self.feature_indices.copy() if self.feature_indices is not None else None
-        )
+        new_node.feature_indices = self.feature_indices.copy() if self.feature_indices is not None else None
 
         new_node.grace_period_offset = self.grace_period_offset
 
         return new_node
 
     def reset(self):
-        """ Reset function, reseting key parameters. """
+        """Reset function, reseting key parameters."""
         self.samples_seen = 0
         self.y_max = 0
         self.y_min = 0

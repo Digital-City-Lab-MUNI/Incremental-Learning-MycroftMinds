@@ -208,7 +208,9 @@ class FastODT(BaseTree):
             x = x[0]
         return self.predict(x)
 
-    def _update_tree(self, node: NodeHoeffdingBound, x: np.ndarray, y: float, depth: int = 0, payload_print = "", debug_index = 0) -> None:
+    def _update_tree(
+        self, node: NodeHoeffdingBound, x: np.ndarray, y: float, depth: int = 0, payload_print="", debug_index=0
+    ) -> None:
         """Update the tree with a new sample."""
         # Check if we reached the maximum depth
         if depth >= self.depth:
@@ -216,7 +218,7 @@ class FastODT(BaseTree):
 
         if node.left is None or node.right is None and self.splits[depth] is not None:
             self._attempt_split(node, depth)
-            
+
         # if node is a leaf, update its stats and check for split
         if node.left is None and node.right is None:
             node.update_stats(x, y)
@@ -227,10 +229,10 @@ class FastODT(BaseTree):
         elif node.feature is not None:
             if x[node.feature] <= node.threshold:
                 debug_index = debug_index * 2
-                self._update_tree(node.left, x, y, depth + 1, payload_print = payload_print, debug_index = debug_index)
+                self._update_tree(node.left, x, y, depth + 1, payload_print=payload_print, debug_index=debug_index)
             elif x[node.feature] > node.threshold:
                 debug_index = debug_index * 2 + 1
-                self._update_tree(node.right, x, y, depth + 1, payload_print = payload_print, debug_index = debug_index)
+                self._update_tree(node.right, x, y, depth + 1, payload_print=payload_print, debug_index=debug_index)
 
     def _attempt_split(self, node: NodeHoeffdingBound, depth: int) -> None:
         """Attempt to split the node when the Hoeffding Bound indicates a split is warranted."""

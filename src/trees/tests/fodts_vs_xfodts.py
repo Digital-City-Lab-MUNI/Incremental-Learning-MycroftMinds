@@ -12,8 +12,8 @@ GREEN = "\033[92m"
 YELLOW = "\033[93m"
 RESET = "\033[0m"
 
-def fodt_index_nodes(node, depth, result, current_depth=0, erron = True):
 
+def fodt_index_nodes(node, depth, result, current_depth=0, erron=True):
     if depth == current_depth:
         return
 
@@ -22,7 +22,7 @@ def fodt_index_nodes(node, depth, result, current_depth=0, erron = True):
         result.append([])
 
     result[current_depth].append(node)
-    
+
     if node is None:
         fodt_index_nodes(None, depth, result, current_depth + 1)
         fodt_index_nodes(None, depth, result, current_depth + 1)
@@ -30,7 +30,8 @@ def fodt_index_nodes(node, depth, result, current_depth=0, erron = True):
         fodt_index_nodes(node.left, depth, result, current_depth + 1)
         fodt_index_nodes(node.right, depth, result, current_depth + 1)
 
-def model_check(fast_model, xfast_model, depth, erron = False, similarity_break = True):
+
+def model_check(fast_model, xfast_model, depth, erron=False, similarity_break=True):
     similar = True
     fast_model_indexed = []
     fodt_index_nodes(fast_model.root, depth, fast_model_indexed)
@@ -44,8 +45,7 @@ def model_check(fast_model, xfast_model, depth, erron = False, similarity_break 
 
         max_nodes = 2**d
         for n in range(max_nodes):
-
-            fast_model_row = fast_model_indexed[d] 
+            fast_model_row = fast_model_indexed[d]
             fast_node = fast_model_row[n]
             x_fast_node = xfast_model.depths_containers[d][n]
 
@@ -61,7 +61,7 @@ def model_check(fast_model, xfast_model, depth, erron = False, similarity_break 
                     print("x_fast_node exists but no fast_node")
                     similar = False
 
-            elif fast_node and not x_fast_node:    
+            elif fast_node and not x_fast_node:
                 if erron:
                     print(f"-------max_depth: {depth} d: {d} max_n: {2**d} n: {n} parent {n // 2}--------- 3")
                 if fast_node.threshold and fast_node.feature:
@@ -86,7 +86,7 @@ def model_check(fast_model, xfast_model, depth, erron = False, similarity_break 
                     print(f"fast_node: {fast_node.value}")
                     similar = False
 
-                if d < depth - 1: 
+                if d < depth - 1:
                     if fast_node.feature == x_fast_node.feature:
                         if not erron:
                             print(f"{GREEN}feature is same: {fast_node.feature == x_fast_node.feature}{RESET}")
@@ -100,7 +100,7 @@ def model_check(fast_model, xfast_model, depth, erron = False, similarity_break 
                             similar = False
                         print(f"x_fast_node: {x_fast_node.feature}")
                         print(f"fast_node: {fast_node.feature}")
-                        
+
                     if fast_node.threshold == x_fast_node.threshold:
                         if not erron:
                             print(f"{GREEN}threshold is same: {fast_node.threshold == x_fast_node.threshold}{RESET}")
@@ -116,23 +116,24 @@ def model_check(fast_model, xfast_model, depth, erron = False, similarity_break 
                         print(f"fast_node: {fast_node.threshold}")
     return similar
 
+
 if __name__ == "__main__":
     project_root = ""
 
-    smoke_dir = project_root + 'smoke_data/'
-    X_path = smoke_dir + 'X.npy'
-    y_path = smoke_dir + 'y.npy'
-    print('Smoke data dir:', smoke_dir)
+    smoke_dir = project_root + "smoke_data/"
+    X_path = smoke_dir + "X.npy"
+    y_path = smoke_dir + "y.npy"
+    print("Smoke data dir:", smoke_dir)
 
     X = np.load(X_path, allow_pickle=True)
     Y = np.load(y_path, allow_pickle=True)
-    print('Raw shapes -> X:', X.shape, 'Y:', Y.shape)
+    print("Raw shapes -> X:", X.shape, "Y:", Y.shape)
 
     # drop the first two columns
     if X.ndim == 2 and X.shape[1] >= 3:
         X = X[:, 2:]
-    print('After slicing -> X:', X.shape)
-    print('Y stats -> min:', float(np.min(Y)), 'max:', float(np.max(Y)))
+    print("After slicing -> X:", X.shape)
+    print("Y stats -> min:", float(np.min(Y)), "max:", float(np.max(Y)))
 
     # hyperparams for trees
     depth = 7
@@ -141,10 +142,10 @@ if __name__ == "__main__":
     tie_threshold = 0.05
     max_feature = 1.0
     grace_period_depth = -1
-    bin_type = 'mean'
+    bin_type = "mean"
     max_bins = 1
     inherit_bins = False
-    split_criterion = 'vr_rel'
+    split_criterion = "vr_rel"
 
     fast_model = FastODT(
         depth=depth,
@@ -171,16 +172,16 @@ if __name__ == "__main__":
         inherit_bins=inherit_bins,
         split_criterion=split_criterion,
     )
-    print('Models initialized.')
+    print("Models initialized.")
 
     it = 0
-    for x,y in zip(X,Y):
+    for x, y in zip(X, Y):
         print("========================================================")
-        print(f'#{it}. Fitting sample x:', x[:5], 'y:', y)
+        print(f"#{it}. Fitting sample x:", x[:5], "y:", y)
         fast_model.learn_one(x, y)
         xfast_model.learn_one(x, y)
         it += 1
-        if not model_check(fast_model, xfast_model, depth, erron = True):
+        if not model_check(fast_model, xfast_model, depth, erron=True):
             print(f"{RED} MODEL DIFFERS {RESET}")
             exit()
 
@@ -203,5 +204,3 @@ if __name__ == "__main__":
 
     print("verify model [model diff]")
     model_check(fast_model, xfast_model, depth)
-
-    

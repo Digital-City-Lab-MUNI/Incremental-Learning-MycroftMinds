@@ -252,7 +252,7 @@ class xFastODT(BaseTree):
             else:
                 self.mature_tree = True
 
-    def __find_node(self, depth, index, x, y = 0, no_stats_update = False):
+    def __find_node(self, depth, index, x, y=0, no_stats_update=False):
         """Finds last populated node by index."""
 
         node = self.depths_containers[depth][index]
@@ -269,7 +269,7 @@ class xFastODT(BaseTree):
                 node.feature = None
                 node.threshold = None
 
-        else: 
+        else:
             node = node.copy()
             if not no_stats_update:
                 node.reset()
@@ -299,7 +299,7 @@ if __name__ == "__main__":
     X = np.load("./smoke_data/X.npy", allow_pickle=True)
     Y = np.load("./smoke_data/y.npy", allow_pickle=True)
     X = X[:, 2:]
-    
+
     # Test if model will be partially filled after receiving only one sample
     model_hf = xFastODT(depth=50, grace_period=10, split_confidence=0.0001)
     start = time.time()
