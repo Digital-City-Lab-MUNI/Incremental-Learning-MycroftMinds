@@ -21,7 +21,6 @@ def hoeffding_bound(R: float, n: int, delta: float) -> float:
     """
     return np.sqrt((R**2) * np.log(1 / delta) / (2 * n))
 
-
 class NodeHoeffdingBound:  # one leaf of the FastODT
     """
     Incremental tree node with histogram-based binning for split selection.

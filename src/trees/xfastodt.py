@@ -149,15 +149,24 @@ class xFastODT(BaseTree):
 
         if verbose:
             for i in tqdm.tqdm(range(len(X))):
-                self.__update_tree(None, X[i], y[i], depth=0)
+                self.__update_tree(X[i], y[i], depth=0)
         else:
             for i in range(len(X)):
-                self.__update_tree(None, X[i], y[i], depth=0)
+                self.__update_tree(X[i], y[i], depth=0)
 
-    def learn_one(self, x, y: float):
+    def learn_one(self, x : np.ndarray, y: float):
         """
         Incrementally update the tree with a single sample (x, y).
         x must be a 1D array-like structure that can be converted to a numpy array (or dict).
+
+        Parameters
+        -----------
+
+        x : np.ndarray
+            Feature matrix of shape (n_samples, n_features) or (n_features,) for
+            a single sample.
+        y : float 
+            Target value
         """
         if isinstance(x, dict):
             x = np.asarray(list(x.values()))
@@ -173,6 +182,13 @@ class xFastODT(BaseTree):
         """
         Predict the output for a single sample x.
         x must be a 1D array-like structure that can be converted to a numpy array (or dict).
+
+        Parameters
+        -----------
+
+        x : np.ndarray
+            Feature matrix of shape (n_samples, n_features) or (n_features,) for
+            a single sample.
         """
         if isinstance(x, dict):
             x = np.asarray(list(x.values()))
@@ -183,7 +199,16 @@ class xFastODT(BaseTree):
         return self.predict(x)
 
     def predict(self, X: np.ndarray):
-        """Predicts y value."""
+        """
+        Predicts y value.
+        
+        Parameters
+        -----------
+
+        x : np.ndarray
+            Feature matrix of shape (n_samples, n_features) or (n_features,) for
+            a single sample.
+        """
 
         return_vector = []
         for x in X:
@@ -201,8 +226,21 @@ class xFastODT(BaseTree):
             return_vector.append(node.value)
         return return_vector
 
-    def __update_tree(self, node, x: np.ndarray, y: float, depth=0):
-        """Update the tree with a new sample."""
+    def __update_tree(self, x: np.ndarray, y: float, depth=0):
+        """
+        Update the tree with a new sample.
+
+        Parameters
+        -----------
+
+        x : np.ndarray
+            Feature matrix of shape (n_samples, n_features) or (n_features,) for
+            a single sample.
+        y : float 
+            Target value
+        depth : int
+            Current tree depth
+        """
 
         # Take all currently known splits
         # At this point we should have all splits for self.current_depth
@@ -253,7 +291,30 @@ class xFastODT(BaseTree):
                 self.mature_tree = True
 
     def __find_node(self, depth, index, x, y=0, no_stats_update=False):
-        """Finds last populated node by index."""
+        """
+        Finds last populated parent node by index. This is helper function which exists only because of how extreme fastODTs are implemented.
+        Sometimes tree may jump to node which was never touched by training function and has no values. That means algorithm has to find some value to use.
+        Hence, it tracks back to last known parent with assigned values and propagate that values down to the node.
+
+        This function behaves differently in training and in inference. If during training there was more nodes between jumped node and suitable parent, 
+        then we train those nodes as well before propagating data. This process is added to behave in same way as classic FastODTs which does that naturally while
+        traversing recursively tree.
+
+        Parameters
+        -----------
+
+        depth : int
+            Current tree depth
+        index: int
+            Current depth node index,
+        x : np.ndarray
+            Feature matrix of shape (n_samples, n_features) or (n_features,) for
+            a single sample.
+        y : float 
+            Target value. This values should be left untouched during inference.
+        no_stats_update: boolean
+            Changes behavior between inference and training. For inference it should be set to False, so nodes are not changed by incoming data and y value can be left unset.
+        """
 
         node = self.depths_containers[depth][index]
         # print(f"looking for index: {index}")
