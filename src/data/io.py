@@ -163,7 +163,7 @@ def load_data_numpy(
 
         elif data_type == "single_tuple":
             # Return a single tuple
-            return data["X"], data["y"]
+            return data["X"][:max_length], data["y"][:max_length]
 
         else:
             print(f"[ERROR] Unknown data type: {data_type}")
