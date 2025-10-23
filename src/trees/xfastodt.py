@@ -226,7 +226,7 @@ class xFastODT(BaseTree):
             return_vector.append(node.value)
         return return_vector
 
-    def __update_tree(self, x: np.ndarray, y: float, depth=0):
+    def _update_tree(self, x: np.ndarray, y: float, depth=0):
         """
         Update the tree with a new sample.
 
@@ -291,7 +291,7 @@ class xFastODT(BaseTree):
             else:
                 self.mature_tree = True
 
-    def __find_node(self, depth, index, x, y=0, no_stats_update=False):
+    def _find_node(self, depth, index, x, y=0, no_stats_update=False):
         """
         Finds last populated parent node by index. This is helper function which exists only because of how extreme fastODTs are implemented.
         Sometimes tree may jump to node which was never touched by training function and has no values. That means algorithm has to find some value to use.
