@@ -267,6 +267,7 @@ class xFastODT(BaseTree):
         if node is None:
             self.depths_containers[node_depth][node_index] = self.__find_node(node_depth, node_index, x, y)
             node = self.depths_containers[node_depth][node_index]
+            node.update_stats(x, y)
         else:
             if self.mature_tree:
                 return
@@ -329,12 +330,8 @@ class xFastODT(BaseTree):
             if not no_stats_update:
                 node.feature = None
                 node.threshold = None
-
         else:
             node = node.copy()
-            if not no_stats_update:
-                node.reset()
-                node.update_stats(x, y)
             node.threshold = self.splits_values[depth]
             node.feature = self.splits_features[depth]
 

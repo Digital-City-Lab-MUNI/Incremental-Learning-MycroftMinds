@@ -216,7 +216,7 @@ class FastODT(BaseTree):
         if depth >= self.depth:
             return
 
-        if node.left is None or node.right is None and self.splits[depth] is not None:
+        if (node.left is None or node.right is None) and self.splits[depth] is not None:
             self._attempt_split(node, depth)
 
         # if node is a leaf, update its stats and check for split
