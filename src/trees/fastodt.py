@@ -181,10 +181,10 @@ class FastODT(BaseTree):
 
         if verbose:
             for i in tqdm.tqdm(range(len(X))):
-                self.__update_tree(self.root, X[i], y[i], depth=0)
+                self._update_tree(self.root, X[i], y[i], depth=0)
         else:
             for i in range(len(X)):
-                self.__update_tree(self.root, X[i], y[i], depth=0)
+                self._update_tree(self.root, X[i], y[i], depth=0)
 
     def learn_one(self, x: Union[np.ndarray, Sequence[float], dict, pd.DataFrame], y: float) -> None:
         """Update the model with a single observation."""
@@ -196,7 +196,7 @@ class FastODT(BaseTree):
             x = np.asarray(x)
         if x.ndim == 2 and x.shape[0] == 1:
             x = x[0]
-        self.__update_tree(self.root, x, y, depth=0)
+        self._update_tree(self.root, x, y, depth=0)
 
     def predict_one(self, x: Union[np.ndarray, Sequence[float], dict]) -> float:
         """Predict target for a single sample."""
@@ -219,22 +219,22 @@ class FastODT(BaseTree):
             return
 
         if (node.left is None or node.right is None) and self.splits[depth] is not None:
-            self.__attempt_split(node, depth)
+            self._attempt_split(node, depth)
 
         # if node is a leaf, update its stats and check for split
         if node.left is None and node.right is None:
             node.update_stats(x, y)
             if node.reached_grace_period() or self.grace_period_depth < depth:  # check if grace period is over
-                self.__attempt_split(node, depth)
+                self._attempt_split(node, depth)
 
         # traverse the tree to reach the correct leaf
         elif node.feature is not None:
             if x[node.feature] <= node.threshold:
                 debug_index = debug_index * 2
-                self.__update_tree(node.left, x, y, depth + 1, payload_print=payload_print, debug_index=debug_index)
+                self._update_tree(node.left, x, y, depth + 1, payload_print=payload_print, debug_index=debug_index)
             elif x[node.feature] > node.threshold:
                 debug_index = debug_index * 2 + 1
-                self.__update_tree(node.right, x, y, depth + 1, payload_print=payload_print, debug_index=debug_index)
+                self._update_tree(node.right, x, y, depth + 1, payload_print=payload_print, debug_index=debug_index)
 
     def _attempt_split(self, node: NodeHoeffdingBound, depth: int) -> None:
         """Attempt to split the node when the Hoeffding Bound indicates a split is warranted."""

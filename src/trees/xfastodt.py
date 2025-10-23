@@ -176,7 +176,7 @@ class xFastODT(BaseTree):
             x = np.asarray(x)
         if x.ndim == 2 and x.shape[0] == 1:
             x = x[0]
-        self._update_tree(None, x, y, depth=0)
+        self._update_tree(x, y, depth=0)
 
     def predict_one(self, x):
         """
