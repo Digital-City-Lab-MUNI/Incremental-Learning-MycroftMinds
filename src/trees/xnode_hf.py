@@ -21,7 +21,6 @@ def hoeffding_bound(R: float, n: int, delta: float) -> float:
     """
     return np.sqrt((R**2) * np.log(1 / delta) / (2 * n))
 
-
 class NodeHoeffdingBound:  # one leaf of the FastODT
     """
     Incremental tree node with histogram-based binning for split selection.
@@ -149,6 +148,53 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         self.split_criterion: callable = split_criterion if split_criterion is not None else variance_reduction
         self.inherit_bins: bool = inherit_bins
         self.rng: np.random.Generator = rng
+
+    def __copy__(self):
+        # to use for shallow copies
+        return self.copy()
+
+    def copy(self):
+        """Custom copy function to perform fast copy of new node based on parent node"""
+        # Create new instance using constructor
+        new_node = NodeHoeffdingBound(
+            split_confidence=self.delta,
+            tie_threshold=self.tie_threshold,
+            max_feature=self.max_feature,
+            eagerness=0.0,  # Not stored, so you can hardcode this
+            grace_period=self.grace_period,
+            index=self.index,
+            bin_type=self.bin_type,
+            max_bins=self.max_bins,
+            inherit_bins=self.inherit_bins,
+            split_criterion=self.split_criterion,
+        )
+
+        # Shallow-copy or directly assign attributes
+        new_node.samples_seen = self.samples_seen
+        new_node.y_max = self.y_max
+        new_node.y_min = self.y_min
+        new_node.sum_y = self.sum_y
+        new_node.sum_y_squared = self.sum_y_squared
+        new_node.value = self.value
+
+        new_node.feature = self.feature
+        new_node.threshold = self.threshold
+        new_node.feature_indices = self.feature_indices.copy() if self.feature_indices is not None else None
+
+        new_node.grace_period_offset = self.grace_period_offset
+
+        return new_node
+
+    def reset(self):
+        """Reset function, reseting key parameters."""
+        self.samples_seen = 0
+        self.y_max = 0
+        self.y_min = 0
+        self.sum_y = 0
+        self.sum_y_squared = 0
+        self.histograms = None
+        self.threshold = 0
+        self.feature = None
 
     def check_grace_period(self):
         """Check if grace period is met."""

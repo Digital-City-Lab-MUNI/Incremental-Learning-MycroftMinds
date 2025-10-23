@@ -120,7 +120,7 @@ def save_data_pickle(
 
 
 def load_data_numpy(
-    filename: str, load_dir: str = "../data"
+    filename: str, load_dir: str = "../data", max_length=-1
 ) -> Union[List[Tuple[np.ndarray, np.ndarray]], Tuple[np.ndarray, np.ndarray], None]:
     """Load splits from a ``.npz`` archive produced by :func:`save_data_numpy`.
 
@@ -159,11 +159,11 @@ def load_data_numpy(
                 y = data[f"y_{i}"]
                 result.append((X, y))
 
-            return result
+            return result[:max_length]
 
         elif data_type == "single_tuple":
             # Return a single tuple
-            return data["X"], data["y"]
+            return data["X"][:max_length], data["y"][:max_length]
 
         else:
             print(f"[ERROR] Unknown data type: {data_type}")
@@ -176,7 +176,7 @@ def load_data_numpy(
 
 
 def load_data_pickle(
-    filename: str, load_dir: str = "../data"
+    filename: str, load_dir: str = "../data", max_length=-1
 ) -> Union[List[Tuple[np.ndarray, np.ndarray]], Tuple[np.ndarray, np.ndarray], None]:
     """Load splits from a pickle file produced by :func:`save_data_pickle`.
 
@@ -200,7 +200,7 @@ def load_data_pickle(
 
     try:
         with open(load_path, "rb") as f:
-            data = pickle.load(f)
+            data = pickle.load(f)[:max_length]
         return data
 
     except Exception as e:
@@ -266,6 +266,7 @@ def load_dataset(
     train: bool = True,
     valid: bool = True,
     test: bool = True,
+    max_length=-1,
 ) -> Tuple[Any, Any, Any]:
     """Load persisted dataset splits.
 
@@ -293,15 +294,15 @@ def load_dataset(
     if use_numpy:
         if train:
             print("[INFO] Loading train data...")
-            train = load_data_numpy(f"{prefix}train", data_dir)
+            train = load_data_numpy(f"{prefix}train", data_dir, max_length=max_length)
             print(f"[INFO] Train data loaded: {len(train)} samples")
         if valid:
             print("[INFO] Loading valid data...")
-            valid = load_data_numpy(f"{prefix}valid", data_dir)
+            valid = load_data_numpy(f"{prefix}valid", data_dir, max_length=max_length)
             print(f"[INFO] Valid data loaded: {len(valid)} samples")
         if test:
             print("[INFO] Loading test data...")
-            test = load_data_numpy(f"{prefix}test", data_dir)
+            test = load_data_numpy(f"{prefix}test", data_dir, max_length=max_length)
             print(f"[INFO] Test data loaded: {len(test)} samples")
 
     else:
@@ -317,15 +318,15 @@ def load_dataset(
 
         # Load data using pickle
         print("[INFO] Loading train data...")
-        train = load_data_pickle(f"{prefix}train", data_dir)
+        train = load_data_pickle(f"{prefix}train", data_dir, max_length=max_length)
         print(f"[INFO] Train data loaded: {len(train)} samples")
 
         print("[INFO] Loading valid data...")
-        valid = load_data_pickle(f"{prefix}valid", data_dir)
+        valid = load_data_pickle(f"{prefix}valid", data_dir, max_length=max_length)
         print(f"[INFO] Valid data loaded: {len(valid)} samples")
 
         print("[INFO] Loading test data...")
-        test = load_data_pickle(f"{prefix}test", data_dir)
+        test = load_data_pickle(f"{prefix}test", data_dir, max_length=max_length)
         print(f"[INFO] Test data loaded: {len(test)} samples")
 
     return train, valid, test
