@@ -149,10 +149,10 @@ class xFastODT(BaseTree):
 
         if verbose:
             for i in tqdm.tqdm(range(len(X))):
-                self.__update_tree(X[i], y[i], depth=0)
+                self._update_tree(X[i], y[i], depth=0)
         else:
             for i in range(len(X)):
-                self.__update_tree(X[i], y[i], depth=0)
+                self._update_tree(X[i], y[i], depth=0)
 
     def learn_one(self, x : np.ndarray, y: float):
         """
@@ -176,7 +176,7 @@ class xFastODT(BaseTree):
             x = np.asarray(x)
         if x.ndim == 2 and x.shape[0] == 1:
             x = x[0]
-        self.__update_tree(None, x, y, depth=0)
+        self._update_tree(None, x, y, depth=0)
 
     def predict_one(self, x):
         """
@@ -222,7 +222,7 @@ class xFastODT(BaseTree):
 
             node = self.depths_containers[node_depth][node_index]
             if node is None:
-                node = self.__find_node(node_depth, node_index, x, no_stats_update=True)
+                node = self._find_node(node_depth, node_index, x, no_stats_update=True)
             return_vector.append(node.value)
         return return_vector
 
@@ -265,7 +265,7 @@ class xFastODT(BaseTree):
 
         node = self.depths_containers[node_depth][node_index]
         if node is None:
-            self.depths_containers[node_depth][node_index] = self.__find_node(node_depth, node_index, x, y)
+            self.depths_containers[node_depth][node_index] = self._find_node(node_depth, node_index, x, y)
             node = self.depths_containers[node_depth][node_index]
             node.update_stats(x, y)
         else:
@@ -323,7 +323,7 @@ class xFastODT(BaseTree):
             parent_node_index = (
                 index // 2
             )  # find parent index by rule that it is child index / 2 and floored to nearest integer
-            node = self.__find_node(depth - 1, parent_node_index, x, y, no_stats_update)
+            node = self._find_node(depth - 1, parent_node_index, x, y, no_stats_update)
             node.index = index
             self.depths_containers[depth][index] = node
             node = node.copy()
