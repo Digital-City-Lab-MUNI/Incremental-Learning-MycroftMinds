@@ -140,7 +140,7 @@ class xFastODT(BaseTree):
             If True, displays a progress bar via ``tqdm``.
         """
 
-        X = ensure_2d_array(X)  # 10.1 -> [10.1] -> (1,1)
+        X = ensure_2d_array(X)  # 10.root1 -> [10.1] -> (1,1)
         y = np.asarray(y)
         if y.ndim == 0:
             y = np.array([y])
@@ -178,7 +178,7 @@ class xFastODT(BaseTree):
             x = x[0]
         self._update_tree(x, y, depth=0)
 
-    def predict_one(self, x):
+    def predict_one(self, x) -> float:
         """
         Predict the output for a single sample x.
         x must be a 1D array-like structure that can be converted to a numpy array (or dict).
@@ -196,7 +196,8 @@ class xFastODT(BaseTree):
             x = np.asarray(x)
         if x.ndim == 2 and x.shape[0] == 1:
             x = x[0]
-        return self.predict(x)
+        ret = self.predict([x])
+        return ret[0]
 
     def predict(self, X: np.ndarray):
         """
@@ -209,8 +210,12 @@ class xFastODT(BaseTree):
             Feature matrix of shape (n_samples, n_features) or (n_features,) for
             a single sample.
         """
-
         return_vector = []
+        if self.current_depth <= 0:
+            for x in X:
+                return_vector.append(0.0)
+            return return_vector
+
         for x in X:
             # Check if we reached the maximum depth
             active_splits_features = self.splits_features[: self.current_depth]
@@ -351,6 +356,9 @@ class xFastODT(BaseTree):
             node.split(best_split, self.split_confidence)
             node.left.update_from_parent_node(node)
             node.right.update_from_parent_node(node)
+
+    def is_filled(self):
+        return self.mature_tree
 
 
 if __name__ == "__main__":

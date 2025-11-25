@@ -12,6 +12,7 @@ if parent_dir not in sys.path:
 
 
 from src.trees.fastodt import FastODT
+from src.trees.xfastodt import xFastODT
 import src.trees.constants as C
 
 import abc
@@ -694,6 +695,336 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
     def valid_aggregation_method(self):
         """Valid aggregation_method values."""
         return self._VALID_AGGREGATION_METHOD
+
+class ARFRegressorxFODT(BaseForest, base.Regressor):
+    """Adaptive Random Forest regressor based on FODT.
+
+    The 3 most important aspects of Adaptive Random Forest [^1] are:
+
+    1. inducing diversity through re-sampling
+
+    2. inducing diversity through randomly selecting subsets of features for
+       node splits
+
+    3. drift detectors per base tree, which cause selective resets in response
+       to drifts
+
+    Notice that this implementation is slightly different from the original
+    algorithm proposed in [^2]. It also adds a new strategy to monitor the
+    predictions and check for concept drifts. The deviations of the predictions
+    to the target are monitored and normalized in the [0, 1] range to fulfill ADWIN's
+    requirements. We assume that the data subjected to the normalization follows
+    a normal distribution, and thus, lies within the interval of the mean $\\pm3\\sigma$.
+
+    Parameters
+    ----------
+    n_models
+        Number of trees in the ensemble.
+    max_features
+        Max number of attributes for each node split.<br/>
+        - If `int`, then consider `max_features` at each split.<br/>
+        - If `float`, then `max_features` is a percentage and
+          `int(max_features * n_features)` features are considered per split.<br/>
+        - If "sqrt", then `max_features=sqrt(n_features)`.<br/>
+        - If "log2", then `max_features=log2(n_features)`.<br/>
+        - If None, then ``max_features=n_features``.
+    lambda_value
+        The lambda value for bagging (lambda=6 corresponds to Leveraging Bagging).
+    metric
+        Metric used to track trees performance within the ensemble. Depending,
+        on the configuration, this metric is also used to weight predictions
+        from the members of the ensemble. Defaults to `metrics.MSE()`.
+    aggregation_method
+        The method to use to aggregate predictions in the ensemble.<br/>
+        - 'mean'<br/>
+        - 'median' - If selected will disable the weighted vote.
+    disable_weighted_vote
+        If `True`, disables the weighted vote prediction, i.e. does not assign
+        weights to individual tree's predictions and uses the arithmetic mean
+        instead. Otherwise will use the `metric` value to weight predictions.
+    drift_detector
+        Drift Detection method. Set to None to disable Drift detection.
+        Defaults to `drift.ADWIN(0.001)`.
+    warning_detector
+        Warning Detection method. Set to None to disable warning detection.
+        Defaults to `drift.ADWIN(0.01)`.
+    grace_period
+        [*Tree parameter*] Number of instances a leaf should observe between
+        split attempts.
+    grace_period_depth
+        [*Tree parameter*] The depth of the grace period. If set to `-1`, the grace period
+        will be applied to all leaves. If set to `1`, the grace period will be applied
+        only to the root node.
+    max_depth
+        [*Tree parameter*] The maximum depth a tree can reach. If `None`, the
+        tree will grow until the system recursion limit.
+    delta
+        [*Tree parameter*] Allowed error in split decision, a value closer to 0
+        takes longer to decide.
+    tau
+        [*Tree parameter*] Threshold below which a split will be forced to break
+        ties.
+    leaf_prediction
+        [*Tree parameter*] Prediction mechanism used at leaves.</br>
+        - 'mean' - Target mean</br>
+        - 'model' - Uses the model defined in `leaf_model`</br>
+        - 'adaptive' - Chooses between 'mean' and 'model' dynamically</br>
+    leaf_model
+        [*Tree parameter*] The regression model used to provide responses if
+        `leaf_prediction='model'`. If not provided, an instance of
+        `river.linear_model.LinearRegression` with the default hyperparameters
+         is used.
+    model_selector_decay
+        [*Tree parameter*] The exponential decaying factor applied to the learning models'
+        squared errors, that are monitored if `leaf_prediction='adaptive'`. Must be
+        between `0` and `1`. The closer to `1`, the more importance is going to
+        be given to past observations. On the other hand, if its value
+        approaches `0`, the recent observed errors are going to have more
+        influence on the final decision.
+    nominal_attributes
+        [*Tree parameter*] List of Nominal attributes. If empty, then assume that
+        all attributes are numerical.
+    splitter
+        [*Tree parameter*] The Splitter or Attribute Observer (AO) used to monitor the class
+        statistics of numeric features and perform splits. Splitters are available in the
+        `tree.splitter` module. Different splitters are available for classification and
+        regression tasks. Classification and regression splitters can be distinguished by their
+        property `is_target_class`. This is an advanced option. Special care must be taken when
+        choosing different splitters.By default, `tree.splitter.EBSTSplitter` is used if
+        `splitter` is `None`.
+    min_samples_split
+        [*Tree parameter*] The minimum number of samples every branch resulting from a split
+        candidate must have to be considered valid.
+    bin_type
+        [*FastODT parameter*] The binning strategy used for numeric features.
+        - 'mean' - Bins are created based on the mean of the feature values.
+        - 'adaptive' - Bins are created dynamically based on the data distribution. Defaults to 'adaptive'.z
+    max_bins
+        [*FastODT parameter*] The maximum number of bins to use for numeric features. Defaults to 32.
+    inherit_bins
+        [*FastODT parameter*] If True, inherit the binning strategy from the parent node. Defaults to False.
+    split_criterion
+        [*FastODT parameter*] The criterion used to evaluate splits. Defaults to 'vr_rel'.
+    binary_split
+        [*Tree parameter*] If True, only allow binary splits.
+    max_size
+        [*Tree parameter*] Maximum memory (MiB) consumed by the tree.
+    memory_estimate_period
+        [*Tree parameter*] Number of instances between memory consumption checks.
+    stop_mem_management
+        [*Tree parameter*] If True, stop growing as soon as memory limit is hit.
+    remove_poor_attrs
+        [*Tree parameter*] If True, disable poor attributes to reduce memory usage.
+    merit_preprune
+        [*Tree parameter*] If True, enable merit-based tree pre-pruning.
+    seed
+        Random seed for reproducibility.
+
+    References
+    ----------
+    [^1]: Gomes, H.M., Bifet, A., Read, J., Barddal, J.P., Enembreck, F.,
+          Pfharinger, B., Holmes, G. and Abdessalem, T., 2017. Adaptive random
+          forests for evolving data stream classification. Machine Learning,
+          106(9-10), pp.1469-1495.
+
+    [^2]: Gomes, H.M., Barddal, J.P., Boiko, L.E., Bifet, A., 2018.
+          Adaptive random forests for data stream regression. ESANN 2018.
+
+    Examples
+    --------
+
+    >>> from river import datasets
+    >>> from river import evaluate
+    >>> from river import forest
+    >>> from river import metrics
+    >>> from river import preprocessing
+
+    >>> dataset = datasets.TrumpApproval()
+
+    >>> model = (
+    ...     preprocessing.StandardScaler() |
+    ...     forest.ARFRegressor(seed=42)
+    ... )
+
+    >>> metric = metrics.MAE()
+
+    >>> evaluate.progressive_val_score(dataset, model, metric)
+    MAE: 0.772113
+
+    """
+
+    _MEAN = "mean"
+    _MEDIAN = "median"
+    _VALID_AGGREGATION_METHOD = [_MEAN, _MEDIAN]
+
+    def __init__(
+        self,
+        # Forest parameters
+        n_models: int = 10,
+        max_features="sqrt",
+        aggregation_method: str = "median",
+        lambda_value: int = 6,
+        metric: metrics.base.RegressionMetric | None = None,
+        disable_weighted_vote=True,
+        drift_detector: base.DriftDetector | None = None,
+        warning_detector: base.DriftDetector | None = None,
+        # Tree parameters
+        grace_period: int = 50,
+        max_depth: int | None = None,
+        delta: float = 0.001,
+        tau: float = 0.05,
+        leaf_prediction: str = "adaptive",
+        leaf_model: base.Regressor | None = None,
+        model_selector_decay: float = 0.95,
+        nominal_attributes: list | None = None,
+        splitter: Splitter | None = None,
+        min_samples_split: int = 5,
+        binary_split: bool = False,
+        max_size: float = 500.0,
+        memory_estimate_period: int = 2_000_000,
+        stop_mem_management: bool = False,
+        remove_poor_attrs: bool = False,
+        merit_preprune: bool = True,
+        seed: int | None = None,
+        max_feature: float = 1.0,
+        eagerness: float = 0.0,
+        grace_period_depth: int = -1,
+        bin_type: str = C.HistogramType.ADAPTIVE,
+        max_bins: int = 32,
+        inherit_bins: bool = False,
+        split_criterion: str = C.SplitCriterion.VR_REL,
+    ):
+        super().__init__(
+            n_models=n_models,
+            max_features=max_features,
+            lambda_value=lambda_value,
+            metric=metric or metrics.MSE(),
+            disable_weighted_vote=disable_weighted_vote,
+            drift_detector=drift_detector or ADWIN(0.001),
+            warning_detector=warning_detector or ADWIN(0.01),
+            seed=seed,
+        )
+
+        # Tree parameters
+        self.grace_period = grace_period
+        self.grace_period_depth = grace_period_depth
+        self.max_depth = max_depth
+        self.delta = delta
+        self.tau = tau
+        self.leaf_prediction = leaf_prediction
+        self.leaf_model = leaf_model
+        self.model_selector_decay = model_selector_decay
+        self.nominal_attributes = nominal_attributes
+        self.splitter = splitter
+        self.min_samples_split = min_samples_split
+        self.binary_split = binary_split
+        self.max_size = max_size
+        self.memory_estimate_period = memory_estimate_period
+        self.stop_mem_management = stop_mem_management
+        self.remove_poor_attrs = remove_poor_attrs
+        self.merit_preprune = merit_preprune
+        self.eagerness = eagerness
+        self.max_feature = max_feature
+        self.bin_type = bin_type
+        self.max_bins = max_bins
+        self.inherit_bins = inherit_bins
+        self.split_criterion = split_criterion
+
+        if aggregation_method in self._VALID_AGGREGATION_METHOD:
+            self.aggregation_method = aggregation_method
+        else:
+            raise ValueError(
+                f"Invalid aggregation_method: {aggregation_method}."
+                f"\nValid values are: {self._VALID_AGGREGATION_METHOD}."
+            )
+
+        # Used to normalize the input for the drift trackers
+        self._drift_norm = [stats.Var() for _ in range(self.n_models)]
+
+    @property
+    def _mutable_attributes(self):
+        return {
+            "max_features",
+            "aggregation_method",
+            "lambda_value",
+            "grace_period",
+            "delta",
+            "tau",
+            "model_selector_decay",
+        }
+
+    def predict_one(self, x: dict) -> base.typing.RegTarget:
+        if len(self) == 0:
+            self._init_ensemble(sorted(x.keys()))
+            return 0.0  # type: ignore
+
+        y_pred = np.zeros(self.n_models)
+
+        if not self.disable_weighted_vote and self.aggregation_method != self._MEDIAN:
+            weights = np.zeros(self.n_models)
+            sum_weights = 0.0
+            for i, model in enumerate(self):
+                y_pred[i] = model.predict_one(x)
+                weights[i] = self._metrics[i].get()
+                sum_weights += weights[i]
+
+            if sum_weights != 0:
+                # The higher the error, the worse is the tree
+                weights = sum_weights - weights
+                # Normalize weights to sum up to 1
+                weights /= weights.sum()
+                y_pred *= weights
+        else:
+            for i, model in enumerate(self):
+                y_pred[i] = model.predict_one(x)
+
+        if self.aggregation_method == self._MEAN:
+            y_pred = y_pred.mean()
+        else:
+            y_pred = float(np.median(y_pred))  # type: ignore
+
+        return float(y_pred)  # type: ignore
+
+    def _new_base_model(self):
+        return xFastODT(
+            depth=self.max_depth,
+            grace_period=self.grace_period,
+            split_confidence=self.delta,
+            tie_threshold=self.tau,
+            max_feature=self.max_feature,
+            grace_period_depth=self.grace_period_depth,
+            bin_type=self.bin_type,
+            max_bins=self.max_bins,
+            inherit_bins=self.inherit_bins,
+            split_criterion=self.split_criterion,
+            random_state=self._rng_np,
+        )
+
+    def _drift_detector_input(
+        self,
+        tree_id: int,
+        y_true: int | float,
+        y_pred: int | float,
+    ) -> int | float:
+        drift_input = y_true - y_pred
+        self._drift_norm[tree_id].update(drift_input)
+
+        if self._drift_norm[tree_id].mean.n == 1:
+            return 0.5  # The expected error is the normalized mean error
+        
+        sd = math.sqrt(self._drift_norm[tree_id].get())
+
+        # We assume the error follows a normal distribution -> (empirical rule)
+        # 99.73% of the values lie  between [mean - 3*sd, mean + 3*sd]. We
+        # assume this range for the normalized data. Hence, we can apply the
+        # min-max norm to cope with  ADWIN's requirements
+        return (drift_input + 3 * sd) / (6 * sd) if sd > 0 else 0.5
+
+    @property
+    def valid_aggregation_method(self):
+        """Valid aggregation_method values."""
+        return self._VALID_AGGREGATION_METHOD
+
 
 
 if __name__ == "__main__":
