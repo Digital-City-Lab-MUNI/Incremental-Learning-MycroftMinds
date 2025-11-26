@@ -196,7 +196,7 @@ class xFastODT(BaseTree):
             x = np.asarray(x)
         if x.ndim == 2 and x.shape[0] == 1:
             x = x[0]
-        ret = self.predict([x])
+        ret = self.predict(x)
         return ret[0]
 
     def predict(self, X: np.ndarray):
@@ -210,6 +210,9 @@ class xFastODT(BaseTree):
             Feature matrix of shape (n_samples, n_features) or (n_features,) for
             a single sample.
         """
+        if len(X.shape) == 1:
+            X = np.array([X])
+
         return_vector = []
         if self.current_depth <= 0:
             for x in X:
@@ -360,6 +363,24 @@ class xFastODT(BaseTree):
     def is_filled(self):
         return self.mature_tree
 
+    def measure_error(self, y_baseline: float, y_predicted: float) -> float:
+        """Update rolling error buffer and return its mean.
+
+        Parameters
+        ----------
+        y_baseline : float
+            Ground truth target value.
+        y_predicted : float
+            Model prediction.
+
+        Returns
+        -------
+        float
+            Mean of the rolling error window (length 20).
+        """
+        self.error_rates.pop(0)
+        self.error_rates.append(y_baseline - y_predicted)
+        return np.mean(self.error_rates)
 
 if __name__ == "__main__":
     X = np.load("./smoke_data/X.npy", allow_pickle=True)

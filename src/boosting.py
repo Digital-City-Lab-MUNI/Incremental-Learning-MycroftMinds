@@ -381,9 +381,14 @@ class xIncubationBoost:
 
         # Index-based pruning (eGBDT)
         for n, node in enumerate(self.chain):
-            y_pred = node.predict(X) * (
-                1.0 if n == 0 else self.learning_rate
-            )  # first node is not multiplied by learning rate
+            if len(X.shape) == 1:
+                y_pred = node.predict(np.array([X]))[0] * (
+                    1.0 if n == 0 else self.learning_rate
+                )  # first node is not multiplied by learning rate
+            else:
+                y_pred = node.predict(X) * (
+                    1.0 if n == 0 else self.learning_rate
+                )  # first node is not multiplied by learning rate
             y_pred_strong += y_pred
             residual = y - y_pred_strong
 
@@ -395,7 +400,7 @@ class xIncubationBoost:
                 else:
                     break
             else:
-                node.partial_fit([X], residual)
+                node.partial_fit(np.array([X]), residual)
 
         if pruning_index is not None:
             self.chain = self.chain[: pruning_index + 1]
@@ -444,10 +449,16 @@ class xIncubationBoost:
 
     def predict(self, X: Sequence[float]) -> float:
         """Predict a single target value for a single feature vector."""
-        y_pred = 0.0
-        for n, node in enumerate(self.chain):
-            y_pred += node.predict(X) * (1.0 if n == 0 else self.learning_rate)
-        return y_pred
+        if len(X.shape) == 1:
+            X = np.array([X])
+
+        y_preds = []
+        for x in X:
+            y_pred = 0.0
+            for n, node in enumerate(self.chain):
+                y_pred += node.predict(x)[0] * (1.0 if n == 0 else self.learning_rate)
+            y_preds.append(y_pred)
+        return y_preds
 
 
 
