@@ -6,6 +6,7 @@
 *.code-workspace
 *.log
 .pytest_cache/
+.venv/
 # datasets: keep local data out of git (see data/README.md). data/* already
 # covers everything under data/; the explicit patterns document the intent.
 data/*

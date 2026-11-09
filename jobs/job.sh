@@ -32,15 +32,15 @@ RESULTS="results/rerun"
 # --- Python environment -----------------------------------------------------
 if command -v uv >/dev/null 2>&1; then
   VENV_DIR="${SLURM_SUBMIT_DIR}/venv-$SLURM_JOB_ID"
-  uv venv "$VENV_DIR"
+  uv venv --python "$(command -v python3)" --system-site-packages "$VENV_DIR"
   # shellcheck disable=SC1091
   source "$VENV_DIR/bin/activate"
-  uv pip install -r requirements.txt
+  uv pip install -r requirements.txt || echo "[warn] uv pip install failed (offline?); continuing with system site-packages"
 else
-  python3 -m venv .venv
+  python3 -m venv --system-site-packages .venv
   # shellcheck disable=SC1091
   source .venv/bin/activate
-  pip install -r requirements.txt
+  pip install -r requirements.txt || echo "[warn] pip install failed (offline?); continuing with system site-packages"
 fi
 echo "python: $(python -c 'import sys; print(sys.version)')"
 
