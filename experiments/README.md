@@ -67,9 +67,11 @@ adds `*_delta` columns to compare against a previous run.
 
 ```bash
 # push this branch first (must contain experiments/ + the src/ fixes)
-wes launch jobs/fastodt_rerun.wes     # from the repo root; submits the SLURM array job
-wes sync --ssh hpc                    # syncs wes.status + results/rerun back into results/
-wes check --ssh hpc                   # one-shot status
+# wes CLI: the current ../../wes checkout registers `dispatch` (not `launch`);
+# (cd ../../wes && uv sync) regenerates the `wes` console script first:
+../../wes/.venv/bin/wes dispatch jobs/fastodt_rerun.wes   # from the repo root; submits the SLURM array job
+../../wes/.venv/bin/wes sync --ssh hpc                    # syncs wes.status + results/rerun into results/
+../../wes/.venv/bin/wes check --ssh hpc                   # one-shot status
 ```
 
 `jobs/fastodt_rerun.wes` clones this repo on `ssh: hpc`, runs `jobs/pre.sh` (links

@@ -47,8 +47,9 @@ exp-prepare:
 	${PYTHON} -m experiments.prepare_results --results-dir $(RESULTS)/raw --out $(RESULTS)/tables
 
 # --- HPC rerun via WES (see jobs/fastodt_rerun.wes) ---
+WES ?= ../wes/.venv/bin/wes
 wes-launch:
-	wes launch jobs/fastodt_rerun.wes
+	$(WES) dispatch jobs/fastodt_rerun.wes
 
 wes-sync:
-	wes sync --ssh hpc
+	$(WES) sync --ssh hpc

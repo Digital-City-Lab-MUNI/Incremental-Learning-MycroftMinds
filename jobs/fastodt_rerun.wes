@@ -1,9 +1,13 @@
 # WES task definition: rerun the FastODT / IncubationBoost evaluation matrix on the HPC.
 #
-# Launch from THIS repo's root with the wes CLI (see ../../wes):
-#   wes launch jobs/fastodt_rerun.wes        # or: python -m wes.cli jobs/fastodt_rerun.wes
-#   wes sync --ssh hpc                        # watch wes.status + sync artifacts into results/
-#   wes check --ssh hpc                       # one-shot status
+# Launch from THIS repo's root with the wes CLI (see ../../wes). NOTE: in the
+# current wes checkout the subcommand is `dispatch` (README's `wes launch ...`
+# and `python -m wes.cli` are stale; cli.py has no __main__ guard):
+#   (cd ../../wes && uv sync)                # regenerates the `wes` script (wes.cli:main)
+#   ../../wes/.venv/bin/wes dispatch jobs/fastodt_rerun.wes
+#   ../../wes/.venv/bin/wes sync --ssh hpc    # watch wes.status + sync artifacts into results/
+#   ../../wes/.venv/bin/wes check --ssh hpc   # one-shot status
+# (or without installing: ../../wes/.venv/bin/python -c "import sys; sys.argv=['wes','dispatch','jobs/fastodt_rerun.wes']; from wes.cli import main; main()")
 #
 # Prerequisites:
 #   1. push this repo; `branch` below must contain BOTH the experiment tooling
