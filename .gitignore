@@ -6,8 +6,14 @@
 *.code-workspace
 *.log
 .pytest_cache/
+# datasets: keep local data out of git (see data/README.md). data/* already
+# covers everything under data/; the explicit patterns document the intent.
 data/*
 !data/*.md
+data/*.npz
+data/*.csv
+data/*.rar
+data/*.zip
 results/*
 !results/*.md
 results (07-2025)/
