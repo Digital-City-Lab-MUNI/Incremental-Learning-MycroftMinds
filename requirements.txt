@@ -12,3 +12,4 @@ matplotlib==3.10.3
 seaborn==0.13.2
 # Dev dependencies
 ruff==0.12.8
+pyyaml==6.0.3  # experiment configs (configs/experiments.yaml)

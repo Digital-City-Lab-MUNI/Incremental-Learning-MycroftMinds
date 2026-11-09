@@ -1,0 +1,1198 @@
+_comment:
+- Experiment matrix for rerunning the FastODT / IncubationBoost evaluations after the
+- behavioral fixes (see Incremental-Learning-MycroftMinds/TODO.md, Phase 5). Transcribed
+- from notebooks/{first_batch,second_batch}/*_evaluation.ipynb in that repository.
+- '''$use_residuals'' in params is replaced by the dataset''s use_residuals flag.'
+protocol:
+  forecast_horizon: 1h
+  agg_level: hourly
+  update_freq_batch: 14D
+  normalize_robust: true
+  predict_train_test: false
+datasets:
+  fb_1h:
+    data_dir: first_batch
+    prefix: dev_4_1h_wfv
+    data_freq: H
+    use_residuals: true
+    spike_prominence: 10
+    update_freq_incremental: 1h
+    features:
+    - time
+    - device_id
+    - hour
+    - weekday
+    - month
+    - L1_act_power_lag_1h
+    - L1_act_power_lag_24h
+    - L1_app_power_lag_1h
+    - L1_app_power_lag_24h
+    - L1_current_lag_1h
+    - L1_current_lag_24h
+    - L1_react_power_lag_1h
+    - L1_react_power_lag_24h
+    - L1_voltage_lag_1h
+    - L1_voltage_lag_24h
+    - L2_act_power_lag_1h
+    - L2_act_power_lag_24h
+    - L2_app_power_lag_1h
+    - L2_app_power_lag_24h
+    - L2_current_lag_1h
+    - L2_current_lag_24h
+    - L2_react_power_lag_1h
+    - L2_react_power_lag_24h
+    - L2_voltage_lag_1h
+    - L2_voltage_lag_24h
+    - L3_act_power_lag_1h
+    - L3_act_power_lag_24h
+    - L3_app_power_lag_1h
+    - L3_app_power_lag_24h
+    - L3_current_lag_1h
+    - L3_current_lag_24h
+    - L3_react_power_lag_1h
+    - L3_react_power_lag_24h
+    - L3_voltage_lag_1h
+    - L3_voltage_lag_24h
+    - grid_freq_lag_1h
+    - grid_freq_lag_24h
+    - powerfactor1_lag_1h
+    - powerfactor1_lag_24h
+    - powerfactor2_lag_1h
+    - powerfactor2_lag_24h
+    - powerfactor3_lag_1h
+    - powerfactor3_lag_24h
+    models:
+    - BL_Prev
+    - BL_Mean
+    - GBDT
+    - RF
+    - HoeffdingTree
+    - ARF_Hoeffding
+    - FastODT
+    - xFastODT
+    - ARF_FastODT
+    - IncubationBoost
+    model_params:
+      BL_Prev:
+        is_residual: $use_residuals
+      BL_Mean: {}
+      GBDT:
+        n_estimators: 100
+        learning_rate: 0.03
+        subsample: 0.8
+        max_depth: 10
+        random_state: 42
+      RF:
+        n_estimators: 100
+        max_depth: 10
+        max_features: sqrt
+        random_state: 42
+        n_jobs: -1
+      HoeffdingTree:
+        max_depth: 10
+        grace_period: 10
+        delta: 0.5
+        tau: 0.05
+        leaf_prediction: mean
+      ARF_Hoeffding:
+        n_models: 10
+        max_features: 0.8
+        aggregation_method: median
+        grace_period: 10
+        max_depth: 10
+        delta: 0.5
+        tau: 0.01
+        seed: 42
+      FastODT:
+        depth: 50
+        grace_period: 24
+        grace_period_depth: 0
+        split_confidence: 0.005
+        max_feature: 0.3
+        tie_threshold: 0.05
+        bin_type: mean
+        split_criterion: vr_rel
+      xFastODT:
+        depth: 50
+        grace_period: 12
+        grace_period_depth: 0
+        split_confidence: 0.005
+        max_feature: 1.0
+        tie_threshold: 0.05
+        bin_type: mean
+        split_criterion: vr_rel
+      ARF_FastODT:
+        n_models: 20
+        aggregation_method: mean
+        grace_period: 0
+        disable_weighted_vote: true
+        max_depth: 50
+        delta: 0.05
+        tau: 0.01
+        seed: 42
+        max_features: 0.7
+        bin_type: mean
+        max_bins: 1
+        split_criterion: vr_rel
+      IncubationBoost:
+        length: 20
+        learning_rate: 0.5
+        depth: 50
+        grace_period: 24
+        split_confidence: 0.01
+        eagerness: 0
+        grace_period_depth: -1
+        bin_type: mean
+        max_bins: 1
+        max_feature: 0.7
+        tie_threshold: 0.05
+        split_criterion: vr_rel
+        verbose: false
+  fb_15m:
+    data_dir: first_batch
+    prefix: dev_4_15m_new_wfv
+    data_freq: 15min
+    use_residuals: false
+    spike_prominence: 9
+    update_freq_incremental: 15min
+    features:
+    - time
+    - device_id
+    - hour
+    - weekday
+    - month
+    - L1_act_power_lag_1h
+    - L1_act_power_lag_24h
+    - L1_act_power_lag_1455min
+    - L1_act_power_lag_168h
+    - L1_app_power_lag_1h
+    - L1_app_power_lag_24h
+    - L1_app_power_lag_1455min
+    - L1_app_power_lag_168h
+    - L1_current_lag_1h
+    - L1_current_lag_24h
+    - L1_current_lag_1455min
+    - L1_current_lag_168h
+    - L1_react_power_lag_1h
+    - L1_react_power_lag_24h
+    - L1_react_power_lag_1455min
+    - L1_react_power_lag_168h
+    - L1_voltage_lag_1h
+    - L1_voltage_lag_24h
+    - L1_voltage_lag_1455min
+    - L1_voltage_lag_168h
+    - L2_act_power_lag_1h
+    - L2_act_power_lag_24h
+    - L2_act_power_lag_1455min
+    - L2_act_power_lag_168h
+    - L2_app_power_lag_1h
+    - L2_app_power_lag_24h
+    - L2_app_power_lag_1455min
+    - L2_app_power_lag_168h
+    - L2_current_lag_1h
+    - L2_current_lag_24h
+    - L2_current_lag_1455min
+    - L2_current_lag_168h
+    - L2_react_power_lag_1h
+    - L2_react_power_lag_24h
+    - L2_react_power_lag_1455min
+    - L2_react_power_lag_168h
+    - L2_voltage_lag_1h
+    - L2_voltage_lag_24h
+    - L2_voltage_lag_1455min
+    - L2_voltage_lag_168h
+    - L3_act_power_lag_1h
+    - L3_act_power_lag_24h
+    - L3_act_power_lag_1455min
+    - L3_act_power_lag_168h
+    - L3_app_power_lag_1h
+    - L3_app_power_lag_24h
+    - L3_app_power_lag_1455min
+    - L3_app_power_lag_168h
+    - L3_current_lag_1h
+    - L3_current_lag_24h
+    - L3_current_lag_1455min
+    - L3_current_lag_168h
+    - L3_react_power_lag_1h
+    - L3_react_power_lag_24h
+    - L3_react_power_lag_1455min
+    - L3_react_power_lag_168h
+    - L3_voltage_lag_1h
+    - L3_voltage_lag_24h
+    - L3_voltage_lag_1455min
+    - L3_voltage_lag_168h
+    - grid_freq_lag_1h
+    - grid_freq_lag_24h
+    - grid_freq_lag_1455min
+    - grid_freq_lag_168h
+    - powerfactor1_lag_1h
+    - powerfactor1_lag_24h
+    - powerfactor1_lag_1455min
+    - powerfactor1_lag_168h
+    - powerfactor2_lag_1h
+    - powerfactor2_lag_24h
+    - powerfactor2_lag_1455min
+    - powerfactor2_lag_168h
+    - powerfactor3_lag_1h
+    - powerfactor3_lag_24h
+    - powerfactor3_lag_1455min
+    - powerfactor3_lag_168h
+    models:
+    - BL_Prev
+    - BL_Mean
+    - GBDT
+    - RF
+    - HoeffdingTree
+    - ARF_Hoeffding
+    - FastODT
+    - xFastODT
+    - ARF_FastODT
+    - IncubationBoost
+    model_params:
+      BL_Prev:
+        is_residual: $use_residuals
+      BL_Mean: {}
+      GBDT:
+        n_estimators: 100
+        learning_rate: 0.03
+        subsample: 0.8
+        max_depth: 10
+        random_state: 42
+      RF:
+        n_estimators: 100
+        max_depth: 10
+        max_features: sqrt
+        random_state: 42
+        n_jobs: -1
+      HoeffdingTree:
+        max_depth: 10
+        grace_period: 10
+        delta: 0.5
+        tau: 0.05
+        leaf_prediction: mean
+      ARF_Hoeffding:
+        n_models: 10
+        max_features: 0.8
+        aggregation_method: median
+        grace_period: 10
+        max_depth: 10
+        delta: 0.5
+        tau: 0.01
+        seed: 42
+      FastODT:
+        depth: 50
+        grace_period: 24
+        grace_period_depth: 0
+        split_confidence: 0.005
+        max_feature: 1
+        tie_threshold: 0.05
+        bin_type: mean
+        split_criterion: vr_rel
+      xFastODT:
+        depth: 50
+        grace_period: 24
+        grace_period_depth: 0
+        split_confidence: 0.005
+        max_feature: 0.3
+        tie_threshold: 0.05
+        bin_type: mean
+        split_criterion: vr_rel
+      ARF_FastODT:
+        n_models: 20
+        aggregation_method: mean
+        grace_period: 0
+        disable_weighted_vote: true
+        max_depth: 50
+        delta: 0.05
+        tau: 0.01
+        seed: 42
+        max_features: 0.7
+        bin_type: mean
+        max_bins: 1
+        split_criterion: vr_rel
+      IncubationBoost:
+        length: 20
+        learning_rate: 0.5
+        depth: 50
+        grace_period: 24
+        split_confidence: 0.01
+        eagerness: 0
+        grace_period_depth: -1
+        bin_type: mean
+        max_bins: 1
+        max_feature: 0.7
+        tie_threshold: 0.05
+        split_criterion: vr_rel
+        verbose: false
+  sb_com_1h:
+    data_dir: second_batch/commercial
+    prefix: sb_com_hour_wfv
+    data_freq: H
+    use_residuals: true
+    spike_prominence: 2.0
+    update_freq_incremental: 1h
+    features:
+    - time
+    - device_id
+    - hour
+    - weekday
+    - month
+    - consumption_lag_1h
+    - consumption_lag_2h
+    - consumption_lag_3h
+    - consumption_lag_24h
+    models:
+    - BL_Prev
+    - BL_Mean
+    - GBDT
+    - RF
+    - HoeffdingTree
+    - ARF_Hoeffding
+    - FastODT
+    - xFastODT
+    - ARF_FastODT
+    - IncubationBoost
+    - IncubationBoost_WR
+    - IncubationBoost_Elastic
+    model_params:
+      BL_Prev:
+        is_residual: $use_residuals
+      BL_Mean: {}
+      GBDT:
+        n_estimators: 100
+        learning_rate: 0.05
+        max_depth: 3
+        subsample: 0.6
+        random_state: 42
+      RF:
+        n_estimators: 300
+        max_depth: 7
+        max_features: 1.0
+        random_state: 42
+        n_jobs: -1
+      HoeffdingTree:
+        max_depth: 10
+        grace_period: 96
+        tau: 0.001
+        delta: 0.005
+      ARF_Hoeffding:
+        n_models: 10
+        max_features: 0.8
+        aggregation_method: median
+        grace_period: 10
+        max_depth: 10
+        delta: 0.5
+        tau: 0.01
+        seed: 42
+      FastODT:
+        depth: 30
+        grace_period: 96
+        grace_period_depth: 0
+        split_confidence: 0.1
+        max_feature: 0.7
+        tie_threshold: 0.05
+        bin_type: adaptive
+        max_bins: 16
+        split_criterion: vr_rel
+      xFastODT:
+        depth: 50
+        grace_period: 24
+        grace_period_depth: 0
+        split_confidence: 0.005
+        max_feature: 0.3
+        tie_threshold: 0.05
+        bin_type: mean
+        split_criterion: vr_rel
+      ARF_FastODT:
+        n_models: 5
+        max_features: 0.5
+        max_depth: 30
+        aggregation_method: mean
+        disable_weighted_vote: true
+        eagerness: 0
+        tau: 0.05
+        delta: 0.05
+        grace_period: 96
+        grace_period_depth: 0
+        bin_type: mean
+        split_criterion: vr_rel
+      IncubationBoost:
+        length: 40
+        learning_rate: 0.5
+        depth: 10
+        grace_period: 0
+        grace_period_depth: 1
+        split_confidence: 0.05
+        max_feature: 1.0
+        tie_threshold: 0.01
+        bin_type: adaptive
+        max_bins: 16
+        split_criterion: vr_rel
+        verbose: false
+      IncubationBoost_WR:
+        length: 30
+        learning_rate: 0.01
+        depth: 30
+        grace_period: 24
+        grace_period_depth: -1
+        split_confidence: 0.1
+        max_feature: 1
+        tie_threshold: 0.05
+        bin_type: adaptive
+        max_bins: 32
+        split_criterion: vr_rel
+        verbose: false
+        pruning_strategy: weighted_ratio
+        wr_fixed_multiplier: 0.5
+        wr_alpha: 1
+        wr_beta: 0.1
+        wr_gamma: 0.0
+        wr_baseline: 0.0
+        wr_min_keep: 1
+        wr_error_agg:
+        - ema
+        wr_ema_decay: 0.95
+        wr_gate_eps: 0.05
+        wr_cooldown: 32
+      IncubationBoost_Elastic:
+        length: 50
+        learning_rate: 0.001
+        depth: 5
+        grace_period: 48
+        grace_period_depth: -1
+        split_confidence: 0.1
+        max_feature: 0.5
+        tie_threshold: 0.05
+        bin_type: adaptive
+        max_bins: 32
+        split_criterion: vr_rel
+        verbose: false
+        pruning_strategy: new_egbdt
+        wr_fixed_multiplier: 2.0
+        wr_alpha: 0
+        wr_beta: 0
+        wr_gamma: 0
+        wr_baseline: 0.0
+        wr_min_keep: 3
+        wr_error_agg: ema
+        wr_ema_decay: 0
+        wr_gate_eps: 0
+        wr_cooldown: 0
+  sb_com_15m:
+    data_dir: second_batch/commercial
+    prefix: sb_com_15m_wfv
+    data_freq: 15min
+    use_residuals: false
+    spike_prominence: 2.0
+    update_freq_incremental: 15min
+    features:
+    - time
+    - device_id
+    - hour
+    - weekday
+    - month
+    - consumption_lag_1h
+    - consumption_lag_75min
+    - consumption_lag_24h
+    - consumption_lag_111min
+    models:
+    - BL_Prev
+    - BL_Mean
+    - GBDT
+    - RF
+    - HoeffdingTree
+    - ARF_Hoeffding
+    - FastODT
+    - xFastODT
+    - ARF_FastODT
+    - IncubationBoost
+    model_params:
+      BL_Prev:
+        is_residual: $use_residuals
+      BL_Mean: {}
+      GBDT:
+        n_estimators: 150
+        learning_rate: 0.01
+        max_depth: 3
+        subsample: 0.8
+        random_state: 42
+      RF:
+        n_estimators: 300
+        max_depth: 7
+        max_features: 1.0
+        random_state: 42
+        n_jobs: -1
+      HoeffdingTree:
+        max_depth: 10
+        grace_period: 96
+        tau: 0.001
+        delta: 0.005
+      ARF_Hoeffding:
+        n_models: 12
+        max_features: 0.8
+        aggregation_method: median
+        grace_period: 10
+        max_depth: 10
+        delta: 0.5
+        tau: 0.01
+        seed: 42
+      FastODT:
+        depth: 50
+        grace_period: 48
+        grace_period_depth: -1
+        split_confidence: 0.05
+        max_feature: 0.7
+        tie_threshold: 0.05
+        bin_type: adaptive
+        max_bins: 32
+        split_criterion: vr_rel
+      xFastODT:
+        depth: 50
+        grace_period: 24
+        grace_period_depth: 0
+        split_confidence: 0.005
+        max_feature: 0.3
+        tie_threshold: 0.05
+        bin_type: mean
+        split_criterion: vr_rel
+      ARF_FastODT:
+        n_models: 20
+        aggregation_method: mean
+        grace_period: 0
+        disable_weighted_vote: true
+        max_depth: 50
+        delta: 0.05
+        tau: 0.01
+        seed: 42
+        max_features: 0.7
+        bin_type: mean
+        max_bins: 1
+        split_criterion: vr_rel
+      IncubationBoost:
+        length: 10
+        learning_rate: 0.5
+        depth: 5
+        grace_period: 0
+        grace_period_depth: -1
+        split_confidence: 0.5
+        max_feature: 1.0
+        tie_threshold: 0.05
+        bin_type: adaptive
+        max_bins: 8
+        split_criterion: vr_rel
+        verbose: false
+  sb_ind_1h:
+    data_dir: second_batch/industrial
+    prefix: sb_ind_hour_wfv
+    data_freq: H
+    use_residuals: true
+    spike_prominence: 3.5
+    update_freq_incremental: 1h
+    features:
+    - time
+    - device_id
+    - hour
+    - weekday
+    - month
+    - consumption_lag_1h
+    - consumption_lag_2h
+    - consumption_lag_24h
+    - consumption_lag_25h
+    models:
+    - BL_Prev
+    - BL_Mean
+    - GBDT
+    - RF
+    - HoeffdingTree
+    - ARF_Hoeffding
+    - FastODT
+    - xFastODT
+    - ARF_FastODT
+    - IncubationBoost
+    - IncubationBoost_WR
+    - IncubationBoost_Elastic
+    model_params:
+      BL_Prev:
+        is_residual: $use_residuals
+      BL_Mean: {}
+      GBDT:
+        n_estimators: 150
+        learning_rate: 0.05
+        max_depth: 7
+        subsample: 0.8
+        random_state: 42
+      RF:
+        n_estimators: 300
+        max_depth: 20
+        max_features: 0.7
+        random_state: 42
+        n_jobs: -1
+      HoeffdingTree:
+        max_depth: 15
+        grace_period: 10
+        tau: 0.1
+        delta: 0.01
+        leaf_prediction: mean
+      ARF_Hoeffding:
+        n_models: 20
+        max_features: 0.8
+        aggregation_method: mean
+        grace_period: 24
+        max_depth: 10
+        delta: 0.05
+        tau: 0.05
+        seed: 42
+      FastODT:
+        depth: 50
+        grace_period: 10
+        grace_period_depth: -1
+        split_confidence: 0.5
+        max_feature: 1.0
+        tie_threshold: 0.05
+        bin_type: adaptive
+        max_bins: 32
+        split_criterion: vr_rel
+      xFastODT:
+        depth: 50
+        grace_period: 24
+        grace_period_depth: 0
+        split_confidence: 0.005
+        max_feature: 0.3
+        tie_threshold: 0.05
+        bin_type: mean
+        split_criterion: vr_rel
+      ARF_FastODT:
+        n_models: 60
+        max_feature: 0.5
+        max_depth: 30
+        aggregation_method: mean
+        disable_weighted_vote: true
+        eagerness: 0
+        tau: 0.01
+        delta: 0.1
+        grace_period: 0
+        grace_period_depth: 0
+        bin_type: mean
+        split_criterion: vr_rel
+      IncubationBoost:
+        length: 20
+        learning_rate: 0.5
+        depth: 5
+        grace_period: 48
+        grace_period_depth: -1
+        split_confidence: 0.5
+        max_feature: 1.0
+        tie_threshold: 0.05
+        bin_type: adaptive
+        max_bins: 4
+        split_criterion: vr_rel
+        verbose: false
+      IncubationBoost_WR:
+        length: 40
+        learning_rate: 0.001
+        depth: 20
+        grace_period: 24
+        grace_period_depth: -1
+        split_confidence: 0.05
+        max_feature: 0.7
+        tie_threshold: 0.05
+        bin_type: adaptive
+        max_bins: 32
+        split_criterion: vr_rel
+        verbose: false
+        wr_fixed_multiplier: 1.8
+        wr_alpha: 1.2
+        wr_beta: 0.5
+        wr_gamma: 0.1
+        wr_baseline: 0.0
+        wr_min_keep: 2
+        wr_error_agg:
+        - ema
+        wr_ema_decay: 0.8
+        wr_gate_eps: 0.15
+        wr_cooldown: 16
+      IncubationBoost_Elastic:
+        length: 50
+        learning_rate: 0.1
+        depth: 30
+        grace_period: 48
+        grace_period_depth: -1
+        split_confidence: 0.1
+        max_feature: 1
+        tie_threshold: 0.05
+        bin_type: adaptive
+        max_bins: 16
+        split_criterion: vr_rel
+        verbose: false
+        pruning_strategy: new_egbdt
+  sb_ind_15m:
+    data_dir: second_batch/industrial
+    prefix: sb_ind_15m_wfv
+    data_freq: 15min
+    use_residuals: false
+    spike_prominence: 5.0
+    update_freq_incremental: 15min
+    features:
+    - time
+    - device_id
+    - hour
+    - weekday
+    - month
+    - consumption_lag_1h
+    - consumption_lag_75min
+    - consumption_lag_24h
+    - consumption_lag_111min
+    models:
+    - BL_Prev
+    - BL_Mean
+    - GBDT
+    - RF
+    - HoeffdingTree
+    - ARF_Hoeffding
+    - FastODT
+    - xFastODT
+    - ARF_FastODT
+    - IncubationBoost
+    model_params:
+      BL_Prev:
+        is_residual: $use_residuals
+      BL_Mean: {}
+      GBDT:
+        n_estimators: 150
+        learning_rate: 0.05
+        max_depth: 7
+        subsample: 0.8
+        random_state: 42
+      RF:
+        n_estimators: 300
+        max_depth: 20
+        max_features: 0.7
+        random_state: 42
+        n_jobs: -1
+      HoeffdingTree:
+        max_depth: 15
+        grace_period: 10
+        tau: 0.1
+        delta: 0.01
+        leaf_prediction: mean
+      ARF_Hoeffding:
+        n_models: 20
+        max_features: 0.8
+        aggregation_method: mean
+        grace_period: 24
+        max_depth: 10
+        delta: 0.05
+        tau: 0.05
+        seed: 42
+      FastODT:
+        depth: 50
+        grace_period: 10
+        grace_period_depth: -1
+        split_confidence: 0.5
+        max_feature: 1.0
+        tie_threshold: 0.05
+        bin_type: adaptive
+        max_bins: 32
+        split_criterion: vr_rel
+      xFastODT:
+        depth: 50
+        grace_period: 24
+        grace_period_depth: 0
+        split_confidence: 0.005
+        max_feature: 0.3
+        tie_threshold: 0.05
+        bin_type: mean
+        split_criterion: vr_rel
+      ARF_FastODT:
+        n_models: 60
+        max_feature: 0.5
+        max_depth: 30
+        aggregation_method: mean
+        disable_weighted_vote: true
+        eagerness: 0
+        tau: 0.01
+        delta: 0.1
+        grace_period: 0
+        grace_period_depth: 0
+        bin_type: mean
+        split_criterion: vr_rel
+      IncubationBoost:
+        length: 20
+        learning_rate: 0.5
+        depth: 5
+        grace_period: 48
+        grace_period_depth: -1
+        split_confidence: 0.5
+        max_feature: 1.0
+        tie_threshold: 0.05
+        bin_type: adaptive
+        max_bins: 4
+        split_criterion: vr_rel
+        verbose: false
+  od_aq_1h:
+    data_dir: other_data
+    prefix: od_AQ_hour_wfv
+    data_freq: H
+    use_residuals: true
+    spike_prominence: 5
+    update_freq_incremental: 1h
+    features:
+    - time
+    - device_id
+    - hour
+    - weekday
+    - month
+    - pm2.5_lag_1h
+    - pm2.5_lag_2h
+    - pm2.5_lag_3h
+    - pm2.5_lag_4h
+    - pm2.5_lag_24h
+    - TEMP_lag_1h
+    - TEMP_lag_2h
+    - TEMP_lag_3h
+    - TEMP_lag_4h
+    - TEMP_lag_24h
+    - DEWP_lag_1h
+    - DEWP_lag_2h
+    - DEWP_lag_3h
+    - DEWP_lag_4h
+    - DEWP_lag_24h
+    - Iws_lag_1h
+    - Iws_lag_2h
+    - Iws_lag_3h
+    - Iws_lag_4h
+    - Iws_lag_24h
+    models:
+    - BL_Mean
+    - BL_Prev
+    - GBDT
+    - RF
+    - HoeffdingTree
+    - ARF_Hoeffding
+    - FastODT
+    - ARF_FastODT
+    - IncubationBoost
+    - IncubationBoost_Elastic
+    model_params:
+      BL_Mean: {}
+      BL_Prev:
+        is_residual: true
+      GBDT:
+        n_estimators: 25
+        learning_rate: 0.01
+        max_depth: 3
+        subsample: 1.0
+        random_state: 42
+      RF:
+        n_estimators: 300
+        max_depth: 3
+        max_features: 0.3
+        random_state: 42
+        n_jobs: -1
+      HoeffdingTree:
+        max_depth: 3
+        grace_period: 48
+        tau: 0.01
+        delta: 0.005
+      ARF_Hoeffding:
+        n_models: 10
+        max_features: 0.8
+        aggregation_method: median
+        grace_period: 10
+        max_depth: 10
+        delta: 0.5
+        tau: 0.01
+        seed: 42
+      FastODT:
+        depth: 10
+        grace_period: 96
+        grace_period_depth: -1
+        split_confidence: 0.001
+        max_feature: 1.0
+        tie_threshold: 0.01
+        bin_type: adaptive
+        max_bins: 8
+        split_criterion: vr_rel
+      ARF_FastODT:
+        n_models: 20
+        aggregation_method: mean
+        grace_period: 0
+        disable_weighted_vote: true
+        max_depth: 10
+        delta: 0.005
+        tau: 0.01
+        max_features: 0.7
+        bin_type: adaptive
+        max_bins: 8
+        split_criterion: vr_rel
+        seed: 42
+      IncubationBoost:
+        length: 40
+        learning_rate: 0.001
+        depth: 5
+        grace_period: 48
+        grace_period_depth: -1
+        split_confidence: 0.01
+        max_feature: 0.3
+        tie_threshold: 0.01
+        bin_type: adaptive
+        max_bins: 16
+        split_criterion: vr_rel
+        verbose: false
+      IncubationBoost_Elastic:
+        length: 40
+        learning_rate: 0.001
+        depth: 5
+        grace_period: 48
+        grace_period_depth: -1
+        split_confidence: 0.01
+        max_feature: 0.3
+        tie_threshold: 0.01
+        bin_type: adaptive
+        max_bins: 16
+        split_criterion: vr_rel
+        verbose: false
+    _note: from notebooks/other_data/aq_1h_resid.ipynb
+  od_electricity_1h:
+    data_dir: other_data
+    prefix: od_electricity_hour_wfv
+    data_freq: H
+    use_residuals: true
+    spike_prominence: 5
+    update_freq_incremental: 1h
+    features:
+    - time
+    - device_id
+    - hour
+    - weekday
+    - month
+    - Global_active_power_lag_1h
+    - Global_active_power_lag_2h
+    - Global_active_power_lag_24h
+    - Global_active_power_lag_168h
+    - Voltage_lag_1h
+    - Voltage_lag_2h
+    - Voltage_lag_24h
+    - Voltage_lag_168h
+    - Global_reactive_power_lag_1h
+    - Global_reactive_power_lag_2h
+    - Global_reactive_power_lag_24h
+    - Global_reactive_power_lag_168h
+    models:
+    - BL_Mean
+    - BL_Prev
+    - GBDT
+    - RF
+    - HoeffdingTree
+    - ARF_Hoeffding
+    - FastODT
+    - ARF_FastODT
+    - IncubationBoost
+    - IncubationBoost_Elastic
+    model_params:
+      BL_Mean: {}
+      BL_Prev:
+        is_residual: true
+      GBDT:
+        n_estimators: 25
+        learning_rate: 0.01
+        max_depth: 3
+        subsample: 0.8
+        random_state: 42
+      RF:
+        n_estimators: 200
+        max_depth: 7
+        max_features: 0.7
+        random_state: 42
+        n_jobs: -1
+      HoeffdingTree:
+        max_depth: 3
+        grace_period: 10
+        tau: 0.005
+        delta: 0.05
+        leaf_prediction: mean
+      ARF_Hoeffding:
+        n_models: 10
+        max_features: 0.8
+        aggregation_method: median
+        grace_period: 10
+        max_depth: 10
+        delta: 0.5
+        tau: 0.01
+        seed: 42
+      FastODT:
+        depth: 5
+        grace_period: 10
+        grace_period_depth: -1
+        split_confidence: 0.001
+        max_feature: 0.7
+        tie_threshold: 0.01
+        bin_type: adaptive
+        max_bins: 8
+        split_criterion: vr_rel
+      ARF_FastODT:
+        n_models: 20
+        aggregation_method: mean
+        grace_period: 0
+        disable_weighted_vote: true
+        max_depth: 10
+        delta: 0.005
+        tau: 0.01
+        max_features: 0.7
+        bin_type: adaptive
+        max_bins: 8
+        split_criterion: vr_rel
+        seed: 42
+      IncubationBoost:
+        length: 30
+        learning_rate: 0.1
+        depth: 5
+        grace_period: 48
+        grace_period_depth: 1
+        split_confidence: 0.01
+        max_feature: 0.3
+        tie_threshold: 0.01
+        bin_type: adaptive
+        max_bins: 16
+        split_criterion: vr_rel
+        random_state: 42
+        verbose: false
+      IncubationBoost_Elastic:
+        length: 50
+        learning_rate: 0.001
+        depth: 5
+        grace_period: 48
+        grace_period_depth: -1
+        split_confidence: 0.1
+        max_feature: 0.5
+        tie_threshold: 0.05
+        bin_type: adaptive
+        max_bins: 32
+        split_criterion: vr_rel
+        verbose: false
+        pruning_strategy: new_egbdt
+        wr_fixed_multiplier: 2.0
+        wr_alpha: 0
+        wr_beta: 0
+        wr_gamma: 0
+        wr_baseline: 0.0
+        wr_min_keep: 3
+        wr_error_agg: ema
+        wr_ema_decay: 0
+        wr_gate_eps: 0
+        wr_cooldown: 0
+    _note: from notebooks/other_data/electricity_1h_resid.ipynb
+  od_friedman_1h:
+    data_dir: other_data
+    prefix: od_friedman_hour_wfv
+    data_freq: H
+    use_residuals: true
+    spike_prominence: 6.5
+    update_freq_incremental: 1h
+    features:
+    - time
+    - device_id
+    - hour
+    - weekday
+    - month
+    - y_lag_1h
+    - y_lag_2h
+    - y_lag_3h
+    - y_lag_4h
+    - y_lag_5h
+    - y_lag_6h
+    models:
+    - BL_Mean
+    - BL_Prev
+    - GBDT
+    - RF
+    - HoeffdingTree
+    - ARF_Hoeffding
+    - FastODT
+    - ARF_FastODT
+    - IncubationBoost
+    - IncubationBoost_Elastic
+    model_params:
+      BL_Mean: {}
+      BL_Prev:
+        is_residual: true
+      GBDT:
+        n_estimators: 25
+        learning_rate: 0.05
+        max_depth: 3
+        subsample: 1.0
+        random_state: 42
+      RF:
+        n_estimators: 100
+        max_depth: 3
+        max_features: 0.3
+        random_state: 42
+        n_jobs: -1
+      HoeffdingTree:
+        max_depth: 3
+        grace_period: 96
+        tau: 0.01
+        delta: 0.01
+      ARF_Hoeffding:
+        n_models: 40
+        max_features: 0.1
+        max_depth: 7
+        aggregation_method: median
+        disable_weighted_vote: true
+        drift_detector: null
+        warning_detector: null
+        tau: 0.005
+        delta: 0.01
+        grace_period: 96
+      FastODT:
+        depth: 50
+        grace_period: 0
+        grace_period_depth: 1
+        split_confidence: 0.005
+        max_feature: 0.3
+        tie_threshold: 0.01
+        bin_type: adaptive
+        max_bins: 8
+        split_criterion: vr_rel
+      ARF_FastODT:
+        n_models: 30
+        max_features: 0.7
+        max_depth: 10
+        aggregation_method: mean
+        disable_weighted_vote: false
+        drift_detector: null
+        warning_detector: null
+        eagerness: 0
+        tau: 0.05
+        delta: 0.5
+        grace_period: 96
+        grace_period_depth: 1
+        bin_type: mean
+        split_criterion: vr_rel
+      IncubationBoost:
+        length: 5
+        learning_rate: 0.001
+        depth: 20
+        grace_period: 0
+        grace_period_depth: -1
+        split_confidence: 0.01
+        max_feature: 1.0
+        tie_threshold: 0.01
+        bin_type: adaptive
+        max_bins: 32
+        split_criterion: vr_rel
+        verbose: false
+      IncubationBoost_Elastic:
+        length: 5
+        learning_rate: 0.001
+        depth: 20
+        grace_period: 0
+        grace_period_depth: -1
+        split_confidence: 0.01
+        max_feature: 1.0
+        tie_threshold: 0.01
+        bin_type: adaptive
+        max_bins: 32
+        split_criterion: vr_rel
+        verbose: false
+    _note: from notebooks/other_data/friedman_1h_resid.ipynb

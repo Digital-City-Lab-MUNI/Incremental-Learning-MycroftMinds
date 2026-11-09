@@ -1,0 +1,36 @@
+# WES task definition: rerun the FastODT / IncubationBoost evaluation matrix on the HPC.
+#
+# Launch from THIS repo's root with the wes CLI (see ../../wes):
+#   wes launch jobs/fastodt_rerun.wes        # or: python -m wes.cli jobs/fastodt_rerun.wes
+#   wes sync --ssh hpc                        # watch wes.status + sync artifacts into results/
+#   wes check --ssh hpc                       # one-shot status
+#
+# Prerequisites:
+#   1. push this repo; `branch` below must contain BOTH the experiment tooling
+#      (experiments/, configs/, jobs/) and the behavioral fixes in src/ — the
+#      whole point of the rerun is to measure the corrected implementation;
+#   2. datasets are gitignored: set FASTODT_DATA_SHARED to a dir on the HPC whose
+#      children are named first_batch/, other_data/, second_batch/ (pre.sh links
+#      them into the cloned repo's data/), or set FASTODT_DATA_ROOT directly.
+#      Available locally under ../datasets as <name>(current)/<name>/ (first_batch,
+#      other_data; second_batch is not on disk yet);
+#   3. check `sinfo` on the cluster and set `partition` below if the default
+#      partition is not suitable (CPU-only job, no GPU requested).
+#
+# Artifacts: the remote <repo>/results/rerun tree is synced back by `wes sync`
+# into the local results/ directory (job logs land under results/<task>/<namespace>/).
+sequence:
+  - fastodt_rerun:
+      git_url: git@github.com:Digital-City-Lab-MUNI/Incremental-Learning-MycroftMinds.git
+      branch: main
+      ssh: hpc
+      pre: jobs/pre.sh
+      job: jobs/job.sh
+      artifacts:
+        - results/rerun
+      cleanup: false
+      cpus: '8'
+      memory: 32G
+      time: '24:00:00'
+      # partition: cpu          # set after `ssh hpc sinfo`
+      # nodelist: h86           # optional pinning, as in ../../wes examples
