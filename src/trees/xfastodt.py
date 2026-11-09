@@ -40,7 +40,9 @@ class xFastODT(BaseTree):
             Maximum depth of the decision tree. Controls the number of splits from the root to a leaf.
 
         grace_period : int, optional (default=10)
-            Number of samples a node should observe before attempting to split.
+            Interval (in samples observed by a node) between split attempts; reset
+            after every attempt, successful or not. Beyond ``grace_period_depth``
+            the grace period no longer gates attempts.
 
         split_confidence : float, optional (default=1.0)
             Confidence level for splitting criterion. A higher value makes splitting more conservative.
@@ -93,7 +95,9 @@ class xFastODT(BaseTree):
         self.depths_containers: list = []
         self.mature_tree: bool = False
 
-        self.error_rates: list[float] = np.zeros(20).tolist()
+        # Rolling window (max length 20) of recent absolute errors. Starts
+        # empty: before 20 samples the score is the mean of the errors seen so far.
+        self.error_rates: list[float] = []
 
         self.max_feature: int = max_feature
         self.grace_period_depth: int = grace_period_depth
@@ -125,6 +129,32 @@ class xFastODT(BaseTree):
             split_criterion=split_criterion,
             rng=self.rng,
         )
+
+    def measure_error(self, y_baseline: float, y_predicted: float) -> float:
+        """Update the rolling error window with the absolute error and return its mean.
+
+        The score is the mean absolute error (MAE) over a rolling window of the
+        last 20 observed errors. The window starts empty, so before 20 samples
+        the score is the mean of the errors observed so far. Absolute errors are
+        nonnegative: overprediction is penalized and opposite-sign errors cannot
+        cancel each other.
+
+        Parameters
+        ----------
+        y_baseline : float
+            Ground truth target value.
+        y_predicted : float
+            Model prediction.
+
+        Returns
+        -------
+        float
+            Mean absolute error over the rolling window (up to length 20).
+        """
+        self.error_rates.append(abs(y_baseline - y_predicted))
+        if len(self.error_rates) > 20:
+            self.error_rates.pop(0)
+        return float(np.mean(self.error_rates))
 
     def partial_fit(self, X: np.ndarray, y: np.ndarray, verbose: bool = False):
         """Fit the model incrementally on a batch of samples.
@@ -265,41 +295,46 @@ class xFastODT(BaseTree):
 
         node = self.depths_containers[node_depth][node_index]
         if node is None:
-            self.depths_containers[node_depth][node_index] = self._find_node(node_depth, node_index, x, y)
-            node = self.depths_containers[node_depth][node_index]
-            node.update_stats(x, y)
-        else:
-            if self.mature_tree:
-                return
-            else:
-                node.update_stats(x, y)
+            node = self._find_node(node_depth, node_index, x, y)
+            self.depths_containers[node_depth][node_index] = node
 
-        best_split, _ = node.find_best_split()  # here happens hf bound calculation
-        if best_split[0] is not None:
-            depth = len(decision_vector)
+        # Leaf statistics are always updated, even for a mature tree: the
+        # maximum-depth guard stops structural growth, not prediction updates.
+        node.update_stats(x, y)
 
-            self.splits_features[depth] = best_split[0]
-            self.splits_values[depth] = best_split[1]
+        # Mature tree (maximum depth reached): no further structural growth.
+        if self.mature_tree:
+            return
 
-            if depth + 1 < self.depth:
-                left, right = node.produce_split(best_split, self.split_confidence)
-                left.update_from_parent_node(node)
-                right.update_from_parent_node(node)
-                self.depths_containers[depth + 1][left.index] = left
-                self.depths_containers[depth + 1][right.index] = right
-                self.current_depth += 1
-            else:
-                self.mature_tree = True
+        # Grace-period gating between split attempts (with depth-limited
+        # bypass), mirroring FastODT.
+        if node.reached_grace_period() or self.grace_period_depth < node_depth:
+            best_split, _ = node.find_best_split()  # here happens hf bound calculation
+            # Restart the grace-period interval after every attempt, successful or not.
+            node.note_split_attempt()
+            if best_split[0] is not None:
+                self.splits_features[node_depth] = best_split[0]
+                self.splits_values[node_depth] = best_split[1]
+
+                if node_depth + 1 < self.depth:
+                    left, right = node.produce_split(best_split, self.split_confidence)
+                    left.update_from_parent_node(node)
+                    right.update_from_parent_node(node)
+                    self.depths_containers[node_depth + 1][left.index] = left
+                    self.depths_containers[node_depth + 1][right.index] = right
+                    self.current_depth += 1
+                else:
+                    self.mature_tree = True
 
     def _find_node(self, depth, index, x, y=0, no_stats_update=False):
         """
-        Finds last populated parent node by index. This is helper function which exists only because of how extreme fastODTs are implemented.
-        Sometimes tree may jump to node which was never touched by training function and has no values. That means algorithm has to find some value to use.
-        Hence, it tracks back to last known parent with assigned values and propagate that values down to the node.
+        Finds (or lazily creates) the node at (depth, index). This is a helper function which exists only because of how extreme fastODTs are implemented.
+        Sometimes the tree jumps to a node index which was never touched by the training function and has no values. That means the algorithm has to find some value to use.
+        Hence, it tracks back to the deepest existing ancestor (MSB-first indexing: parent of index is ``index // 2``) and propagates the ancestor's
+        prediction down to the node.
 
-        This function behaves differently in training and in inference. If during training there was more nodes between jumped node and suitable parent, 
-        then we train those nodes as well before propagating data. This process is added to behave in same way as classic FastODTs which does that naturally while
-        traversing recursively tree.
+        A lazily created node inherits only the ancestor's prediction value; its observation statistics (count, target sums, min/max), histograms, and
+        split-attempt counters start fresh (zero-initialized), so the first sample routed to it yields count 1 / sum_y = its own target.
 
         Parameters
         -----------
@@ -311,29 +346,20 @@ class xFastODT(BaseTree):
         x : np.ndarray
             Feature matrix of shape (n_samples, n_features) or (n_features,) for
             a single sample.
-        y : float 
-            Target value. This values should be left untouched during inference.
+        y : float
+            Target value. This value should be left untouched during inference.
         no_stats_update: boolean
-            Changes behavior between inference and training. For inference it should be set to False, so nodes are not changed by incoming data and y value can be left unset.
+            Kept for API compatibility between inference and training calls; the
+            returned node always inherits the prediction with fresh statistics.
         """
 
         node = self.depths_containers[depth][index]
-        # print(f"looking for index: {index}")
         if node is None:
-            parent_node_index = (
-                index // 2
-            )  # find parent index by rule that it is child index / 2 and floored to nearest integer
-            node = self._find_node(depth - 1, parent_node_index, x, y, no_stats_update)
-            node.index = index
+            # find parent index by rule that it is child index / 2 and floored to nearest integer
+            parent_node_index = index // 2
+            parent = self._find_node(depth - 1, parent_node_index, x, y, no_stats_update)
+            node = parent.fresh_lazy_node(index)
             self.depths_containers[depth][index] = node
-            node = node.copy()
-            if not no_stats_update:
-                node.feature = None
-                node.threshold = None
-        else:
-            node = node.copy()
-            node.threshold = self.splits_values[depth]
-            node.feature = self.splits_features[depth]
 
         return node
 

@@ -50,7 +50,8 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
     eagerness : float, optional, default=0.0
         Factor controlling speed of splitting (increases effective attempts).
     grace_period : int, optional, default=0
-        Minimum samples observed before considering a split.
+        Interval (in samples observed by this node) between split attempts;
+        reset to ``samples_seen`` after every attempt (``note_split_attempt``).
     bin_type : type, optional, default=AdaptiveHistogram
         Histogram class (AdaptiveHistogram, EquiWidthHistogram, MeanSplitter...).
     max_bins : int, optional, default=32
@@ -100,7 +101,8 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
     grace_period : int
         Grace period for splitting.
     grace_period_offset : int
-        Offset for grace period.
+        ``samples_seen`` at the last split attempt; reset on every attempt so
+        attempts are spaced ``grace_period`` samples apart.
     prev_splitting_period : int
         Previous splitting period.
     max_feature : float
@@ -159,8 +161,8 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         self.split_period_counter: int = 0
         self.split_ideal_period: int = 10
         self.grace_period: int = grace_period
-        # Offset from the parent's `samples_seen` that's passed to child
-        # for proper grace period calculation
+        # `samples_seen` at the last split attempt; the grace-period interval
+        # restarts from this offset after every attempt (see note_split_attempt)
         self.grace_period_offset: int = 0
         self.prev_splitting_period: int = self.split_ideal_period
 
@@ -178,6 +180,14 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
     def check_grace_period(self) -> bool:
         """Check if the grace period has expired."""
         return self.grace_period_offset + self.grace_period < self.samples_seen
+
+    def note_split_attempt(self) -> None:
+        """Record a split attempt, restarting the grace-period interval.
+
+        Called after every split attempt (successful or not), so the next
+        attempt happens only after another ``grace_period`` samples.
+        """
+        self.grace_period_offset = self.samples_seen
 
     def update_stats(self, x: np.ndarray, y: float) -> None:
         """
@@ -328,7 +338,13 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         # If not inheriting, children will initialize new empty histograms on first update_stats
 
     def reached_grace_period(self) -> bool:
-        """Return True if grace period satisfied for attempting a split."""
+        """Return True if enough samples were observed since the last split attempt.
+
+        The grace period is an interval between split attempts: after each
+        attempt (see :meth:`note_split_attempt`) the offset is reset to the
+        current ``samples_seen``, so attempts are spaced ``grace_period``
+        samples apart instead of happening on every sample.
+        """
         return self.grace_period_offset + self.grace_period < self.samples_seen
 
     def show(self, prefix: str = "") -> None:

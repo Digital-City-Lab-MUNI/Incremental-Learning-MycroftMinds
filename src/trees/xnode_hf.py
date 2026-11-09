@@ -36,7 +36,8 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
     eagerness : float
         Eagerness parameter (currently unused). Default is 0.0.
     grace_period : int
-        Number of samples a node should observe before attempting to split.
+        Interval (in samples observed by this node) between split attempts;
+        reset to ``samples_seen`` after every attempt (``note_split_attempt``).
     index : int
         Node index in the tree structure. Default is 0.
     bin_type : class
@@ -136,7 +137,9 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
 
         # 200 is magic number but it is hyperparam which makes hf work for us
         self.grace_period: int = grace_period
-        self.grace_period_offset: int = 0  # this is the offset from the parent's `samples_seen` that's passed to child for proper grace period calculation
+        # `samples_seen` at the last split attempt; reset on every attempt
+        # (see note_split_attempt) so attempts are spaced `grace_period` apart
+        self.grace_period_offset: int = 0
 
         self.max_feature: float = max_feature
         self.feature_indices: np.ndarray = None
@@ -167,6 +170,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
             max_bins=self.max_bins,
             inherit_bins=self.inherit_bins,
             split_criterion=self.split_criterion,
+            rng=self.rng,
         )
 
         # Shallow-copy or directly assign attributes
@@ -196,9 +200,40 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         self.threshold = 0
         self.feature = None
 
+    def fresh_lazy_node(self, index: int) -> "NodeHoeffdingBound":
+        """Create a lazy child node at ``index`` inheriting only this node's prediction.
+
+        The child keeps the ancestor's ``value`` (inherited prediction) but
+        starts with zero-initialized observation statistics (count, target
+        sums, min/max), empty histograms, and a zeroed split-attempt offset,
+        matching the intended MSB-first lazy-node semantics.
+        """
+        child = NodeHoeffdingBound(
+            split_confidence=self.delta,
+            tie_threshold=self.tie_threshold,
+            max_feature=self.max_feature,
+            grace_period=self.grace_period,
+            index=index,
+            bin_type=self.bin_type,
+            max_bins=self.max_bins,
+            inherit_bins=self.inherit_bins,
+            split_criterion=self.split_criterion,
+            rng=self.rng,
+        )
+        child.value = self.value  # inherited prediction
+        return child
+
     def check_grace_period(self):
         """Check if grace period is met."""
         return self.grace_period_offset + self.grace_period < self.samples_seen
+
+    def note_split_attempt(self) -> None:
+        """Record a split attempt, restarting the grace-period interval.
+
+        Called after every split attempt (successful or not), so the next
+        attempt happens only after another ``grace_period`` samples.
+        """
+        self.grace_period_offset = self.samples_seen
 
     def update_stats(self, x: np.ndarray, y: float) -> None:
         """Update the statistics of the node's histograms with a new sample."""
@@ -329,7 +364,7 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         return left, right
 
     def reached_grace_period(self) -> bool:
-        """Check if the node has seen enough samples to consider splitting."""
+        """Return True if enough samples were observed since the last split attempt."""
         return self.grace_period_offset + self.grace_period < self.samples_seen
 
     def show(self, prefix=""):

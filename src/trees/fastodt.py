@@ -39,7 +39,9 @@ class FastODT(BaseTree):
         Maximum depth (root at depth 0). Nodes at or beyond this depth are
         treated as leaves.
     grace_period : int, optional, default=10
-        Minimum number of samples a leaf observes before evaluating a split.
+        Interval (in samples observed by a leaf) between split attempts. The
+        interval restarts after every attempt, successful or not; beyond
+        ``grace_period_depth`` the grace period no longer gates attempts.
     split_confidence : float, optional, default=0.01
         Hoeffding bound confidence (smaller values -> more eager splitting).
     tie_threshold : float, optional, default=0.05
@@ -72,7 +74,8 @@ class FastODT(BaseTree):
         Cached best split (feature, threshold, ...) per depth to encourage
         consistency among nodes at the same depth.
     error_rates : list of float
-        Rolling window (length 20) of recent absolute errors for monitoring.
+        Rolling window (max length 20) of recent absolute errors; the score
+        returned by ``measure_error`` is their mean (rolling MAE). Starts empty.
     grace_period : int
         Number of samples before checking for a split at each node.
     split_confidence : float
@@ -109,7 +112,9 @@ class FastODT(BaseTree):
         self.depth = depth
         self.splits = [None] * depth
 
-        self.error_rates = np.zeros(20).tolist()
+        # Rolling window (max length 20) of recent absolute errors. Starts
+        # empty: before 20 samples the score is the mean of the errors seen so far.
+        self.error_rates: list[float] = []
 
         self.max_feature = max_feature
         self.grace_period_depth = grace_period_depth
@@ -141,7 +146,13 @@ class FastODT(BaseTree):
         )
 
     def measure_error(self, y_baseline: float, y_predicted: float) -> float:
-        """Update rolling error buffer and return its mean.
+        """Update the rolling error window with the absolute error and return its mean.
+
+        The score is the mean absolute error (MAE) over a rolling window of the
+        last 20 observed errors. The window starts empty, so before 20 samples
+        the score is the mean of the errors observed so far. Absolute errors are
+        nonnegative: overprediction is penalized and opposite-sign errors cannot
+        cancel each other.
 
         Parameters
         ----------
@@ -153,11 +164,12 @@ class FastODT(BaseTree):
         Returns
         -------
         float
-            Mean of the rolling error window (length 20).
+            Mean absolute error over the rolling window (up to length 20).
         """
-        self.error_rates.pop(0)
-        self.error_rates.append(y_baseline - y_predicted)
-        return np.mean(self.error_rates)
+        self.error_rates.append(abs(y_baseline - y_predicted))
+        if len(self.error_rates) > 20:
+            self.error_rates.pop(0)
+        return float(np.mean(self.error_rates))
 
     def partial_fit(self, X: np.ndarray, y: np.ndarray, verbose: bool = False) -> None:
         """Fit the model incrementally on a batch of samples.
@@ -212,10 +224,12 @@ class FastODT(BaseTree):
         self, node: NodeHoeffdingBound, x: np.ndarray, y: float, depth: int = 0, payload_print="", debug_index=0
     ) -> None:
         """Update the tree with a new sample."""
-        # Check if we reached the maximum depth
-        # In case max depth is reached we should stop tree traversal
-        # (there is no more nodes nor splits to make)
+        # Check if we reached the maximum depth. The guard stops structural
+        # growth, not prediction updates: a maximum-depth leaf still updates
+        # its statistics (but no split is attempted).
         if depth >= self.depth:
+            if node.left is None and node.right is None:
+                node.update_stats(x, y)
             return
 
         if (node.left is None or node.right is None) and self.splits[depth] is not None:
@@ -239,6 +253,8 @@ class FastODT(BaseTree):
     def _attempt_split(self, node: NodeHoeffdingBound, depth: int) -> None:
         """Attempt to split the node when the Hoeffding Bound indicates a split is warranted."""
         best_split, _ = node.find_best_split()  # here happens hf bound calculation
+        # Restart the grace-period interval after every attempt, successful or not.
+        node.note_split_attempt()
         if self.splits[depth] is not None:
             node.split(self.splits[depth], self.split_confidence)
             node.left.update_from_parent_node(node)

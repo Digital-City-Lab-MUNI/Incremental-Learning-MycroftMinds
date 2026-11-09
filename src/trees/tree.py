@@ -105,7 +105,10 @@ class BaseTree(BaseLearner):
         if node.threshold is None:
             return ret
 
-        if X[node.feature] < node.threshold:
+        # Routing convention: samples equal to the threshold go left (<=),
+        # matching FastODT training, histogram split evaluation, and the
+        # binary-mask routing of xFastODT.
+        if X[node.feature] <= node.threshold:
             return self._traverse(X, node.left)
         else:
             return self._traverse(X, node.right)
@@ -121,7 +124,7 @@ class BaseTree(BaseLearner):
         if threshold is None or feature is None:
             return Node(value=value)
 
-        left_indices = X[:, feature] < threshold
+        left_indices = X[:, feature] <= threshold
         right_indices = ~left_indices
 
         left_child = self._grow(X[left_indices], y[left_indices], depth + 1)
@@ -144,7 +147,7 @@ class BaseTree(BaseLearner):
         for feature, _ in enumerate(X[0, :]):
             thresholds = X[:, feature]
             for threshold in thresholds:
-                left_mask = X[:, feature] < threshold
+                left_mask = X[:, feature] <= threshold
                 right_mask = ~left_mask
 
                 if sum(left_mask) == 0 or sum(right_mask) == 0:

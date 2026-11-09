@@ -84,14 +84,18 @@ class IncubationBoost:
 
     Workflow per mini-batch sample::
 
-        1. Predict sequentially with existing chain accumulating strong
-           prediction.
-        2. Update residual = y - strong_prediction.
-        3. For each learner not yet filled, update it with the residual.
-        4. Track best pruning index by minimal error; truncate chain if a
-           learner fails to further reduce error.
-        5. Incubate a new learner on residuals until it becomes filled, then
-           append if ensemble length budget allows.
+        1. Predict sequentially with the existing chain, accumulating the
+           strong prediction (all predictions captured before training on the
+           current sample).
+        2. A still-growing learner is trained on the residual of the prefix
+           *preceding* it (``y - strong_prediction`` before adding its own
+           contribution), so the first tree learns ``y`` itself.
+        3. Greedy prefix pruning (eGBDT-style): scan mature learners in order
+           and stop at the first prefix whose rolling error fails to improve;
+           truncate the chain to the last improving prefix.
+        4. Incubate a new learner on the residual of the retained chain
+           (``y - retained_prefix_prediction``), excluding any rejected trees,
+           until it becomes filled, then append if the length budget allows.
     """
 
     def __init__(
@@ -153,6 +157,9 @@ class IncubationBoost:
         y_pred_strong = 0.0
         pruning_index: Optional[int] = None
         prev_pruning_error_rate = float("inf")
+        # Prediction of the retained prefix, captured before any training on
+        # the current sample (used for the incubation target after pruning).
+        retained_prefix_prediction = 0.0
 
         if len(self.chain) == 0:
             new_node = self.base_learner(
@@ -169,28 +176,46 @@ class IncubationBoost:
             )
             self.chain.append(new_node)
 
-        # Index-based pruning (eGBDT)
+        # Index-based greedy prefix pruning (eGBDT-style): stop at the first
+        # mature prefix that fails to improve the rolling error.
         for n, node in enumerate(self.chain):
-            y_pred = node.predict(X) * (
-                1.0 if n == 0 else self.learning_rate
-            )  # first node is not multiplied by learning rate
-            y_pred_strong += y_pred
-            residual = y - y_pred_strong
-
             if node.is_filled():
+                y_pred = node.predict(X) * (
+                    1.0 if n == 0 else self.learning_rate
+                )  # first node is not multiplied by learning rate
+                y_pred_strong += y_pred
+                residual = y - y_pred_strong
+
                 error_rate = node.measure_error(y, y_pred_strong)
                 if error_rate < prev_pruning_error_rate:
                     pruning_index = n
                     prev_pruning_error_rate = error_rate
+                    retained_prefix_prediction = y_pred_strong
                 else:
                     break
             else:
-                node.partial_fit([X], residual)
+                # Growing tree: capture the training target BEFORE adding the
+                # current tree's own contribution, so the first tree learns y
+                # itself and every tree learns what the preceding prefix missed.
+                # All predictions are taken before training on this sample.
+                training_target = y - y_pred_strong
+                y_pred = node.predict(X) * (
+                    1.0 if n == 0 else self.learning_rate
+                )  # first node is not multiplied by learning rate
+                y_pred_strong += y_pred
+                residual = y - y_pred_strong
+                node.partial_fit([X], training_target)
 
         if pruning_index is not None:
             self.chain = self.chain[: pruning_index + 1]
+            # Incubation target: residual of the chain actually retained.
+            # The loop residual would still contain the rejected tree's
+            # contribution, so recompute it from the retained prefix prediction.
+            incubation_target = y - retained_prefix_prediction
+        else:
+            incubation_target = residual
 
-        hatched_node = self.incubate(X, residual)
+        hatched_node = self.incubate(X, incubation_target)
         if hatched_node is not None and len(self.chain) < self.length:
             self.chain.append(hatched_node)
 
