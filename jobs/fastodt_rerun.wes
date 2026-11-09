@@ -16,8 +16,8 @@
 #   2. datasets are gitignored: set FASTODT_DATA_SHARED to a dir on the HPC whose
 #      children are named first_batch/, other_data/, second_batch/ (pre.sh links
 #      them into the cloned repo's data/), or set FASTODT_DATA_ROOT directly.
-#      Available locally under ../datasets as <name>(current)/<name>/ (first_batch,
-#      other_data; second_batch is not on disk yet);
+#      All present locally under ../datasets as <name>(current)/<name>/ (first_batch,
+#      other_data, second_batch — the last extracted from the Telegram-downloaded rar);
 #   3. check `sinfo` on the cluster and set `partition` below if the default
 #      partition is not suitable (CPU-only job, no GPU requested).
 #

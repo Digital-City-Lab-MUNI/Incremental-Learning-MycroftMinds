@@ -69,6 +69,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     data_dir = data_root / ds["data_dir"]
 
+    if not (data_dir / f"{ds['prefix']}_train.npz").exists():
+        print(
+            f"[SKIP] dataset={args.dataset}: no '{ds['prefix']}_train.npz' under {data_dir} "
+            f"(data root {data_root}); dataset not available, skipping"
+        )
+        return 0
+
     # imported only after the model repo is on sys.path
     from src.data.io import load_dataset
     from src.evaluation.metrics import all_time_aggregation_metrics

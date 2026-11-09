@@ -26,8 +26,8 @@ default the data root to `./data`; raw results go to `results/rerun/raw`, tables
 
 ## Datasets
 
-9 dataset entries in `configs/experiments.yaml`. The paper uses 6 datasets; their processed
-splits live in `../datasets` — 4 of 6 available locally:
+9 dataset entries in `configs/experiments.yaml`. The paper uses 6 datasets; all 6 are now
+available locally, processed splits in `../datasets`:
 
 | config key       | paper dataset          | data dir   | prefix                  | on disk at `../datasets` |
 |------------------|------------------------|------------|-------------------------|--------------------------|
@@ -42,10 +42,13 @@ On disk the dirs are nested as `../datasets/<name>(current)/<name>/`, so create 
 data root with properly named subdirs:
 
 ```bash
+# actually the repo's data/ dir already has these symlinks (see data/README.md),
+# so the default --data-root ./data works; a separate staging dir is only needed
+# on the HPC:
 mkdir -p data_staging
-ln -s "$(pwd)/../datasets/first_batch(current)/first_batch" data_staging/first_batch
-ln -s "$(pwd)/../datasets/other_data(current)/other_data"   data_staging/other_data
-# add second_batch here once available
+for n in first_batch other_data second_batch; do
+  ln -s "$(pwd)/../datasets/${n}(current)/${n}" "data_staging/${n}"
+done
 ```
 
 ## Run locally

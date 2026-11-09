@@ -14,7 +14,7 @@ resolve without copying ~1 GB:
 ```
 data/first_batch  -> ../../datasets/first_batch(current)/first_batch
 data/other_data   -> ../../datasets/other_data(current)/other_data
-data/second_batch -> ../../datasets/second_batch(current)/second_batch   # appears once that batch is available
+data/second_batch -> ../../datasets/second_batch(current)/second_batch   # extracted from ~/Downloads/Telegram Desktop/second_batch(current).rar
 ```
 
 Recreate with: `cd data && ln -sfn "../../datasets/<name>(current)/<name>" <name>`.

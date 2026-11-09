@@ -207,6 +207,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     data_dir = data_root / ds["data_dir"]
 
+    if not (data_dir / f"{ds['prefix']}_train.npz").exists():
+        print(
+            f"[SKIP] dataset={args.dataset}: no '{ds['prefix']}_train.npz' under {data_dir} "
+            f"(data root {data_root}); dataset not available, skipping"
+        )
+        return 0
+
     from src.data.io import load_dataset
 
     max_length = args.max_length if args.max_length and args.max_length > 0 else 10**12
