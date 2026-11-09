@@ -12,6 +12,7 @@ endif
 DATASET ?= od_friedman_1h
 DATA_ROOT ?= data
 RESULTS ?= results/rerun
+MAX_LENGTH ?= -1
 
 # Install Python dependencies (including dev dependencies for now)
 install:
@@ -50,8 +51,8 @@ exp-prepare:
 exp-all:
 	@for ds in $$(${PYTHON} -c "import yaml; print(' '.join(yaml.safe_load(open('configs/experiments.yaml'))['datasets']))"); do \
 	  echo "=== dataset $$ds ==="; \
-	  ${PYTHON} -m experiments.run_evaluation --dataset $$ds --data-root $(DATA_ROOT) --results-dir $(RESULTS)/raw || exit 1; \
-	  ${PYTHON} -m experiments.run_benchmark --dataset $$ds --data-root $(DATA_ROOT) --results-dir $(RESULTS)/raw || exit 1; \
+	  ${PYTHON} -m experiments.run_evaluation --dataset $$ds --data-root $(DATA_ROOT) --results-dir $(RESULTS)/raw --max-length $(MAX_LENGTH) || exit 1; \
+	  ${PYTHON} -m experiments.run_benchmark --dataset $$ds --data-root $(DATA_ROOT) --results-dir $(RESULTS)/raw --max-length $(MAX_LENGTH) || exit 1; \
 	done
 	${PYTHON} -m experiments.prepare_results --results-dir $(RESULTS)/raw --out $(RESULTS)/tables
 
