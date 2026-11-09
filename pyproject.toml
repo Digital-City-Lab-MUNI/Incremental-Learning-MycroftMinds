@@ -1,3 +1,30 @@
+[project]
+name = "incremental-learning-mycroftminds"
+version = "0.1.0"
+description = "Incremental learning models (FastODT, xFastODT, IncubationBoost) and the evaluation pipeline"
+requires-python = ">=3.10"
+# Keep in sync with requirements.txt (pip path); the uv path uses this table.
+dependencies = [
+  "numpy==2.2.5",
+  "pandas==2.2.3",
+  "scipy==1.15.3",
+  "scikit-learn==1.6.1",
+  "river==0.22.0",
+  "tqdm==4.67.1",
+  "Pympler==1.1",
+  'ipython==9.2.0; python_version >= "3.11"',
+  'ipython==8.32.0; python_version < "3.11"',
+  "pyyaml==6.0.3",
+  "ipywidgets==8.1.5",
+]
+
+[project.optional-dependencies]
+viz = ["matplotlib==3.10.3", "seaborn==0.13.2"]
+dev = ["ruff==0.12.8", "pytest>=8.0.0"]
+
+[tool.uv]
+package = false  # the repo is used via sys.path (src/), not installed as a package
+
 [tool.ruff]  # Linting options
 line-length = 120
 target-version = "py311"  # Python version

@@ -1,13 +1,13 @@
 .PHONY: install format lint all clean test exp-run exp-benchmark exp-prepare exp-all wes-launch wes-sync
 
-# Python command: prefer uv (ephemeral pinned env on python 3.12, like the wes
-# examples); fall back to system python3 (run `make install` first in that case).
-# Override with e.g. `make exp-all PYTHON=python3`.
+# Python command: prefer the uv project env (`uv run python` uses .venv created
+# by `uv sync` / `make install`); fall back to system python3 (run `make install`
+# first in that case). Override with e.g. `make exp-all PYTHON=python3`.
 UV := $(shell command -v uv 2>/dev/null)
 ifeq ($(UV),)
     PYTHON ?= python3
 else
-    PYTHON ?= uv run --with-requirements requirements.txt --python 3.12 python
+    PYTHON ?= uv run python
 endif
 
 # Experiment rerun (see experiments/README.md); override with e.g.
@@ -17,12 +17,12 @@ DATA_ROOT ?= data
 RESULTS ?= results/rerun
 MAX_LENGTH ?= -1
 
-# Install Python dependencies (including dev dependencies for now)
+# Install Python dependencies: uv project env when uv is available, else pip.
 install:
 ifeq ($(UV),)
 	pip install -r requirements.txt
 else
-	uv pip install --system -r requirements.txt
+	uv sync --extra dev
 endif
 
 # Format code with Ruff (uses parameters from pyproject.toml)
