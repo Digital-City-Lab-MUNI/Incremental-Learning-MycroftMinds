@@ -22,7 +22,7 @@
 sequence:
   - fastodt_rerun:
       git_url: git@github.com:Digital-City-Lab-MUNI/Incremental-Learning-MycroftMinds.git
-      branch: main
+      branch: fix/fastodt-review-fixes
       ssh: hpc
       pre: jobs/pre.sh
       job: jobs/job.sh
