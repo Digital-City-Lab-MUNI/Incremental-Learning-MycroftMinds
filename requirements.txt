@@ -13,3 +13,4 @@ seaborn==0.13.2
 # Dev dependencies
 ruff==0.12.8
 pyyaml==6.0.3  # experiment configs (configs/experiments.yaml)
+ipywidgets==8.1.5  # tqdm.notebook (used by src/evaluation/training.py) needs it when ipython>=9 is installed
