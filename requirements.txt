@@ -6,7 +6,9 @@ scipy==1.15.3
 river==0.22.0
 tqdm==4.67.1
 Pympler==1.1
-ipython==9.2.0
+ipython==9.2.0; python_version >= "3.11"
+# last py3.10-compatible ipython
+ipython==8.32.0; python_version < "3.11"
 # Visualization
 matplotlib==3.10.3
 seaborn==0.13.2
