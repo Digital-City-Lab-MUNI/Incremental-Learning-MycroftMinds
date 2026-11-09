@@ -9,6 +9,9 @@ from src.evaluation.metrics import calculate_metrics, all_time_aggregation_metri
 from src.evaluation.visualization import plot_part_predictions, plot_hourly_predictions
 from src.evaluation.training import all_valid_splits_seq_fit_predict, test_set_seq_fit_predict
 
+# imported pipeline helper, not a test: stop pytest from collecting it
+test_set_seq_fit_predict.__test__ = False
+
 from river.forest import ARFRegressor
 from river.tree import HoeffdingTreeRegressor
 from src.evaluation.baseline import PreviousValueRegressor, SeasonalMeanRegressor

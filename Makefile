@@ -1,4 +1,4 @@
-.PHONY: install format lint all clean test exp-run exp-benchmark exp-prepare wes-launch wes-sync
+.PHONY: install format lint all clean test exp-run exp-benchmark exp-prepare exp-all wes-launch wes-sync
 
 # Detect OS and set PYTHON command accordingly
 ifeq ($(OS),Windows_NT)
@@ -44,6 +44,15 @@ exp-benchmark:
 	${PYTHON} -m experiments.run_benchmark --dataset $(DATASET) --data-root $(DATA_ROOT) --results-dir $(RESULTS)/raw
 
 exp-prepare:
+	${PYTHON} -m experiments.prepare_results --results-dir $(RESULTS)/raw --out $(RESULTS)/tables
+
+# full experiment matrix: every dataset in configs/experiments.yaml, all models
+exp-all:
+	@for ds in $$(${PYTHON} -c "import yaml; print(' '.join(yaml.safe_load(open('configs/experiments.yaml'))['datasets']))"); do \
+	  echo "=== dataset $$ds ==="; \
+	  ${PYTHON} -m experiments.run_evaluation --dataset $$ds --data-root $(DATA_ROOT) --results-dir $(RESULTS)/raw || exit 1; \
+	  ${PYTHON} -m experiments.run_benchmark --dataset $$ds --data-root $(DATA_ROOT) --results-dir $(RESULTS)/raw || exit 1; \
+	done
 	${PYTHON} -m experiments.prepare_results --results-dir $(RESULTS)/raw --out $(RESULTS)/tables
 
 # --- HPC rerun via WES (see jobs/fastodt_rerun.wes) ---
