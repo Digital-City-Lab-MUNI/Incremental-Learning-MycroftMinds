@@ -19,4 +19,4 @@ results/*
 !results/*.md
 results (07-2025)/
 src/ensemble_methods/elasticGBDT.py
-__pycache__
+__pycache__.DS_Store
