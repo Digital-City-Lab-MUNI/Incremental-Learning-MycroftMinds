@@ -30,19 +30,38 @@ DATA_ROOT="${FASTODT_DATA_ROOT:-$PWD/data}"
 RESULTS="results/rerun"
 
 # --- Python environment -----------------------------------------------------
+# The pipeline needs Python >= 3.10 (the pinned ipython==9.2.0 in
+# requirements.txt needs >= 3.11). The cluster may provide uv via modules (as in
+# the ../../wes examples), so load it first. Prefer a modern interpreter for the
+# venv; fall back to the system python3 with system site-packages; install pinned
+# requirements, then unpinned core deps; verify imports and fail fast otherwise.
+if command -v module >/dev/null 2>&1; then
+  module load uv 2>/dev/null || true
+fi
+CORE_DEPS="numpy pandas scipy scikit-learn river tqdm Pympler pyyaml"
 if command -v uv >/dev/null 2>&1; then
   VENV_DIR="${SLURM_SUBMIT_DIR}/venv-$SLURM_JOB_ID"
-  uv venv --python "$(command -v python3)" --system-site-packages "$VENV_DIR"
+  rm -rf "$VENV_DIR"
+  uv venv --python 3.12 "$VENV_DIR" 2>/dev/null \
+    || uv venv --python "$(command -v python3)" --system-site-packages "$VENV_DIR" \
+    || uv venv "$VENV_DIR"
   # shellcheck disable=SC1091
   source "$VENV_DIR/bin/activate"
-  uv pip install -r requirements.txt || echo "[warn] uv pip install failed (offline?); continuing with system site-packages"
+  uv pip install -r requirements.txt \
+    || uv pip install $CORE_DEPS \
+    || echo "[warn] uv install failed; relying on preinstalled packages"
 else
-  python3 -m venv --system-site-packages .venv
+  python3 -m venv --system-site-packages .venv 2>/dev/null || python3 -m venv .venv
   # shellcheck disable=SC1091
   source .venv/bin/activate
-  pip install -r requirements.txt || echo "[warn] pip install failed (offline?); continuing with system site-packages"
+  pip install -r requirements.txt \
+    || pip install $CORE_DEPS \
+    || pip install --user $CORE_DEPS \
+    || echo "[warn] pip install failed; relying on system packages"
 fi
-echo "python: $(python -c 'import sys; print(sys.version)')"
+echo "python: $(python -c 'import sys; print(sys.version)') at $(command -v python)"
+python -c "import numpy, pandas, scipy, sklearn, river, tqdm, pympler, yaml; print('deps ok')" \
+  || { echo "[ERROR] missing required packages (numpy pandas scipy sklearn river tqdm pympler yaml); job will fail"; exit 1; }
 
 # --- evaluation (valid splits + test set) -----------------------------------
 MODELS_ARG=()
