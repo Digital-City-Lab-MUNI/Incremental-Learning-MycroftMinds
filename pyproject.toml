@@ -16,10 +16,12 @@ dependencies = [
   'ipython==8.32.0; python_version < "3.11"',
   "pyyaml==6.0.3",
   "ipywidgets==8.1.5",
+  # needed at import time: src/__init__ -> src.evaluation -> visualization.py
+  "matplotlib==3.10.3",
+  "seaborn==0.13.2",
 ]
 
 [project.optional-dependencies]
-viz = ["matplotlib==3.10.3", "seaborn==0.13.2"]
 dev = ["ruff==0.12.8", "pytest>=8.0.0"]
 
 [tool.uv]
