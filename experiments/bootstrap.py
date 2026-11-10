@@ -8,9 +8,10 @@ import platform
 import socket
 import subprocess
 import sys
+import traceback
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 
 def _repo_root() -> Path:
@@ -105,12 +106,16 @@ def peak_rss_mb() -> float:
 _WORKER = None
 
 
-def _worker_entry(name: str):
+def _worker_entry(name: str) -> Any:
     fn, ctx = _WORKER
-    return fn(name, ctx)
+    try:
+        return fn(name, ctx)
+    except Exception as exc:  # one bad model must not kill the whole run
+        traceback.print_exc()
+        return f"[FAIL] {name}: {type(exc).__name__}: {exc}"
 
 
-def run_over_models(jobs: int, models: list, fn, ctx: dict) -> list:
+def run_over_models(jobs: int, models: list, fn: Callable[[str, dict], Any], ctx: dict) -> list:
     """Run ``fn(name, ctx)`` for each model name, optionally in parallel processes.
 
     With ``jobs > 1`` and more than one model, the work runs in ``jobs`` forked
@@ -119,7 +124,8 @@ def run_over_models(jobs: int, models: list, fn, ctx: dict) -> list:
     queue. Per-worker BLAS/OpenMP thread counts are capped to avoid
     oversubscription (e.g. RandomForest ``n_jobs=-1`` inside each worker).
     Falls back to sequential execution when fork is unavailable or jobs <= 1.
-    Returns the list of per-model results in model order.
+    Returns the list of per-model results in model order; a model that raises
+    yields a ``[FAIL] <model>: ...`` string instead of aborting the run.
     """
     if jobs and jobs > 1 and len(models) > 1:
         import multiprocessing as mp
@@ -147,4 +153,11 @@ def run_over_models(jobs: int, models: list, fn, ctx: dict) -> list:
                         os.environ.pop(k, None)
                     else:
                         os.environ[k] = v
-    return [fn(m, ctx) for m in models]
+    results = []
+    for m in models:
+        try:
+            results.append(fn(m, ctx))
+        except Exception as exc:  # one bad model must not kill the whole run
+            traceback.print_exc()
+            results.append(f"[FAIL] {m}: {type(exc).__name__}: {exc}")
+    return results

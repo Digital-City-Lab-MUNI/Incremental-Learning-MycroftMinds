@@ -8,6 +8,7 @@ package (or sklearn / river). Per-dataset hyperparameters live in
 from __future__ import annotations
 
 import copy
+import inspect
 from pathlib import Path
 from typing import Any
 
@@ -83,8 +84,20 @@ def resolve_model(cfg: dict, dataset: str, name: str) -> tuple[type, dict, bool,
         return v
 
     params = substitute(params)
+    model_class = import_class(entry["class"])
+    # Drop params the class constructor does not accept (config/class drift, e.g.
+    # pruning_strategy on IncubationBoostElastic) instead of crashing the run.
+    sig = inspect.signature(model_class.__init__)
+    if not any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()):
+        unsupported = [k for k in params if k not in sig.parameters]
+        if unsupported:
+            print(
+                f"[WARN] {dataset}/{name}: ignoring params not accepted by "
+                f"{model_class.__name__}.__init__: {unsupported}"
+            )
+            params = {k: v for k, v in params.items() if k in sig.parameters}
     incremental = bool(entry["incremental"])
     update_freq = (
         ds.get("update_freq_incremental", ds["data_freq"]) if incremental else cfg["protocol"]["update_freq_batch"]
     )
-    return import_class(entry["class"]), params, incremental, update_freq
+    return model_class, params, incremental, update_freq
