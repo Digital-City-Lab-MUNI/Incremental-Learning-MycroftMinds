@@ -204,7 +204,13 @@ class IncubationBoost:
                 )  # first node is not multiplied by learning rate
                 y_pred_strong += y_pred
                 residual = y - y_pred_strong
-                node.partial_fit([X], training_target)
+                # learn_one is the single-sample update; partial_fit([X], ...) would
+                # re-wrap and re-convert the row on every call (fall back for base
+                # learners that only implement partial_fit)
+                if hasattr(node, "learn_one"):
+                    node.learn_one(X, training_target)
+                else:
+                    node.partial_fit([X], training_target)
 
         if pruning_index is not None:
             self.chain = self.chain[: pruning_index + 1]
@@ -247,10 +253,16 @@ class IncubationBoost:
                 split_criterion=self.split_criterion,
                 random_state=self.rng,
             )
-            self.incubating_node.partial_fit([X], residual)
+            if hasattr(self.incubating_node, "learn_one"):
+                self.incubating_node.learn_one(X, residual)
+            else:
+                self.incubating_node.partial_fit([X], residual)
             return None
 
-        self.incubating_node.partial_fit([X], residual)
+        if hasattr(self.incubating_node, "learn_one"):
+            self.incubating_node.learn_one(X, residual)
+        else:
+            self.incubating_node.partial_fit([X], residual)
         if self.incubating_node.is_filled():
             hatched = self.incubating_node
             self.incubating_node = None

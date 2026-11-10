@@ -47,21 +47,22 @@ test:
 # --- experiment reruns (notebook-equivalent, see experiments/README.md) ---
 # MODELS="FastODT IncubationBoost" to subset models, MAX_LENGTH=N to cap rows/split
 exp-run:
-	${PYTHON} -m experiments.run_evaluation --dataset $(DATASET) --data-root $(DATA_ROOT) --results-dir $(RESULTS)/raw $(if $(MODELS),--models $(MODELS),) --max-length $(MAX_LENGTH)
+	${PYTHON} -m experiments.run_evaluation --dataset $(DATASET) --data-root $(DATA_ROOT) --results-dir $(RESULTS)/raw $(if $(MODELS),--models $(MODELS),) --max-length $(MAX_LENGTH) $(if $(JOBS),--jobs $(JOBS),)
 
 exp-benchmark:
-	${PYTHON} -m experiments.run_benchmark --dataset $(DATASET) --data-root $(DATA_ROOT) --results-dir $(RESULTS)/raw $(if $(MODELS),--models $(MODELS),) --max-length $(MAX_LENGTH)
+	${PYTHON} -m experiments.run_benchmark --dataset $(DATASET) --data-root $(DATA_ROOT) --results-dir $(RESULTS)/raw $(if $(MODELS),--models $(MODELS),) --max-length $(MAX_LENGTH) $(if $(JOBS),--jobs $(JOBS),)
 
 exp-prepare:
 	${PYTHON} -m experiments.prepare_results --results-dir $(RESULTS)/raw --out $(RESULTS)/tables
 
 # full experiment matrix: every dataset in configs/experiments.yaml, all models;
 # a failing dataset is reported but does not abort the rest
+# JOBS=N parallelizes models within each dataset stage (e.g. make exp-all JOBS=8)
 exp-all:
 	@fail=0; for ds in $$(${PYTHON} -c "import yaml; print(' '.join(yaml.safe_load(open('configs/experiments.yaml'))['datasets']))"); do \
 	  echo "=== dataset $$ds ==="; \
-	  ${PYTHON} -m experiments.run_evaluation --dataset $$ds --data-root $(DATA_ROOT) --results-dir $(RESULTS)/raw --max-length $(MAX_LENGTH) || { echo "[FAIL] eval $$ds"; fail=1; }; \
-	  ${PYTHON} -m experiments.run_benchmark --dataset $$ds --data-root $(DATA_ROOT) --results-dir $(RESULTS)/raw --max-length $(MAX_LENGTH) || { echo "[FAIL] bench $$ds"; fail=1; }; \
+	  ${PYTHON} -m experiments.run_evaluation --dataset $$ds --data-root $(DATA_ROOT) --results-dir $(RESULTS)/raw --max-length $(MAX_LENGTH) $(if $(JOBS),--jobs $(JOBS),) || { echo "[FAIL] eval $$ds"; fail=1; }; \
+	  ${PYTHON} -m experiments.run_benchmark --dataset $$ds --data-root $(DATA_ROOT) --results-dir $(RESULTS)/raw --max-length $(MAX_LENGTH) $(if $(JOBS),--jobs $(JOBS),) || { echo "[FAIL] bench $$ds"; fail=1; }; \
 	done; \
 	${PYTHON} -m experiments.prepare_results --results-dir $(RESULTS)/raw --out $(RESULTS)/tables; \
 	exit $$fail

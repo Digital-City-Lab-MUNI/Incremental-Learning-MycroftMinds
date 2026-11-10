@@ -223,44 +223,48 @@ class FastODT(BaseTree):
     def _update_tree(
         self, node: NodeHoeffdingBound, x: np.ndarray, y: float, depth: int = 0, payload_print="", debug_index=0
     ) -> None:
-        """Update the tree with a new sample."""
-        # Check if we reached the maximum depth. The guard stops structural
-        # growth, not prediction updates: a maximum-depth leaf still updates
-        # its statistics (but no split is attempted).
-        if depth >= self.depth:
-            if node.left is None and node.right is None:
-                node.update_stats(x, y)
-            return
+        """Update the tree with a new sample (iterative: per-sample calls recurse otherwise)."""
+        while True:
+            # Check if we reached the maximum depth. The guard stops structural
+            # growth, not prediction updates: a maximum-depth leaf still updates
+            # its statistics (but no split is attempted).
+            if depth >= self.depth:
+                if node.left is None and node.right is None:
+                    node.update_stats(x, y)
+                return
 
-        if (node.left is None or node.right is None) and self.splits[depth] is not None:
-            self._attempt_split(node, depth)
-
-        # if node is a leaf, update its stats and check for split
-        if node.left is None and node.right is None:
-            node.update_stats(x, y)
-            if node.reached_grace_period() or self.grace_period_depth < depth:  # check if grace period is over
+            if (node.left is None or node.right is None) and self.splits[depth] is not None:
                 self._attempt_split(node, depth)
 
-        # traverse the tree to reach the correct leaf
-        elif node.feature is not None:
+            # if node is a leaf, update its stats and check for split
+            if node.left is None and node.right is None:
+                node.update_stats(x, y)
+                if node.reached_grace_period() or self.grace_period_depth < depth:  # check if grace period is over
+                    self._attempt_split(node, depth)
+                return
+
+            # traverse the tree to reach the correct leaf
             if x[node.feature] <= node.threshold:
-                debug_index = debug_index * 2
-                self._update_tree(node.left, x, y, depth + 1, payload_print=payload_print, debug_index=debug_index)
-            elif x[node.feature] > node.threshold:
-                debug_index = debug_index * 2 + 1
-                self._update_tree(node.right, x, y, depth + 1, payload_print=payload_print, debug_index=debug_index)
+                node = node.left
+            else:
+                node = node.right
+            depth += 1
 
     def _attempt_split(self, node: NodeHoeffdingBound, depth: int) -> None:
         """Attempt to split the node when the Hoeffding Bound indicates a split is warranted."""
-        best_split, _ = node.find_best_split()  # here happens hf bound calculation
         # Restart the grace-period interval after every attempt, successful or not.
         node.note_split_attempt()
         if self.splits[depth] is not None:
+            # A split is already cached for this depth: reuse it directly. Scanning
+            # the histograms here (find_best_split) would be pure waste -- the result
+            # would be discarded -- and it is O(features x bins^2) per sample.
             node.split(self.splits[depth], self.split_confidence)
             node.left.update_from_parent_node(node)
             node.right.update_from_parent_node(node)
+            return
 
-        elif best_split[0] is not None:
+        best_split, _ = node.find_best_split()  # here happens hf bound calculation
+        if best_split[0] is not None:
             self.splits[depth] = best_split
             node.split(best_split, self.split_confidence)
             node.left.update_from_parent_node(node)

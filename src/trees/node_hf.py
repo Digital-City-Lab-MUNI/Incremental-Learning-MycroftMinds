@@ -259,11 +259,11 @@ class NodeHoeffdingBound:  # one leaf of the FastODT
         best_split_1st = (None, None, 0)
         best_split_2nd = (None, None, 0)
 
+        # iter_candidate_stats yields all candidates of a histogram in O(bins) via
+        # prefix sums; the naive get_candidates()+aggregate_stats() loop is O(bins^2)
+        # per feature with dict lookups in the inner loop.
         for feature, hist in (self.histograms or {}).items():
-            candidates = hist.get_candidates()
-            for thr in candidates:
-                left_stats = hist.aggregate_stats(thr, left=True)
-                right_stats = hist.aggregate_stats(thr, left=False)
+            for thr, left_stats, right_stats in hist.iter_candidate_stats():
                 reduction = self.split_criterion(
                     left_stats,
                     right_stats,

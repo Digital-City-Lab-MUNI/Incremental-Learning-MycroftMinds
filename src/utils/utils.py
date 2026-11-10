@@ -21,6 +21,63 @@ import pandas as pd
 import numpy as np
 from typing import Tuple, Sequence
 
+# Registry for the most recent numeric dataset load (src.data.io.load_dataset):
+# original device labels behind the numeric codes, and the source timezone behind
+# the epoch-second time column (so resampling keeps the original local-time
+# bucketing, e.g. Europe/Prague days around DST).
+_DEVICE_LABELS: list = []
+_TIMEZONE = None
+
+
+def register_device_labels(labels: Sequence) -> None:
+    """Register the original device labels for the most recent numeric dataset load."""
+    _DEVICE_LABELS[:] = list(labels)
+
+
+def register_timezone(tz) -> None:
+    """Register the source timezone for the most recent numeric dataset load."""
+    global _TIMEZONE
+    _TIMEZONE = tz
+
+
+def device_label(code):
+    """Map a numeric device code back to its original label (identity if unknown)."""
+    try:
+        i = int(code)
+    except (TypeError, ValueError):
+        return code
+    if 0 <= i < len(_DEVICE_LABELS):
+        return _DEVICE_LABELS[i]
+    return code
+
+
+def as_timestamp(value):
+    """Interpret a time-column value as ``pd.Timestamp``.
+
+    Numeric values are epoch seconds (the layout produced by
+    ``src.data.io.load_dataset``), converted back to the registered source
+    timezone; anything else (e.g. a ``pd.Timestamp`` in a raw object-dtype array)
+    is passed through ``pd.Timestamp`` directly.
+    """
+    if isinstance(value, (int, float, np.integer, np.floating)) and not isinstance(value, bool):
+        if _TIMEZONE is not None:
+            return pd.Timestamp(value, unit="s", tz="UTC").tz_convert(_TIMEZONE)
+        return pd.Timestamp(value, unit="s")
+    return pd.Timestamp(value)
+
+
+def time_index(col: np.ndarray) -> pd.DatetimeIndex:
+    """Build a ``DatetimeIndex`` from a time column (epoch seconds or timestamps)."""
+    if col.dtype == object:
+        try:
+            return pd.DatetimeIndex(col)
+        except Exception:
+            return pd.Index(col)
+    idx = pd.DatetimeIndex(pd.to_datetime(col, unit="s", utc=True))
+    if _TIMEZONE is not None:
+        idx = idx.tz_convert(_TIMEZONE)
+    return idx
+
 
 def get_unique_random_numbers(N: int, upper_bound: int, seed: int | None = None) -> np.ndarray:
     """Sample ``N`` distinct random integers from ``range(upper_bound)`` with optional random seed."""
@@ -99,7 +156,11 @@ def get_device_data(
     if isinstance(data_split, tuple) and len(data_split) == 2:
         X, y = data_split
         mask = X[:, 1] == device_id
-        y_series = pd.Series(y[mask], index=X[mask, 0])
+        if X.dtype == object:
+            y_series = pd.Series(y[mask], index=X[mask, 0])
+        else:
+            # numeric layout: column 0 holds epoch seconds -> proper DatetimeIndex
+            y_series = pd.Series(y[mask], index=time_index(X[mask, 0]))
         return X[mask], y_series
 
     return None, None

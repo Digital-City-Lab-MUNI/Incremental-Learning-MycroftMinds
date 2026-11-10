@@ -15,6 +15,7 @@
 #   MODELS="FastODT xFastODT IncubationBoost"  (default: all models of the dataset)
 #   BENCH_MODELS="..."                          (default: all models)
 #   MAX_LENGTH=20000                            (cap samples per split, -1 = all)
+#   JOBS=8                                      (parallel model workers per stage, default 1)
 #   FASTODT_DATA_ROOT=/path/to/data_root        (default: <repo>/data)
 set -uo pipefail
 
@@ -72,7 +73,8 @@ fi
 python -m experiments.run_evaluation \
   --dataset "$DATASET" "${MODELS_ARG[@]}" \
   --data-root "$DATA_ROOT" \
-  --results-dir "$RESULTS/raw" --max-length "${MAX_LENGTH:--1}"
+  --results-dir "$RESULTS/raw" --max-length "${MAX_LENGTH:--1}" \
+  --jobs "${JOBS:-1}"
 
 # --- computational benchmark -------------------------------------------------
 BENCH_ARG=()
@@ -83,7 +85,8 @@ fi
 python -m experiments.run_benchmark \
   --dataset "$DATASET" "${BENCH_ARG[@]}" \
   --data-root "$DATA_ROOT" \
-  --results-dir "$RESULTS/raw" --max-length "${MAX_LENGTH:--1}"
+  --results-dir "$RESULTS/raw" --max-length "${MAX_LENGTH:--1}" \
+  --jobs "${JOBS:-1}"
 
 # --- aggregate whatever raw results exist so far (idempotent) ----------------
 python -m experiments.prepare_results --results-dir "$RESULTS/raw" --out "$RESULTS/tables"

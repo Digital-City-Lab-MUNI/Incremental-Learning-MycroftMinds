@@ -107,15 +107,20 @@ def match_events(true_idxs: Iterable[int], pred_idxs: Iterable[int], delta: int)
         ``(n_matches, n_true, n_pred)`` counts for matched, true, and predicted
         events.
     """
-    matched = []
-    used_pred = set()
-    for t in true_idxs:
-        for p in pred_idxs:
-            if abs(p - t) <= delta and p not in used_pred:
-                matched.append((t, p))
-                used_pred.add(p)
-                break
-    return len(matched), len(true_idxs), len(pred_idxs)
+    # Two-pointer greedy match (both sides sorted, as returned by find_peaks):
+    # equivalent to the naive O(n_true * n_pred) scan, but O(n_true + n_pred).
+    # Any pred < t - delta can never match this or any later true event.
+    t = sorted(true_idxs)
+    p = sorted(pred_idxs)
+    matches = 0
+    j = 0
+    for ti in t:
+        while j < len(p) and p[j] < ti - delta:
+            j += 1
+        if j < len(p) and p[j] <= ti + delta:
+            matches += 1
+            j += 1
+    return matches, len(t), len(p)
 
 
 def spike_drop_match_score(
@@ -318,7 +323,7 @@ def calculate_metrics(
                 print(f"\t\tF1: {metrics_dict[C.Event.DROPS_DELAYED][C.Metric.F1]:.4f}")
 
     # Function to calculate metrics for aggregated data
-    def aggregate_metrics(y_true: pd.Series, y_pred: pd.Series, freq: str) -> dict:
+    def aggregate_metrics(y_true: pd.Series, y_pred: pd.Series, freq: str, hourly=None) -> dict:
         """Aggregate series to ``freq`` then compute metrics.
 
         This function handles the conversion between power (kW) and energy (kWh) by
@@ -354,8 +359,11 @@ def calculate_metrics(
         freq_td = pd.Timedelta(freq)
 
         if freq_td > pd.Timedelta(C.Freq.H1):
-            # First aggregate to hourly by mean
-            y_true_hourly, y_pred_hourly = aggregate_values(y_true, y_pred, C.Freq.H, "mean")
+            # First aggregate to hourly by mean (pass a precomputed `hourly` pair to
+            # avoid recomputing this resample for every aggregation level)
+            if hourly is None:
+                hourly = aggregate_values(y_true, y_pred, C.Freq.H, "mean")
+            y_true_hourly, y_pred_hourly = hourly
             # Then aggregate to the target frequency by sum
             y_true_agg, y_pred_agg = aggregate_values(y_true_hourly, y_pred_hourly, freq, "sum")
         elif freq_td == pd.Timedelta(C.Freq.H1):
@@ -479,13 +487,18 @@ def calculate_metrics(
     if data_freq not in [C.Freq.H1, C.Freq.H, C.Freq.D, C.Freq.W, C.Freq.D28]:
         metrics[data_freq] = original_metrics
 
+    # Aggregate to hourly once; daily/weekly/28-day all build on the same hourly step
+    hourly = aggregate_values(y_true, y_pred, C.Freq.H, "mean")
+
     # Add hourly metrics (either from original data if data_freq is 'H' or by aggregation)
-    metrics[C.Agg.HOURLY] = original_metrics if data_freq == C.Freq.H else aggregate_metrics(y_true, y_pred, C.Freq.H1)
+    metrics[C.Agg.HOURLY] = (
+        original_metrics if data_freq == C.Freq.H else aggregate_metrics(y_true, y_pred, C.Freq.H1, hourly=hourly)
+    )
 
     # Add other aggregation metrics
-    metrics[C.Agg.DAILY] = aggregate_metrics(y_true, y_pred, C.Freq.D1)
-    metrics[C.Agg.WEEKLY] = aggregate_metrics(y_true, y_pred, C.Freq.W1)
-    metrics[C.Agg.DAYS_28] = aggregate_metrics(y_true, y_pred, C.Freq.D28)
+    metrics[C.Agg.DAILY] = aggregate_metrics(y_true, y_pred, C.Freq.D1, hourly=hourly)
+    metrics[C.Agg.WEEKLY] = aggregate_metrics(y_true, y_pred, C.Freq.W1, hourly=hourly)
+    metrics[C.Agg.DAYS_28] = aggregate_metrics(y_true, y_pred, C.Freq.D28, hourly=hourly)
 
     if verbose:
         print("=" * 50)

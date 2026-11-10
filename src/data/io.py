@@ -14,9 +14,12 @@ original structure automatically.
 
 import os
 import numpy as np
+import pandas as pd
 import traceback
 import pickle
 from typing import List, Tuple, Union, Any
+
+from src.utils.utils import register_device_labels, register_timezone
 
 
 def save_data_numpy(
@@ -259,6 +262,53 @@ def save_dataset(
     return train_path, valid_path, test_path
 
 
+def _to_numeric_split(X: np.ndarray, y: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """Convert an object-dtype split to a compact float64 matrix.
+
+    Layout of the returned ``X`` (same column order as the stored array):
+
+    * column 0 (time) -> float64 epoch seconds in UTC (exact for sub-second grids
+      up to ~100 years at microsecond resolution);
+    * column 1 (device id) -> float64 integer code; original labels are registered
+      via :func:`src.utils.utils.register_device_labels` and can be recovered with
+      :func:`src.utils.utils.device_label`;
+    * columns 2+ (features) -> float64.
+
+    Object arrays make every per-sample indexing/comparison and every vstack/mask
+    operate on boxed Python objects (and unpickling them at load is slow), so the
+    whole pipeline runs on native floats instead. Non-object arrays are returned
+    unchanged.
+    """
+    X = np.asarray(X)
+    if X.dtype != object or X.ndim != 2 or X.shape[1] < 2:
+        return X, y
+    t = pd.to_datetime(pd.Series(X[:, 0]))
+    try:
+        tz = t.dt.tz  # e.g. Europe/Prague; None for tz-naive data
+        secs = t.astype("int64").to_numpy() / 1e9  # tz-aware -> UTC epoch ns
+    except (AttributeError, TypeError):
+        tz = None
+        secs = pd.to_datetime(pd.Series(X[:, 0]), utc=True).astype("int64").to_numpy() / 1e9
+    register_timezone(tz)
+    codes, uniques = pd.factorize(pd.Series(X[:, 1]))
+    register_device_labels(list(uniques))
+    Xn = np.empty(X.shape, dtype=np.float64)
+    Xn[:, 0] = secs
+    Xn[:, 1] = codes.astype(np.float64)
+    if X.shape[1] > 2:
+        Xn[:, 2:] = X[:, 2:].astype(np.float64)
+    return Xn, y
+
+
+def _to_numeric(data: Any) -> Any:
+    """Apply :func:`_to_numeric_split` to a list of splits or a single ``(X, y)`` tuple."""
+    if isinstance(data, list):
+        return [_to_numeric_split(X, y) for X, y in data]
+    if isinstance(data, tuple) and len(data) == 2:
+        return _to_numeric_split(data[0], data[1])
+    return data
+
+
 def load_dataset(
     data_dir: str = "../data",
     prefix: str = "",
@@ -267,6 +317,7 @@ def load_dataset(
     valid: bool = True,
     test: bool = True,
     max_length=-1,
+    numeric: bool = True,
 ) -> Tuple[Any, Any, Any]:
     """Load persisted dataset splits.
 
@@ -281,6 +332,10 @@ def load_dataset(
     train, valid, test : bool, default True
         Flags controlling which splits to load. Unrequested splits retain their
         input argument value (which callers typically ignore) if False.
+    numeric : bool, default True
+        If True, convert object-dtype ``X`` arrays to the compact float64 layout
+        described in :func:`_to_numeric_split` (time as epoch seconds, device id as
+        code). Disable to get the raw stored arrays.
 
     Returns
     -------
@@ -328,5 +383,10 @@ def load_dataset(
         print("[INFO] Loading test data...")
         test = load_data_pickle(f"{prefix}test", data_dir, max_length=max_length)
         print(f"[INFO] Test data loaded: {len(test)} samples")
+
+    if numeric:
+        train = _to_numeric(train)
+        valid = _to_numeric(valid)
+        test = _to_numeric(test)
 
     return train, valid, test

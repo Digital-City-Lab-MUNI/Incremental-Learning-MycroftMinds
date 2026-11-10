@@ -169,8 +169,12 @@ class BaseForest(base.Ensemble):
         if len(self) == 0:
             self._init_ensemble(sorted(x.keys()))
 
+        # Convert the dict to a feature array once; converting per tree would repeat
+        # this n_models times for every sample.
+        x_arr = np.asarray(list(x.values()), dtype=np.float64)
+
         for i, model in enumerate(self):
-            y_pred = model.predict_one(x)
+            y_pred = model.predict_one(x_arr)
 
             # Update performance evaluator
             self._metrics[i].update(
@@ -185,9 +189,9 @@ class BaseForest(base.Ensemble):
             k = poisson(rate=self.lambda_value, rng=self._rng)
             if k > 0:
                 if not self._warning_detection_disabled and self._background[i] is not None:
-                    self._background[i].learn_one(x=x, y=y)  # DTL: remove w=k
+                    self._background[i].learn_one(x_arr, y)  # DTL: remove w=k
 
-                model.learn_one(x=x, y=y)  # DTL: remove w=k
+                model.learn_one(x_arr, y)  # DTL: remove w=k
 
                 drift_input = None
                 if not self._warning_detection_disabled:
@@ -627,13 +631,16 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
             self._init_ensemble(sorted(x.keys()))
             return 0.0  # type: ignore
 
+        # Convert the dict to a feature array once (see learn_one)
+        x_arr = np.asarray(list(x.values()), dtype=np.float64)
+
         y_pred = np.zeros(self.n_models)
 
         if not self.disable_weighted_vote and self.aggregation_method != self._MEDIAN:
             weights = np.zeros(self.n_models)
             sum_weights = 0.0
             for i, model in enumerate(self):
-                y_pred[i] = model.predict_one(x)
+                y_pred[i] = model.predict_one(x_arr)
                 weights[i] = self._metrics[i].get()
                 sum_weights += weights[i]
 
@@ -645,7 +652,7 @@ class ARFRegressorFODT(BaseForest, base.Regressor):
                 y_pred *= weights
         else:
             for i, model in enumerate(self):
-                y_pred[i] = model.predict_one(x)
+                y_pred[i] = model.predict_one(x_arr)
 
         if self.aggregation_method == self._MEAN:
             y_pred = y_pred.mean()

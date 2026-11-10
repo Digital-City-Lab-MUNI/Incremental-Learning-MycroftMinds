@@ -31,7 +31,7 @@ import sys
 import time
 from pathlib import Path
 
-from .bootstrap import collect_environment, ensure_ilm_on_path, peak_rss_mb
+from .bootstrap import collect_environment, ensure_ilm_on_path, peak_rss_mb, run_over_models
 from .registry import load_config, resolve_dataset, resolve_model
 
 
@@ -53,7 +53,98 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--max-length", type=int, default=-1, help="Cap samples per split (passed to load_dataset)")
     ap.add_argument("--start-split", type=int, default=0, help="First validation split to process")
     ap.add_argument("--end-split", type=int, default=None, help="End split (exclusive)")
+    ap.add_argument(
+        "--jobs",
+        type=int,
+        default=1,
+        help="Run this many models in parallel worker processes (fork; loaded data is shared "
+        "copy-on-write). Default 1 = sequential",
+    )
     return ap.parse_args(argv)
+
+
+def _eval_model(name: str, ctx: dict) -> str:
+    """Run the valid-splits walk-forward + test evaluation for one model.
+
+    Writes ``<Model>_valid.pkl`` / ``<Model>_test.pkl`` / ``<Model>_meta.json`` into
+    ``ctx['out_dir']`` and returns the ``[DONE]`` log line.
+    """
+    cfg, ds, protocol = ctx["cfg"], ctx["ds"], ctx["protocol"]
+    model_class, params, incremental, update_freq = resolve_model(cfg, ctx["dataset"], name)
+    common = ctx["common"]
+
+    t0 = time.time()
+    tr_preds, va_preds, tr_metrics, va_metrics = all_valid_splits_seq_fit_predict(
+        model_class=model_class,
+        model_params=params,
+        train=ctx["train"],
+        valid=ctx["valid"],
+        start_split=ctx["start_split"],
+        end_split=ctx["end_split"],
+        tqdm_on=ctx["tqdm_on"],
+        **common,
+    )
+    valid_time_s = time.time() - t0
+    va_agg = all_time_aggregation_metrics(va_metrics, data_freq=ds["data_freq"], verbose=False)
+
+    t0 = time.time()
+    tr_preds_t, te_preds, tr_metrics_t, te_metrics = test_set_seq_fit_predict(
+        model_class=model_class,
+        model_params=params,
+        train=ctx["train"],
+        valid=ctx["valid"],
+        test=ctx["test"],
+        normalize_robust=protocol["normalize_robust"],
+        predict_train=protocol["predict_train_test"],
+        **common,
+    )
+    test_time_s = time.time() - t0
+    te_agg = all_time_aggregation_metrics(te_metrics, data_freq=ds["data_freq"], verbose=False)
+
+    out_dir = ctx["out_dir"]
+    with open(out_dir / f"{name}_valid.pkl", "wb") as f:
+        pickle.dump(
+            {
+                "predictions_train": tr_preds,
+                "predictions_valid": va_preds,
+                "metrics_train": tr_metrics,
+                "metrics_valid": va_metrics,
+                "aggregated_valid": va_agg,
+            },
+            f,
+        )
+    with open(out_dir / f"{name}_test.pkl", "wb") as f:
+        pickle.dump(
+            {
+                "predictions_train": tr_preds_t,
+                "predictions_test": te_preds,
+                "metrics_train": tr_metrics_t,
+                "metrics_test": te_metrics,
+                "aggregated_test": te_agg,
+            },
+            f,
+        )
+    meta = {
+        "dataset": ctx["dataset"],
+        "model": name,
+        "model_class": f"{model_class.__module__}.{model_class.__name__}",
+        "params": params,
+        "incremental": incremental,
+        "update_freq": update_freq,
+        "data_dir": str(ctx["data_dir"]),
+        "prefix": ds["prefix"],
+        "valid_time_s": valid_time_s,
+        "test_time_s": test_time_s,
+        "peak_rss_mb": peak_rss_mb(),
+        "environment": ctx["env"],
+    }
+    with open(out_dir / f"{name}_meta.json", "w", encoding="utf-8") as f:
+        json.dump(meta, f, indent=1, default=str)
+
+    return (
+        f"[DONE] {ctx['dataset']}/{name}: valid {valid_time_s:.1f}s, test {test_time_s:.1f}s, "
+        f"peak RSS {meta['peak_rss_mb']:.0f} MB, ilm_rev {ctx['env']['ilm_git_revision']}"
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -76,7 +167,9 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
 
-    # imported only after the model repo is on sys.path
+    # imported only after the model repo is on sys.path; bound as module globals so
+    # the (possibly forked) per-model worker can see them too
+    global load_dataset, all_time_aggregation_metrics, all_valid_splits_seq_fit_predict, test_set_seq_fit_predict
     from src.data.io import load_dataset
     from src.evaluation.metrics import all_time_aggregation_metrics
     from src.evaluation.training import all_valid_splits_seq_fit_predict, test_set_seq_fit_predict
@@ -94,89 +187,43 @@ def main(argv: list[str] | None = None) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     models = args.models or ds["models"]
-    for name in models:
-        model_class, params, incremental, update_freq = resolve_model(cfg, args.dataset, name)
-        common = dict(
-            use_residuals=ds["use_residuals"],
-            incremental=incremental,
-            data_freq=ds["data_freq"],
-            forecast_horizon=protocol["forecast_horizon"],
-            features=ds["features"],
-            update_freq=update_freq,
-            spike_prominence=ds["spike_prominence"],
-            verbose=1,
-        )
+    # verbose=0: per-device/split metric printing and per-retrain pympler walks only
+    # slow the run down; timings and peak RSS are still recorded in <Model>_meta.json.
+    common = dict(
+        use_residuals=ds["use_residuals"],
+        data_freq=ds["data_freq"],
+        forecast_horizon=protocol["forecast_horizon"],
+        features=ds["features"],
+        spike_prominence=ds["spike_prominence"],
+        verbose=0,
+    )
+    ctx = dict(
+        cfg=cfg,
+        dataset=args.dataset,
+        ds=ds,
+        protocol=protocol,
+        data_dir=data_dir,
+        train=train,
+        valid=valid,
+        test=test,
+        out_dir=out_dir,
+        common=common,
+        start_split=args.start_split,
+        end_split=args.end_split,
+        env=env,
+        tqdm_on=args.jobs <= 1,
+    )
 
-        t0 = time.time()
-        tr_preds, va_preds, tr_metrics, va_metrics = all_valid_splits_seq_fit_predict(
-            model_class=model_class,
-            model_params=params,
-            train=train,
-            valid=valid,
-            start_split=args.start_split,
-            end_split=args.end_split,
-            **common,
-        )
-        valid_time_s = time.time() - t0
-        va_agg = all_time_aggregation_metrics(va_metrics, data_freq=ds["data_freq"], verbose=False)
+    # update_freq differs per model (incremental vs batch), so resolve it inside the worker
+    def _worker(name: str, c: dict) -> str:
+        model_class, params, incremental, update_freq = resolve_model(c["cfg"], c["dataset"], name)
+        c = dict(c)
+        c["common"] = dict(c["common"], incremental=incremental, update_freq=update_freq)
+        return _eval_model(name, c)
 
-        t0 = time.time()
-        tr_preds_t, te_preds, tr_metrics_t, te_metrics = test_set_seq_fit_predict(
-            model_class=model_class,
-            model_params=params,
-            train=train,
-            valid=valid,
-            test=test,
-            normalize_robust=protocol["normalize_robust"],
-            predict_train=protocol["predict_train_test"],
-            **common,
-        )
-        test_time_s = time.time() - t0
-        te_agg = all_time_aggregation_metrics(te_metrics, data_freq=ds["data_freq"], verbose=False)
-
-        with open(out_dir / f"{name}_valid.pkl", "wb") as f:
-            pickle.dump(
-                {
-                    "predictions_train": tr_preds,
-                    "predictions_valid": va_preds,
-                    "metrics_train": tr_metrics,
-                    "metrics_valid": va_metrics,
-                    "aggregated_valid": va_agg,
-                },
-                f,
-            )
-        with open(out_dir / f"{name}_test.pkl", "wb") as f:
-            pickle.dump(
-                {
-                    "predictions_train": tr_preds_t,
-                    "predictions_test": te_preds,
-                    "metrics_train": tr_metrics_t,
-                    "metrics_test": te_metrics,
-                    "aggregated_test": te_agg,
-                },
-                f,
-            )
-        meta = {
-            "dataset": args.dataset,
-            "model": name,
-            "model_class": f"{model_class.__module__}.{model_class.__name__}",
-            "params": params,
-            "incremental": incremental,
-            "update_freq": update_freq,
-            "data_dir": str(data_dir),
-            "prefix": ds["prefix"],
-            "valid_time_s": valid_time_s,
-            "test_time_s": test_time_s,
-            "peak_rss_mb": peak_rss_mb(),
-            "environment": env,
-        }
-        with open(out_dir / f"{name}_meta.json", "w", encoding="utf-8") as f:
-            json.dump(meta, f, indent=1, default=str)
-
-        print(
-            f"[DONE] {args.dataset}/{name}: valid {valid_time_s:.1f}s, test {test_time_s:.1f}s, "
-            f"peak RSS {meta['peak_rss_mb']:.0f} MB, ilm_rev {env['ilm_git_revision']}"
-        )
+    for line in run_over_models(args.jobs, models, _worker, ctx):
+        if line:
+            print(line)
     return 0
 
 

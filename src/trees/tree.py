@@ -100,18 +100,13 @@ class BaseTree(BaseLearner):
             raise ValueError(f"Received data with shape {X.shape}, but expected 1D or 2D array.")
 
     def _traverse(self, X: np.ndarray, node: Node) -> float:
-        """Traverse the tree recursively for a single sample."""
-        ret = node.value
-        if node.threshold is None:
-            return ret
-
+        """Traverse the tree for a single sample (iterative: per-sample calls recurse otherwise)."""
         # Routing convention: samples equal to the threshold go left (<=),
         # matching FastODT training, histogram split evaluation, and the
         # binary-mask routing of xFastODT.
-        if X[node.feature] <= node.threshold:
-            return self._traverse(X, node.left)
-        else:
-            return self._traverse(X, node.right)
+        while node.threshold is not None:
+            node = node.left if X[node.feature] <= node.threshold else node.right
+        return node.value
 
     def _grow(self, X: np.ndarray, y: np.ndarray, depth: int) -> Node:
         """Recursively grow the regression tree returning subtree root."""

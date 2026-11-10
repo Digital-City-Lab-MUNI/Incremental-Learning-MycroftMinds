@@ -35,7 +35,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .bootstrap import collect_environment, ensure_ilm_on_path, peak_rss_mb
+from .bootstrap import collect_environment, ensure_ilm_on_path, peak_rss_mb, run_over_models
 from .registry import load_config, resolve_dataset, resolve_model
 
 
@@ -52,7 +52,29 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--max-devices", type=int, default=5, help="Benchmark at most this many devices")
     ap.add_argument("--max-train", type=int, default=20000, help="Cap training rows per device")
     ap.add_argument("--predict-samples", type=int, default=2000, help="Rows used for latency measurements")
+    ap.add_argument(
+        "--jobs",
+        type=int,
+        default=1,
+        help="Run this many models in parallel worker processes (fork; loaded data is shared "
+        "copy-on-write). Default 1 = sequential",
+    )
     return ap.parse_args(argv)
+
+
+def _bench_worker(name: str, ctx: dict) -> str:
+    """Benchmark one model, write ``<Model>_benchmark.json``, return the ``[DONE]`` log line."""
+    result = benchmark_model(
+        ctx["cfg"], ctx["ds"], ctx["dataset"], name, ctx["train"], ctx["test"], ctx["args"], ctx["env"]
+    )
+    with open(ctx["out_dir"] / f"{name}_benchmark.json", "w", encoding="utf-8") as f:
+        json.dump(result, f, indent=1, default=str)
+    return (
+        f"[DONE] {ctx['dataset']}/{name}: train {result['total_train_time_s']:.1f}s, "
+        f"single {result['pred_single_us_mean']:.1f}us, batch {result['pred_batch_s']:.3f}s/"
+        f"{result['pred_batch_samples']}, peak RSS {result['peak_rss_mb']:.0f} MB, "
+        f"size {result['model_size_mb']:.2f} MB, rmse {result['test_rmse']:.3f}"
+    )
 
 
 def _device_xy(splits: list | tuple, device_id: float, max_rows: int) -> tuple[np.ndarray, pd.Series]:
@@ -225,16 +247,10 @@ def main(argv: list[str] | None = None) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     models = args.models or ds["models"]
-    for name in models:
-        result = benchmark_model(cfg, ds, args.dataset, name, train, test, args, env)
-        with open(out_dir / f"{name}_benchmark.json", "w", encoding="utf-8") as f:
-            json.dump(result, f, indent=1, default=str)
-        print(
-            f"[DONE] {args.dataset}/{name}: train {result['total_train_time_s']:.1f}s, "
-            f"single {result['pred_single_us_mean']:.1f}us, batch {result['pred_batch_s']:.3f}s/"
-            f"{result['pred_batch_samples']}, peak RSS {result['peak_rss_mb']:.0f} MB, "
-            f"size {result['model_size_mb']:.2f} MB, rmse {result['test_rmse']:.3f}"
-        )
+    ctx = dict(cfg=cfg, ds=ds, dataset=args.dataset, train=train, test=test, args=args, env=env, out_dir=out_dir)
+    for line in run_over_models(args.jobs, models, _bench_worker, ctx):
+        if line:
+            print(line)
     return 0
 
 

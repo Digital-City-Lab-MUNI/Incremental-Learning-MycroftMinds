@@ -229,6 +229,51 @@ class AdaptiveHistogram:
                 sum_y2 += float(stat[C.StatKey.SUM_Y2])
         return {C.StatKey.COUNT: count, C.StatKey.SUM_Y: sum_y, C.StatKey.SUM_Y2: sum_y2}
 
+    def iter_candidate_stats(self):
+        """Yield ``(threshold, left_stats, right_stats)`` for every split candidate.
+
+        Bit-exact equivalent of calling :meth:`get_candidates` + :meth:`aggregate_stats`
+        for each candidate (same summation order, so identical floating-point results),
+        but the per-bin stats are extracted once into tuples instead of re-read through
+        dict lookups inside the O(bins^2) loop. Candidate ``k`` is the midpoint between
+        edges ``k-1`` and ``k``: left = bins ``0..k-1``, right = bins ``k..``.
+        """
+        n = len(self.bin_edges)
+        if n < 2:
+            return
+        edges = self.bin_edges
+        # extract (count, sum_y, sum_y2) once per bin; same values aggregate_stats reads
+        stats = [(s[C.StatKey.COUNT], s[C.StatKey.SUM_Y], s[C.StatKey.SUM_Y2]) for s in self.bin_stats]
+        # left side: running fold over bins 0..k-1 in increasing order, exactly like
+        # aggregate_stats(thr, left=True) does (including the 0/0.0 initialization)
+        lc, ly, ly2 = 0, 0.0, 0.0
+        c, sy, sy2 = stats[0]
+        lc += int(c)
+        ly += float(sy)
+        ly2 += float(sy2)
+        prev = edges[0]
+        for k in range(1, n):
+            edge = edges[k]
+            thr = (prev + edge) / 2.0
+            # right side: fold bins k..n-1 in increasing order, exactly like
+            # aggregate_stats(thr, left=False) does
+            rc, ry, ry2 = 0, 0.0, 0.0
+            for j in range(k, n):
+                c, sy, sy2 = stats[j]
+                rc += int(c)
+                ry += float(sy)
+                ry2 += float(sy2)
+            yield (
+                thr,
+                {C.StatKey.COUNT: lc, C.StatKey.SUM_Y: ly, C.StatKey.SUM_Y2: ly2},
+                {C.StatKey.COUNT: rc, C.StatKey.SUM_Y: ry, C.StatKey.SUM_Y2: ry2},
+            )
+            c, sy, sy2 = stats[k]
+            lc += int(c)
+            ly += float(sy)
+            ly2 += float(sy2)
+            prev = edge
+
 
 class EquiWidthHistogram:
     """Fixed-width histogram over a predefined numeric range.
@@ -390,6 +435,41 @@ class EquiWidthHistogram:
             prev = edge
         return mids
 
+    def iter_candidate_stats(self):
+        """Yield ``(threshold, left_stats, right_stats)`` for every split candidate.
+
+        Bit-exact equivalent of :meth:`get_candidates` + :meth:`aggregate_stats` per
+        candidate (same summation order), with per-bin stats extracted once into tuples.
+        Candidate ``k`` lies between the previous boundary and edge ``k``:
+        left = bins ``0..k-1``, right = bins ``k..``.
+        """
+        n = len(self.bin_edges)
+        if n == 0:
+            return
+        edges = self.bin_edges
+        stats = [(s[C.StatKey.COUNT], s[C.StatKey.SUM_Y], s[C.StatKey.SUM_Y2]) for s in self.bin_stats]
+        lc, ly, ly2 = 0, 0.0, 0.0
+        prev = self.min_val
+        for k, edge in enumerate(edges):
+            thr = (prev + edge) / 2.0
+            # right side: fold bins k..n-1 in increasing order (aggregate_stats left=False)
+            rc, ry, ry2 = 0, 0.0, 0.0
+            for j in range(k, n):
+                c, sy, sy2 = stats[j]
+                rc += int(c)
+                ry += float(sy)
+                ry2 += float(sy2)
+            yield (
+                thr,
+                {C.StatKey.COUNT: lc, C.StatKey.SUM_Y: ly, C.StatKey.SUM_Y2: ly2},
+                {C.StatKey.COUNT: rc, C.StatKey.SUM_Y: ry, C.StatKey.SUM_Y2: ry2},
+            )
+            c, sy, sy2 = stats[k]
+            lc += int(c)
+            ly += float(sy)
+            ly2 += float(sy2)
+            prev = edge
+
 
 class MeanSplitterHistogram:
     """Facade that proposes only the running mean as a split threshold.
@@ -540,6 +620,24 @@ class MeanSplitterHistogram:
             C.StatKey.SUM_Y: self.right_sum_y,
             C.StatKey.SUM_Y2: self.right_sum_y2,
         }
+
+    def iter_candidate_stats(self):
+        """Yield the single candidate (the running mean) with its left/right pseudo-stats."""
+        if self.count == 0:
+            return
+        yield (
+            self.sum_x / self.count,
+            {
+                C.StatKey.COUNT: self.left_count,
+                C.StatKey.SUM_Y: self.left_sum_y,
+                C.StatKey.SUM_Y2: self.left_sum_y2,
+            },
+            {
+                C.StatKey.COUNT: self.right_count,
+                C.StatKey.SUM_Y: self.right_sum_y,
+                C.StatKey.SUM_Y2: self.right_sum_y2,
+            },
+        )
 
 
 def get_histogram_type(name: str | None) -> Type[Union[AdaptiveHistogram, EquiWidthHistogram, MeanSplitterHistogram]]:

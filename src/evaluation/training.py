@@ -13,14 +13,14 @@ evaluation. Two update paradigms are supported:
 import pandas as pd
 import numpy as np
 from typing import Tuple, Optional, List, Dict, Any, Type
-from tqdm.notebook import tqdm
+from tqdm.auto import tqdm
 from sklearn.base import BaseEstimator
 import time
 
 # Import from our project's modules
 from src.evaluation.metrics import calculate_metrics
 from src.utils.memory import calculate_memory_usage
-from src.utils.utils import get_device_data
+from src.utils.utils import as_timestamp, device_label, ensure_2d_array, get_device_data, time_index
 from src.data.feature_engineering import filter_features_for_forecast_horizon
 
 
@@ -65,13 +65,16 @@ def _partial_fit_model(model: BaseEstimator, X: np.ndarray, Y: pd.Series) -> Non
     Y : pandas.Series of shape (n_samples,)
         Target values aligned with ``X`` rows.
     """
+    X = ensure_2d_array(X)
     if hasattr(model, "partial_fit"):
         model.partial_fit(X, Y)
     else:
-        # Adaptation for River or other models with learn_one method (convert each row to a dict)
-        X: dict = pd.DataFrame(X).to_dict(orient="records")
-        for x, y in zip(X, Y, strict=True):
-            model.learn_one(x, y)
+        # River-style models take one dict per sample; build the dicts from the rows
+        # directly (pd.DataFrame(X).to_dict("records") per call is far slower, and the
+        # pipeline calls this once per single row)
+        cols = list(range(X.shape[1]))
+        for row, y in zip(X.tolist(), Y, strict=True):
+            model.learn_one(dict(zip(cols, row)), y)
 
 
 def _predict_model(model: BaseEstimator, X: np.ndarray) -> np.ndarray:
@@ -89,12 +92,13 @@ def _predict_model(model: BaseEstimator, X: np.ndarray) -> np.ndarray:
     ndarray of shape (n_samples,)
         Model predictions in original target scale.
     """
+    X = ensure_2d_array(X)
     if hasattr(model, "predict"):
         return model.predict(X)
     else:
-        # Adaptation for River or other models with predict_one method (convert each row to a dict)
-        X: dict = pd.DataFrame(X).to_dict(orient="records")
-        return np.array([model.predict_one(x) for x in X])
+        # River-style models take one dict per sample (see _partial_fit_model)
+        cols = list(range(X.shape[1]))
+        return np.array([model.predict_one(dict(zip(cols, row))) for row in X.tolist()])
 
 
 def seq_fit_predict_batch_model(
@@ -176,54 +180,63 @@ def seq_fit_predict_batch_model(
     # Use filtered indices if available, otherwise use all features
     feature_indices = valid_indices if valid_indices else slice(index_cols, None)
 
-    # Copy training data to avoid modifying the original
-    X_train_seq = X_train.copy()
-    y_train_seq = y_train.copy()
-
     update_freq = pd.Timedelta(update_freq)
+    update_freq_s = update_freq.total_seconds()
+    valid_times = X_valid[:, 0]
+    numeric_time = valid_times.dtype != object  # numeric layout: epoch seconds
+
+    # Grow the training set chunk-wise and materialize it with a single vstack per
+    # retrain, instead of re-copying the whole matrix on every chunk (quadratic).
+    x_chunks = [X_train]
+    y_parts = [y_train]
 
     # Iterate through the validation set in chunks based on update frequency
     current_chunk_start = 0
     while current_chunk_start < len(X_valid):
         # Determine the end of the current chunk using timestamp manipulation
-        current_time = X_valid[current_chunk_start, 0]  # Assuming the first column in X_valid is the timestamp
-        chunk_end_time = current_time + update_freq
-        chunk_end = np.searchsorted(X_valid[:, 0], chunk_end_time, side="right")
+        if numeric_time:
+            chunk_end_time = valid_times[current_chunk_start] + update_freq_s
+        else:
+            chunk_end_time = pd.Timestamp(valid_times[current_chunk_start]) + update_freq
+        chunk_end = np.searchsorted(valid_times, chunk_end_time, side="right")
+
+        X_fit = x_chunks[0] if len(x_chunks) == 1 else np.vstack(x_chunks)
+        y_fit = y_parts[0] if len(y_parts) == 1 else pd.concat(y_parts)
 
         # Retrain the model with the updated training set
         if verbose >= 1:
             start = time.time()
-            print(f"\nRetraining model on data from {X_train_seq[0, 0]} to {X_train_seq[-1, 0]}")
-            model.fit(X_train_seq[:, feature_indices], y_train_seq)
+            print(f"\nRetraining model on data from {as_timestamp(X_fit[0, 0])} to {as_timestamp(X_fit[-1, 0])}")
+            model.fit(X_fit[:, feature_indices], y_fit)
             print(f"\nTime: {time.time() - start:.2f} seconds")
         else:
-            model.fit(X_train_seq[:, feature_indices], y_train_seq)
+            model.fit(X_fit[:, feature_indices], y_fit)
 
         # Predict for the initial training set if required
-        if predict_train and y_train.shape[0] == y_train_seq.shape[0]:
-            y_pred_train = model.predict(X_train_seq[:, feature_indices])
+        if predict_train and y_train.shape[0] == y_fit.shape[0]:
+            y_pred_train = model.predict(X_fit[:, feature_indices])
             y_pred_train = pd.Series(y_pred_train, index=y_train.index)
             if verbose == 2:
                 print("Got predictions on training set")
 
         # Predict for the current chunk
         if verbose >= 1:
-            print(f"Predicting for chunk from {X_valid[current_chunk_start, 0]} to {X_valid[chunk_end - 1, 0]}")
+            print(
+                f"Predicting for chunk from {as_timestamp(X_valid[current_chunk_start, 0])} "
+                f"to {as_timestamp(X_valid[chunk_end - 1, 0])}"
+            )
             print()
             print("-" * 25)
         y_pred_valid_chunk = model.predict(X_valid[current_chunk_start:chunk_end, feature_indices])
         y_pred_valid.extend(y_pred_valid_chunk)
 
         # Add the current chunk of validation data to the training set
-        X_train_seq = np.vstack([X_train_seq, X_valid[current_chunk_start:chunk_end]])
-        y_train_seq = pd.concat(
-            [
-                y_train_seq,
-                pd.Series(
-                    y_valid.iloc[current_chunk_start:chunk_end],
-                    index=y_valid.index[current_chunk_start:chunk_end],
-                ),
-            ]
+        x_chunks.append(X_valid[current_chunk_start:chunk_end])
+        y_parts.append(
+            pd.Series(
+                y_valid.iloc[current_chunk_start:chunk_end],
+                index=y_valid.index[current_chunk_start:chunk_end],
+            )
         )
 
         # Move to the next chunk
@@ -232,8 +245,9 @@ def seq_fit_predict_batch_model(
     if verbose == 2:
         print("Validation predictions completed.")
 
-    # Print memory usage after retraining
-    if verbose >= 1:
+    # Print memory usage after retraining (expensive pympler walk; debug level only,
+    # the benchmark measures model size once per model via calculate_memory_usage)
+    if verbose >= 2:
         memory_usage = calculate_memory_usage(model)
         print(f"Model's memory usage: {memory_usage:.6f} MB")
 
@@ -320,50 +334,53 @@ def seq_fit_predict_incremental_model(
     # Use filtered indices if available, otherwise use all features
     feature_indices = valid_indices if valid_indices else slice(index_cols, None)
 
-    # Copy training data to avoid modifying the original
-    X_train_seq = X_train.copy()
-    y_train_seq = y_train.copy()
-
     forecast_horizon_td = pd.Timedelta(forecast_horizon)
+
+    # Slice the feature block once up front; slicing per row inside the loop below
+    # copies a matrix row on every sample.
+    X_train_f = X_train[:, feature_indices]
+    X_valid_f = X_valid[:, feature_indices]
+    valid_times = time_index(X_valid[:, 0])
 
     # Fit the model on the initial training data
     if verbose >= 1:
-        print(f"Initial training on data from {X_train_seq[0, 0]} to {X_train_seq[-1, 0]}")
+        print(f"Initial training on data from {as_timestamp(X_train[0, 0])} to {as_timestamp(X_train[-1, 0])}")
 
-    _partial_fit_model(model, X_train_seq[:, feature_indices], y_train_seq)
+    _partial_fit_model(model, X_train_f, y_train)
 
     # Predict on the training set if required
     if predict_train:
-        y_pred_train = _predict_model(model, X_train_seq[:, feature_indices])
+        y_pred_train = _predict_model(model, X_train_f)
         y_pred_train = pd.Series(y_pred_train, index=y_train.index)
 
         if verbose >= 2:
             print("Train predictions completed.")
 
     # Initialize last_update_time with the last timestamp from training data
-    last_update_time = pd.Timestamp(X_train_seq[-1, 0])
+    last_update_time = as_timestamp(X_train[-1, 0])
 
     # Iterate through the validation set
     for i in range(len(X_valid)):
         # Predict the current validation point
-        y_pred = _predict_model(model, X_valid[i : i + 1, feature_indices])
+        y_pred = _predict_model(model, X_valid_f[i : i + 1])
         y_pred_valid.extend(y_pred)
 
         # Update the model with the current validation point only after forecast_horizon has passed
-        current_time = pd.Timestamp(X_valid[i, 0])
+        current_time = valid_times[i]
 
         # Check if enough time has passed since the last update
         if current_time - last_update_time >= forecast_horizon_td:
             if verbose == 2:
                 print(f"Updating model at {current_time} (forecast horizon: {forecast_horizon})")
-            _partial_fit_model(model, X_valid[i : i + 1, feature_indices], y_valid.iloc[i : i + 1])
+            _partial_fit_model(model, X_valid_f[i : i + 1], y_valid.iloc[i : i + 1])
             last_update_time = current_time
 
     if verbose == 2:
         print("Validation predictions completed.")
 
-    # Print memory usage after retraining
-    if verbose >= 1:
+    # Print memory usage after retraining (expensive pympler walk; debug level only,
+    # the benchmark measures model size once per model via calculate_memory_usage)
+    if verbose >= 2:
         memory_usage = calculate_memory_usage(model)
         print(f"Model's memory usage: {memory_usage:.6f} MB")
 
@@ -480,9 +497,11 @@ def all_valid_splits_seq_fit_predict(
         for device_id in device_iter:
             X_train, y_train = get_device_data(train[split], device_id=device_id)
             X_valid, y_valid = get_device_data(valid[split], device_id=device_id)
+            # numeric layout stores device ids as codes; report the original label
+            device_key = device_label(device_id)
 
             if X_valid.shape[0] == 0:
-                print(f"[! WARNING !] No validation data for device {device_id} in split {split}. Skipping.")
+                print(f"[! WARNING !] No validation data for device {device_key} in split {split}. Skipping.")
                 continue
 
             if X_train.shape[1] != len(features):
@@ -543,8 +562,8 @@ def all_valid_splits_seq_fit_predict(
                     verbose,
                 )
 
-            train_period = f"{X_train[0, 0]} - {X_train[-1, 0]}"
-            valid_period = f"{X_valid[0, 0]} - {X_valid[-1, 0]}"
+            train_period = f"{as_timestamp(X_train[0, 0])} - {as_timestamp(X_train[-1, 0])}"
+            valid_period = f"{as_timestamp(X_valid[0, 0])} - {as_timestamp(X_valid[-1, 0])}"
 
             if use_residuals:
                 # Adjust predictions to match the original y_train and y_valid
@@ -568,7 +587,7 @@ def all_valid_splits_seq_fit_predict(
                 device_train_metrics = calculate_metrics(
                     y_train,
                     y_pred_train,
-                    device_id,
+                    device_key,
                     train_period,
                     data_freq=data_freq,
                     spike_prominence=spike_prominence,
@@ -582,7 +601,7 @@ def all_valid_splits_seq_fit_predict(
             device_valid_metrics = calculate_metrics(
                 y_valid,
                 y_pred_valid,
-                device_id,
+                device_key,
                 valid_period,
                 data_freq=data_freq,
                 spike_prominence=spike_prominence,
@@ -591,21 +610,21 @@ def all_valid_splits_seq_fit_predict(
                 verbose=verbose,
             )
 
-            if device_id not in device_train_period_predictions:
-                device_train_period_predictions[device_id] = []
-            device_train_period_predictions[device_id].append(device_train_predictions)
+            if device_key not in device_train_period_predictions:
+                device_train_period_predictions[device_key] = []
+            device_train_period_predictions[device_key].append(device_train_predictions)
 
-            if device_id not in device_valid_period_predictions:
-                device_valid_period_predictions[device_id] = []
-            device_valid_period_predictions[device_id].append(device_valid_predictions)
+            if device_key not in device_valid_period_predictions:
+                device_valid_period_predictions[device_key] = []
+            device_valid_period_predictions[device_key].append(device_valid_predictions)
 
-            if device_id not in device_train_period_metrics:
-                device_train_period_metrics[device_id] = []
-            device_train_period_metrics[device_id].append(device_train_metrics)
+            if device_key not in device_train_period_metrics:
+                device_train_period_metrics[device_key] = []
+            device_train_period_metrics[device_key].append(device_train_metrics)
 
-            if device_id not in device_valid_period_metrics:
-                device_valid_period_metrics[device_id] = []
-            device_valid_period_metrics[device_id].append(device_valid_metrics)
+            if device_key not in device_valid_period_metrics:
+                device_valid_period_metrics[device_key] = []
+            device_valid_period_metrics[device_key].append(device_valid_metrics)
 
     # report missing values
     for device_id in device_train_period_predictions:
@@ -736,6 +755,8 @@ def test_set_seq_fit_predict(
         desc="Processing devices for test predictions",
         position=0,
     ):
+        # numeric layout stores device ids as codes; report the original label
+        device_key = device_label(device_id)
         # Extract device data from last training and validation splits
         X_train, y_train = get_device_data(last_train_split, device_id=device_id)
         X_valid, y_valid = get_device_data(last_valid_split, device_id=device_id)
@@ -819,8 +840,8 @@ def test_set_seq_fit_predict(
             )
 
         # Store periods info
-        train_period = f"{X_combined[0, 0]} - {X_combined[-1, 0]}"
-        test_period = f"{X_test[0, 0]} - {X_test[-1, 0]}"
+        train_period = f"{as_timestamp(X_combined[0, 0])} - {as_timestamp(X_combined[-1, 0])}"
+        test_period = f"{as_timestamp(X_test[0, 0])} - {as_timestamp(X_test[-1, 0])}"
 
         if use_residuals:
             # Adjust predictions to match the original y_combined and y_test
@@ -845,7 +866,7 @@ def test_set_seq_fit_predict(
             device_train_metrics = calculate_metrics(
                 y_combined,
                 y_pred_combined,
-                device_id,
+                device_key,
                 train_period,
                 data_freq=data_freq,
                 spike_prominence=spike_prominence,
@@ -859,7 +880,7 @@ def test_set_seq_fit_predict(
         device_test_metrics = calculate_metrics(
             y_test,
             y_pred_test,
-            device_id,
+            device_key,
             test_period,
             data_freq=data_freq,
             spike_prominence=spike_prominence,
@@ -869,22 +890,22 @@ def test_set_seq_fit_predict(
         )
 
         # Store results
-        if device_id not in device_train_period_predictions:
-            device_train_period_predictions[device_id] = []
-        device_train_period_predictions[device_id].append(device_train_predictions)
+        if device_key not in device_train_period_predictions:
+            device_train_period_predictions[device_key] = []
+        device_train_period_predictions[device_key].append(device_train_predictions)
 
-        if device_id not in device_test_period_predictions:
-            device_test_period_predictions[device_id] = []
-        device_test_period_predictions[device_id].append(device_test_predictions)
+        if device_key not in device_test_period_predictions:
+            device_test_period_predictions[device_key] = []
+        device_test_period_predictions[device_key].append(device_test_predictions)
 
-        if device_id not in device_train_period_metrics:
-            device_train_period_metrics[device_id] = []
+        if device_key not in device_train_period_metrics:
+            device_train_period_metrics[device_key] = []
         if device_train_metrics is not None:  # Only append metrics if they were calculated
-            device_train_period_metrics[device_id].append(device_train_metrics)
+            device_train_period_metrics[device_key].append(device_train_metrics)
 
-        if device_id not in device_test_period_metrics:
-            device_test_period_metrics[device_id] = []
-        device_test_period_metrics[device_id].append(device_test_metrics)
+        if device_key not in device_test_period_metrics:
+            device_test_period_metrics[device_key] = []
+        device_test_period_metrics[device_key].append(device_test_metrics)
 
     # Report missing values
     for device_id in device_train_period_predictions:

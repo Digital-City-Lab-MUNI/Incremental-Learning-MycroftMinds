@@ -98,3 +98,53 @@ def peak_rss_mb() -> float:
     import resource
 
     return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
+
+
+# Globals inherited by forked workers in run_over_models (avoids pickling the
+# loaded dataset through the task queue).
+_WORKER = None
+
+
+def _worker_entry(name: str):
+    fn, ctx = _WORKER
+    return fn(name, ctx)
+
+
+def run_over_models(jobs: int, models: list, fn, ctx: dict) -> list:
+    """Run ``fn(name, ctx)`` for each model name, optionally in parallel processes.
+
+    With ``jobs > 1`` and more than one model, the work runs in ``jobs`` forked
+    worker processes; the parent-loaded dataset inside ``ctx`` is shared with the
+    workers copy-on-write (Linux fork), so it is never pickled through the task
+    queue. Per-worker BLAS/OpenMP thread counts are capped to avoid
+    oversubscription (e.g. RandomForest ``n_jobs=-1`` inside each worker).
+    Falls back to sequential execution when fork is unavailable or jobs <= 1.
+    Returns the list of per-model results in model order.
+    """
+    if jobs and jobs > 1 and len(models) > 1:
+        import multiprocessing as mp
+
+        global _WORKER
+        try:
+            mp_ctx = mp.get_context("fork")
+        except ValueError:
+            mp_ctx = None
+        if mp_ctx is not None:
+            _WORKER = (fn, ctx)
+            n = min(jobs, len(models))
+            per = max(1, (os.cpu_count() or n) // n)
+            thread_keys = ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS")
+            saved = {k: os.environ.get(k) for k in thread_keys}
+            for k in thread_keys:
+                os.environ[k] = str(per)
+            try:
+                with mp_ctx.Pool(processes=n) as pool:
+                    return pool.map(_worker_entry, models)
+            finally:
+                _WORKER = None
+                for k, v in saved.items():
+                    if v is None:
+                        os.environ.pop(k, None)
+                    else:
+                        os.environ[k] = v
+    return [fn(m, ctx) for m in models]
