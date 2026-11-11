@@ -55,14 +55,24 @@ PERC_METRICS = {
     "drops_delayed.f1",
 }
 BENCH_COLS = [
+    "schema_version",
     "total_train_time_s",
+    "pipeline_time_s",
+    "fit_calls",
     "pred_single_us_mean",
     "pred_single_us_p50",
     "pred_single_us_p99",
     "pred_batch_s",
     "pred_batch_samples",
+    "pred_batch_samples_per_s",
+    "baseline_peak_rss_mb",
     "peak_rss_mb",
+    "memory_scope",
     "model_size_mb",
+    "model_size_scope",
+    "n_devices",
+    "test_samples",
+    "accuracy_scope",
     "test_rmse",
     "test_mae",
     "test_mape",
@@ -137,9 +147,20 @@ def collect_dataset(
             continue
         with open(bench_path, encoding="utf-8") as f:
             b = json.load(f)
+        if b.get("schema_version") != 2:
+            print(f"[WARN] excluding legacy benchmark {bench_path}; rerun make exp-all")
+            continue
         brow = {"model": name}
         brow.update({k: b.get(k) for k in BENCH_COLS})
         brow["ilm_git_revision"] = (b.get("environment") or {}).get("ilm_git_revision")
+        brow["created_utc"] = (b.get("environment") or {}).get("created_utc")
+        brow["hostname"] = (b.get("environment") or {}).get("hostname")
+        brow["params"] = json.dumps(b.get("params", {}), sort_keys=True)
+        brow["fingerprint"] = b.get("fingerprint")
+        evaluation = next((row for row in metric_rows if row["model"] == name), None)
+        brow["same_evaluation_revision"] = (
+            evaluation is not None and evaluation["ilm_git_revision"] == brow["ilm_git_revision"]
+        )
         bench_rows.append(brow)
     metrics_df = pd.DataFrame(metric_rows)
     bench_df = pd.DataFrame(bench_rows)
@@ -200,15 +221,21 @@ def main(argv: list[str] | None = None) -> int:
 
     model_filter = set(args.models) if args.models else None
     baseline_dir = Path(args.baseline) if args.baseline else None
-    summary: list[str] = ["# FastODT rerun results", ""]
+    summary: list[str] = [
+        "# FastODT rerun results",
+        "",
+        "MAPE is stored as a fraction: multiply by 100 for percent.",
+        "Benchmark accuracy uses the full reconstructed test protocol. Training time counts fit/update calls only.",
+        "Peak RSS includes data, interpreter, evaluation, probes and model-size measurement in a fresh process.",
+        "Model size is the maximum final device-model size, not peak process memory.",
+        "",
+    ]
     all_metrics, all_bench = [], []
 
     for dataset in datasets:
         metrics_df, bench_df, prov = collect_dataset(results_dir, dataset, args.agg_level, models=model_filter)
         if baseline_dir and (baseline_dir / dataset).is_dir():
-            b_metrics, _, _ = collect_dataset(
-                baseline_dir, dataset, args.agg_level, models=model_filter
-            )
+            b_metrics, _, _ = collect_dataset(baseline_dir, dataset, args.agg_level, models=model_filter)
             metrics_df = add_deltas(metrics_df, b_metrics, ["model"], ("valid_", "test_"))
         metrics_df.insert(0, "dataset", dataset)
         bench_df.insert(0, "dataset", dataset)

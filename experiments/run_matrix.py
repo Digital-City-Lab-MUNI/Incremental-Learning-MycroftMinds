@@ -1,8 +1,8 @@
 """Run the full experiment matrix (datasets x models) in parallel without SLURM.
 
-Each dataset is one work unit: walk-forward valid evaluation + test evaluation
-(``run_evaluation``) followed by the computational benchmark (``run_benchmark``),
-then the summary tables are rebuilt once at the end (``prepare_results``).
+Each dataset evaluation is one work unit (``run_evaluation``). Once all evaluation
+workers finish, computational benchmarks run serially in fresh model processes
+(``run_benchmark``), then tables are rebuilt once (``prepare_results``).
 Pass ``--no-benchmark`` to rerun only the paper evaluation protocol; the final
 tables are restricted to the selected datasets/models.
 Dataset units run in ``--jobs`` forked worker processes, so a plain server works::
@@ -78,15 +78,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def _dataset_worker(dataset: str, ctx: dict) -> str:
-    """Run evaluation (+ benchmark) for one dataset; return a ``[DONE]``/``[FAIL]`` line."""
-    from . import run_benchmark, run_evaluation
+    """Run evaluation for one dataset; return a ``[DONE]``/``[FAIL]`` line."""
+    from . import run_evaluation
 
     base = [
-        "--config", ctx["config"],
-        "--data-root", ctx["data_root"],
-        "--results-dir", ctx["raw_dir"],
-        "--max-length", str(ctx["max_length"]),
-        "--jobs", str(ctx["model_jobs"]),
+        "--config",
+        ctx["config"],
+        "--data-root",
+        ctx["data_root"],
+        "--results-dir",
+        ctx["raw_dir"],
+        "--max-length",
+        str(ctx["max_length"]),
+        "--jobs",
+        str(ctx["model_jobs"]),
     ]
     if ctx["skip_existing"]:
         base.append("--skip-existing")
@@ -95,10 +100,9 @@ def _dataset_worker(dataset: str, ctx: dict) -> str:
     base += ["--dataset", dataset]
 
     rc_eval = run_evaluation.main(base)
-    rc_bench = 0 if ctx["no_benchmark"] else run_benchmark.main(base)
-    if rc_eval == 0 and rc_bench == 0:
+    if rc_eval == 0:
         return f"[DONE] {dataset}"
-    return f"[FAIL] {dataset} (eval rc={rc_eval}, bench rc={rc_bench})"
+    return f"[FAIL] {dataset} (eval rc={rc_eval})"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -141,7 +145,30 @@ def main(argv: list[str] | None = None) -> int:
             if line.startswith("[FAIL]"):
                 failed += 1
 
-    from . import prepare_results
+    from . import prepare_results, run_benchmark
+
+    # Finish parallel evaluations before timing resources: benchmark processes
+    # must not compete with other models or datasets in this matrix run.
+    if not args.no_benchmark:
+        for dataset in datasets:
+            benchmark_args = [
+                "--config",
+                args.config,
+                "--data-root",
+                str(data_root),
+                "--results-dir",
+                str(raw_dir),
+                "--dataset",
+                dataset,
+                "--max-length",
+                str(args.max_length),
+            ]
+            if args.models:
+                benchmark_args += ["--models", *args.models]
+            if args.skip_existing:
+                benchmark_args.append("--skip-existing")
+            if run_benchmark.main(benchmark_args) != 0:
+                failed += 1
 
     prepare_args = [
         "--results-dir",
@@ -153,8 +180,8 @@ def main(argv: list[str] | None = None) -> int:
     ]
     if args.models:
         prepare_args += ["--models", *args.models]
-    prepare_results.main(prepare_args)
-    return 1 if failed else 0
+    prepare_rc = prepare_results.main(prepare_args)
+    return 1 if failed or prepare_rc else 0
 
 
 if __name__ == "__main__":

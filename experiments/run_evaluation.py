@@ -31,7 +31,9 @@ import sys
 import time
 from pathlib import Path
 
-from .bootstrap import collect_environment, ensure_ilm_on_path, peak_rss_mb, run_over_models
+import numpy as np
+
+from .bootstrap import collect_environment, ensure_ilm_on_path, peak_rss_mb, run_fingerprint, run_over_models
 from .registry import load_config, resolve_dataset, resolve_model
 
 
@@ -100,6 +102,7 @@ def _eval_model(name: str, ctx: dict) -> str:
     ``ctx['out_dir']`` and returns the ``[DONE]`` log line.
     """
     cfg, ds, protocol = ctx["cfg"], ctx["ds"], ctx["protocol"]
+    np.random.seed(42)
     model_class, params, incremental, update_freq = resolve_model(cfg, ctx["dataset"], name)
     common = ctx["common"]
 
@@ -177,6 +180,9 @@ def _eval_model(name: str, ctx: dict) -> str:
         "test_time_s": test_time_s,
         "peak_rss_mb": peak_rss_mb(),
         "environment": ctx["env"],
+        "fingerprint": ctx["fingerprint"],
+        "seed": 42,
+        "protocol": {**protocol, "use_residuals": ds["use_residuals"], "data_freq": ds["data_freq"]},
     }
     with open(out_dir / f"{name}_meta.json", "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=1, default=str)
@@ -201,11 +207,8 @@ def main(argv: list[str] | None = None) -> int:
     data_dir = data_root / ds["data_dir"]
 
     if not (data_dir / f"{ds['prefix']}_train.npz").exists():
-        print(
-            f"[SKIP] dataset={args.dataset}: no '{ds['prefix']}_train.npz' under {data_dir} "
-            f"(data root {data_root}); dataset not available, skipping"
-        )
-        return 0
+        print(f"[FAIL] dataset={args.dataset}: no '{ds['prefix']}_train.npz' under {data_dir} (data root {data_root})")
+        return 1
 
     # imported only after the model repo is on sys.path; bound as module globals so
     # the (possibly forked) per-model worker can see them too
@@ -227,6 +230,18 @@ def main(argv: list[str] | None = None) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     models = args.models or ds["models"]
+    fingerprint = run_fingerprint(
+        args.config,
+        ilm_path,
+        data_dir,
+        ds["prefix"],
+        {
+            "max_length": args.max_length,
+            "start_split": args.start_split,
+            "end_split": args.end_split,
+            "seed": 42,
+        },
+    )
     if args.skip_existing:
         kept = []
         for m in models:
@@ -235,9 +250,14 @@ def main(argv: list[str] | None = None) -> int:
                 and (out_dir / f"{m}_test.pkl").exists()
                 and (out_dir / f"{m}_meta.json").exists()
             ):
-                print(f"[SKIP] {args.dataset}/{m}: outputs already exist in {out_dir}")
-            else:
-                kept.append(m)
+                try:
+                    meta = json.loads((out_dir / f"{m}_meta.json").read_text())
+                    if meta.get("fingerprint") == fingerprint:
+                        print(f"[SKIP] {args.dataset}/{m}: matching evaluation fingerprint")
+                        continue
+                except (ValueError, OSError):
+                    pass
+            kept.append(m)
         models = kept
         if not models:
             print(f"[INFO] {args.dataset}: nothing to do, all requested models already have results")
@@ -253,6 +273,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     ctx = dict(
         cfg=cfg,
+        fingerprint=fingerprint,
         dataset=args.dataset,
         ds=ds,
         protocol=protocol,
@@ -268,17 +289,20 @@ def main(argv: list[str] | None = None) -> int:
         tqdm_on=args.jobs <= 1,
     )
 
-    # update_freq differs per model (incremental vs batch), so resolve it inside the worker
-    def _worker(name: str, c: dict) -> str:
-        model_class, params, incremental, update_freq = resolve_model(c["cfg"], c["dataset"], name)
-        c = dict(c)
-        c["common"] = dict(c["common"], incremental=incremental, update_freq=update_freq)
-        return _eval_model(name, c)
-
-    for line in run_over_models(args.jobs, models, _worker, ctx):
+    failed = False
+    for line in run_over_models(args.jobs, models, _evaluation_worker, ctx):
         if line:
             print(line)
-    return 0
+            failed = failed or line.startswith("[FAIL]")
+    return int(failed)
+
+
+def _evaluation_worker(name: str, ctx: dict) -> str:
+    """Resolve model-specific update frequency in the evaluation worker."""
+    _, _, incremental, update_freq = resolve_model(ctx["cfg"], ctx["dataset"], name)
+    worker_ctx = dict(ctx)
+    worker_ctx["common"] = dict(ctx["common"], incremental=incremental, update_freq=update_freq)
+    return _eval_model(name, worker_ctx)
 
 
 if __name__ == "__main__":

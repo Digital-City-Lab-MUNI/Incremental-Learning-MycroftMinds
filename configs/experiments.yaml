@@ -3,6 +3,9 @@ _comment:
 - behavioral fixes (see Incremental-Learning-MycroftMinds/TODO.md, Phase 5). Transcribed
 - from notebooks/{first_batch,second_batch}/*_evaluation.ipynb in that repository.
 - '''$use_residuals'' in params is replaced by the dataset''s use_residuals flag.'
+# Matched implementation comparison, not a separately tuned xFastODT model.
+matched_models:
+  xFastODT: FastODT
 protocol:
   forecast_horizon: 1h
   agg_level: hourly

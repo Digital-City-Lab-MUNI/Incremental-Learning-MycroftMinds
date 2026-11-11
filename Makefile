@@ -17,10 +17,9 @@ DATA_ROOT ?= data
 RESULTS ?= results/rerun
 MAX_LENGTH ?= -1
 
-# Paper rerun (Tables 2-3): the 6 hourly datasets x the 8 models shown in the
-# paper. Override e.g. PAPER_MODELS="... xFastODT" or PAPER_DATASETS="...".
+# Paper rerun: six hourly datasets, eight table models plus matched xFastODT.
 PAPER_DATASETS ?= od_aq_1h od_friedman_1h od_electricity_1h sb_com_1h fb_1h sb_ind_1h
-PAPER_MODELS ?= BL_Mean GBDT RF HoeffdingTree ARF_Hoeffding FastODT ARF_FastODT IncubationBoost
+PAPER_MODELS ?= BL_Mean GBDT RF HoeffdingTree ARF_Hoeffding FastODT ARF_FastODT IncubationBoost xFastODT
 DATASET_JOBS ?= 1
 
 # Install Python dependencies: uv project env when uv is available, else pip.
@@ -62,8 +61,7 @@ exp-benchmark:
 exp-prepare:
 	${PYTHON} -m experiments.prepare_results --results-dir $(RESULTS)/raw --out $(RESULTS)/tables
 
-# Paper rerun: notebook-equivalent evaluation for the 6 paper datasets and the 8
-# models in Tables 2-3. No computational benchmark; use `make exp-benchmark` for that.
+# Paper rerun: evaluation followed by fresh-process, serial resource benchmarks.
 # JOBS=N runs N models in parallel within each dataset (datasets stay sequential;
 # set DATASET_JOBS>1 to run datasets in parallel as well).
 exp-all:
@@ -75,7 +73,6 @@ exp-all:
 	  --max-length $(MAX_LENGTH) \
 	  --jobs $(DATASET_JOBS) \
 	  --model-jobs $(if $(JOBS),$(JOBS),1) \
-	  --no-benchmark \
 	  $(if $(SKIP_EXISTING),--skip-existing,)
 
 # full 9-dataset x all-model matrix (evaluation + benchmark), parallel across datasets

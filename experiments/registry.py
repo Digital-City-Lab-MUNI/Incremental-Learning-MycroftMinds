@@ -44,7 +44,15 @@ USE_RESIDUALS_SENTINEL = "$use_residuals"
 def load_config(path: str | Path) -> dict:
     """Load ``configs/experiments.yaml``."""
     with open(path, encoding="utf-8") as f:
-        return yaml.safe_load(f)
+        cfg = yaml.safe_load(f)
+    for target, source in cfg.get("matched_models", {}).items():
+        for dataset in cfg["datasets"].values():
+            if source not in dataset["models"]:
+                continue
+            if target not in dataset["models"]:
+                dataset["models"].append(target)
+            dataset.setdefault("model_params", {})[target] = copy.deepcopy(dataset["model_params"][source])
+    return cfg
 
 
 def dataset_names(cfg: dict) -> list[str]:

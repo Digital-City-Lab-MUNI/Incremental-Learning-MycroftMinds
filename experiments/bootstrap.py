@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import importlib
+import hashlib
+import json
 import os
 import platform
 import socket
@@ -82,6 +84,8 @@ def collect_environment(ilm_path: Path) -> dict:
         "created_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "hostname": socket.gethostname(),
         "platform": platform.platform(),
+        "machine": platform.machine(),
+        "processor": platform.processor(),
         "python": platform.python_version(),
         "cpu_count": os.cpu_count(),
         "thread_env": thread_env,
@@ -98,7 +102,25 @@ def peak_rss_mb() -> float:
     """
     import resource
 
-    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
+    divisor = 1024.0**2 if sys.platform == "darwin" else 1024.0
+    return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / divisor
+
+
+def run_fingerprint(config: str, root: Path, data_dir: Path, prefix: str, settings: dict) -> str:
+    """Identify code/config, dataset file stats, and settings for safe result reuse."""
+    digest = hashlib.sha256()
+    paths = sorted((root / "src").rglob("*.py")) + sorted((root / "experiments").glob("*.py"))
+    for path in paths:
+        digest.update(str(path.relative_to(root)).encode())
+        digest.update(path.read_bytes())
+    digest.update(Path(config).read_bytes())
+    digest.update(git_revision(root).encode())
+    for split in ("train", "valid", "test"):
+        path = data_dir / f"{prefix}_{split}.npz"
+        stat = path.stat()
+        digest.update(f"{path.resolve()}:{stat.st_size}:{stat.st_mtime_ns}".encode())
+    digest.update(json.dumps(settings, sort_keys=True).encode())
+    return digest.hexdigest()
 
 
 # Globals inherited by forked workers in run_in_parallel (avoids pickling the
