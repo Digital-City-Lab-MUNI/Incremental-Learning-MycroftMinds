@@ -101,33 +101,33 @@ def peak_rss_mb() -> float:
     return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
 
 
-# Globals inherited by forked workers in run_over_models (avoids pickling the
+# Globals inherited by forked workers in run_in_parallel (avoids pickling the
 # loaded dataset through the task queue).
 _WORKER = None
 
 
-def _worker_entry(name: str) -> Any:
+def _worker_entry(item: Any) -> Any:
     fn, ctx = _WORKER
     try:
-        return fn(name, ctx)
-    except Exception as exc:  # one bad model must not kill the whole run
+        return fn(item, ctx)
+    except Exception as exc:  # one bad item must not kill the whole run
         traceback.print_exc()
-        return f"[FAIL] {name}: {type(exc).__name__}: {exc}"
+        return f"[FAIL] {item}: {type(exc).__name__}: {exc}"
 
 
-def run_over_models(jobs: int, models: list, fn: Callable[[str, dict], Any], ctx: dict) -> list:
-    """Run ``fn(name, ctx)`` for each model name, optionally in parallel processes.
+def run_in_parallel(jobs: int, items: list, fn: Callable[[Any, dict], Any], ctx: dict) -> list:
+    """Run ``fn(item, ctx)`` for each item, optionally in parallel processes.
 
-    With ``jobs > 1`` and more than one model, the work runs in ``jobs`` forked
-    worker processes; the parent-loaded dataset inside ``ctx`` is shared with the
+    With ``jobs > 1`` and more than one item, the work runs in ``jobs`` forked
+    worker processes; the parent-loaded data inside ``ctx`` is shared with the
     workers copy-on-write (Linux fork), so it is never pickled through the task
     queue. Per-worker BLAS/OpenMP thread counts are capped to avoid
     oversubscription (e.g. RandomForest ``n_jobs=-1`` inside each worker).
     Falls back to sequential execution when fork is unavailable or jobs <= 1.
-    Returns the list of per-model results in model order; a model that raises
-    yields a ``[FAIL] <model>: ...`` string instead of aborting the run.
+    Returns the list of per-item results in item order; an item that raises
+    yields a ``[FAIL] <item>: ...`` string instead of aborting the run.
     """
-    if jobs and jobs > 1 and len(models) > 1:
+    if jobs and jobs > 1 and len(items) > 1:
         import multiprocessing as mp
 
         global _WORKER
@@ -137,7 +137,7 @@ def run_over_models(jobs: int, models: list, fn: Callable[[str, dict], Any], ctx
             mp_ctx = None
         if mp_ctx is not None:
             _WORKER = (fn, ctx)
-            n = min(jobs, len(models))
+            n = min(jobs, len(items))
             per = max(1, (os.cpu_count() or n) // n)
             thread_keys = ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS")
             saved = {k: os.environ.get(k) for k in thread_keys}
@@ -145,7 +145,7 @@ def run_over_models(jobs: int, models: list, fn: Callable[[str, dict], Any], ctx
                 os.environ[k] = str(per)
             try:
                 with mp_ctx.Pool(processes=n) as pool:
-                    return pool.map(_worker_entry, models)
+                    return pool.map(_worker_entry, items)
             finally:
                 _WORKER = None
                 for k, v in saved.items():
@@ -154,10 +154,18 @@ def run_over_models(jobs: int, models: list, fn: Callable[[str, dict], Any], ctx
                     else:
                         os.environ[k] = v
     results = []
-    for m in models:
+    for item in items:
         try:
-            results.append(fn(m, ctx))
-        except Exception as exc:  # one bad model must not kill the whole run
+            results.append(fn(item, ctx))
+        except Exception as exc:  # one bad item must not kill the whole run
             traceback.print_exc()
-            results.append(f"[FAIL] {m}: {type(exc).__name__}: {exc}")
+            results.append(f"[FAIL] {item}: {type(exc).__name__}: {exc}")
     return results
+
+
+def run_over_models(jobs: int, models: list, fn: Callable[[str, dict], Any], ctx: dict) -> list:
+    """Run ``fn(name, ctx)`` for each model name, optionally in parallel processes.
+
+    Thin wrapper around :func:`run_in_parallel`; see its docstring for details.
+    """
+    return run_in_parallel(jobs, models, fn, ctx)

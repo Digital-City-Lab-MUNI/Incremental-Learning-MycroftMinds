@@ -16,6 +16,7 @@
 #   BENCH_MODELS="..."                          (default: all models)
 #   MAX_LENGTH=20000                            (cap samples per split, -1 = all)
 #   JOBS=8                                      (parallel model workers per stage, default 1)
+#   SKIP_EXISTING=1                             (skip models whose results already exist; resume interrupted runs)
 #   FASTODT_DATA_ROOT=/path/to/data_root        (default: <repo>/data)
 set -uo pipefail
 
@@ -65,6 +66,11 @@ python -c "import numpy, pandas, scipy, sklearn, river, tqdm, pympler, yaml; pri
   || { echo "[ERROR] missing required packages (numpy pandas scipy sklearn river tqdm pympler yaml); job will fail"; exit 1; }
 
 # --- evaluation (valid splits + test set) -----------------------------------
+SKIP_ARG=()
+if [ "${SKIP_EXISTING:-0}" = "1" ]; then
+  SKIP_ARG=(--skip-existing)
+fi
+
 MODELS_ARG=()
 if [ -n "${MODELS:-}" ]; then
   # shellcheck disable=SC2206
@@ -74,7 +80,7 @@ python -m experiments.run_evaluation \
   --dataset "$DATASET" "${MODELS_ARG[@]}" \
   --data-root "$DATA_ROOT" \
   --results-dir "$RESULTS/raw" --max-length "${MAX_LENGTH:--1}" \
-  --jobs "${JOBS:-1}"
+  --jobs "${JOBS:-1}" "${SKIP_ARG[@]}"
 
 # --- computational benchmark -------------------------------------------------
 BENCH_ARG=()
@@ -86,7 +92,7 @@ python -m experiments.run_benchmark \
   --dataset "$DATASET" "${BENCH_ARG[@]}" \
   --data-root "$DATA_ROOT" \
   --results-dir "$RESULTS/raw" --max-length "${MAX_LENGTH:--1}" \
-  --jobs "${JOBS:-1}"
+  --jobs "${JOBS:-1}" "${SKIP_ARG[@]}"
 
 # --- aggregate whatever raw results exist so far (idempotent) ----------------
 python -m experiments.prepare_results --results-dir "$RESULTS/raw" --out "$RESULTS/tables"

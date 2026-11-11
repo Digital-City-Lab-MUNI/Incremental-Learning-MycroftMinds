@@ -12,6 +12,7 @@ fixes in `src/` and measuring the computational benchmark required by `../FastOD
 ├── experiments/
 │   ├── run_evaluation.py        # valid-splits walk-forward + test evaluation -> raw results + provenance
 │   ├── run_benchmark.py         # train time (incl. batch refits), single/batch prediction latency, peak RSS, model size, accuracy
+│   ├── run_matrix.py            # full matrix in parallel without SLURM (one forked worker per dataset)
 │   ├── prepare_results.py       # raw -> tables (CSV + summary.md), optional --baseline deltas
 │   └── bootstrap.py / registry.py
 └── jobs/
@@ -63,8 +64,25 @@ python -m experiments.prepare_results   # results/rerun/raw -> results/rerun/tab
 ```
 
 Useful flags: `--models` to subset models, `--max-length N` to cap samples per split,
-`--start-split/--end-split` to subset validation folds. `prepare_results --baseline <prev raw dir>`
-adds `*_delta` columns to compare against a previous run.
+`--start-split/--end-split` to subset validation folds (with `--start-split K > 0` the new
+results are merged into an existing `<Model>_valid.pkl`, so chunked runs equal a full run),
+`--jobs N` to run models of one dataset in parallel worker processes, `--skip-existing` to skip
+models whose results already exist (safe to re-run interrupted batches).
+`prepare_results --baseline <prev raw dir>` adds `*_delta` columns to compare against a previous run.
+
+## Run the full matrix in parallel (no SLURM)
+
+```bash
+python -m experiments.run_matrix --jobs 4 --model-jobs 2 --skip-existing
+# or via Makefile: make exp-matrix JOBS=4 MODEL_JOBS=2 SKIP_EXISTING=1
+# subset: --datasets sb_ind_1h od_aq_1h --models FastODT xFastODT
+```
+
+`run_matrix` runs one forked worker per dataset (each worker runs `run_evaluation` then
+`run_benchmark` for its dataset, with `--model-jobs` as their `--jobs`), then rebuilds
+`results/rerun/tables`. It is the plain-server equivalent of the SLURM array in `jobs/job.sh`;
+total concurrent processes are roughly `jobs x model_jobs` and each dataset worker loads its
+own data, so keep `--jobs` modest on memory-limited machines.
 
 ## Run on the HPC via WES
 

@@ -54,6 +54,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--start-split", type=int, default=0, help="First validation split to process")
     ap.add_argument("--end-split", type=int, default=None, help="End split (exclusive)")
     ap.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="Skip models whose <Model>_valid.pkl/_test.pkl/_meta.json already exist in the "
+        "results dir (useful when resubmitting interrupted jobs)",
+    )
+    ap.add_argument(
         "--jobs",
         type=int,
         default=1,
@@ -61,6 +67,30 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "copy-on-write). Default 1 = sequential",
     )
     return ap.parse_args(argv)
+
+
+def _merge_valid_payload(old: dict, new: dict) -> dict:
+    """Merge per-device period lists of an existing ``_valid.pkl`` with new partial results.
+
+    Splits are independent (the model is re-initialised per split), so entries are
+    deduplicated by their ``period`` string (the new run wins on overlap) and sorted by
+    period; running split ranges in sequence then yields the same payload as one full run.
+    """
+    merged = {}
+    for key in ("predictions_train", "predictions_valid", "metrics_train", "metrics_valid"):
+        old_d = old.get(key) or {}
+        new_d = new.get(key) or {}
+        out = {}
+        for dev in set(old_d) | set(new_d):
+            by_period, other = {}, []
+            for e in (old_d.get(dev) or []) + (new_d.get(dev) or []):
+                if isinstance(e, dict) and "period" in e:
+                    by_period[e["period"]] = e
+                else:
+                    other.append(e)
+            out[dev] = sorted(by_period.values(), key=lambda e: e["period"]) + other
+        merged[key] = out
+    return merged
 
 
 def _eval_model(name: str, ctx: dict) -> str:
@@ -85,6 +115,26 @@ def _eval_model(name: str, ctx: dict) -> str:
         **common,
     )
     valid_time_s = time.time() - t0
+
+    out_dir = ctx["out_dir"]
+    valid_payload = {
+        "predictions_train": tr_preds,
+        "predictions_valid": va_preds,
+        "metrics_train": tr_metrics,
+        "metrics_valid": va_metrics,
+    }
+    # Resume: with --start-split > 0, merge into an existing valid pkl instead of
+    # clobbering the already-computed earlier splits.
+    valid_path = out_dir / f"{name}_valid.pkl"
+    if ctx["start_split"] > 0 and valid_path.exists():
+        try:
+            with open(valid_path, "rb") as f:
+                old = pickle.load(f)
+            valid_payload = _merge_valid_payload(old, valid_payload)
+            va_metrics = valid_payload["metrics_valid"]
+            print(f"[INFO] {ctx['dataset']}/{name}: merged existing valid results with splits >= {ctx['start_split']}")
+        except Exception as exc:
+            print(f"[WARN] {ctx['dataset']}/{name}: could not merge existing valid pkl ({exc}); overwriting")
     va_agg = all_time_aggregation_metrics(va_metrics, data_freq=ds["data_freq"], verbose=False)
 
     t0 = time.time()
@@ -101,18 +151,8 @@ def _eval_model(name: str, ctx: dict) -> str:
     test_time_s = time.time() - t0
     te_agg = all_time_aggregation_metrics(te_metrics, data_freq=ds["data_freq"], verbose=False)
 
-    out_dir = ctx["out_dir"]
-    with open(out_dir / f"{name}_valid.pkl", "wb") as f:
-        pickle.dump(
-            {
-                "predictions_train": tr_preds,
-                "predictions_valid": va_preds,
-                "metrics_train": tr_metrics,
-                "metrics_valid": va_metrics,
-                "aggregated_valid": va_agg,
-            },
-            f,
-        )
+    with open(valid_path, "wb") as f:
+        pickle.dump({**valid_payload, "aggregated_valid": va_agg}, f)
     with open(out_dir / f"{name}_test.pkl", "wb") as f:
         pickle.dump(
             {
@@ -187,6 +227,20 @@ def main(argv: list[str] | None = None) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     models = args.models or ds["models"]
+    if args.skip_existing:
+        kept = []
+        for m in models:
+            if (
+                (out_dir / f"{m}_valid.pkl").exists()
+                and (out_dir / f"{m}_test.pkl").exists()
+                and (out_dir / f"{m}_meta.json").exists()
+            ):
+                print(f"[SKIP] {args.dataset}/{m}: outputs already exist in {out_dir}")
+            else:
+                kept.append(m)
+        models = kept
+        if not models:
+            print(f"[INFO] {args.dataset}: nothing to do, all requested models already have results")
     # verbose=0: per-device/split metric printing and per-retrain pympler walks only
     # slow the run down; timings and peak RSS are still recorded in <Model>_meta.json.
     common = dict(

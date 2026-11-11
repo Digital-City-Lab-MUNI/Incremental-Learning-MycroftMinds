@@ -49,6 +49,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--data-root", default=None)
     ap.add_argument("--results-dir", default="results/rerun/raw")
     ap.add_argument("--max-length", type=int, default=-1, help="Cap samples per split when loading")
+    ap.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="Skip models whose <Model>_benchmark.json already exists in the results dir",
+    )
     ap.add_argument("--max-devices", type=int, default=5, help="Benchmark at most this many devices")
     ap.add_argument("--max-train", type=int, default=20000, help="Cap training rows per device")
     ap.add_argument("--predict-samples", type=int, default=2000, help="Rows used for latency measurements")
@@ -247,6 +252,16 @@ def main(argv: list[str] | None = None) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     models = args.models or ds["models"]
+    if args.skip_existing:
+        kept = []
+        for m in models:
+            if (out_dir / f"{m}_benchmark.json").exists():
+                print(f"[SKIP] {args.dataset}/{m}: benchmark already exists in {out_dir}")
+            else:
+                kept.append(m)
+        models = kept
+        if not models:
+            print(f"[INFO] {args.dataset}: nothing to do, all requested models already benchmarked")
     ctx = dict(cfg=cfg, ds=ds, dataset=args.dataset, train=train, test=test, args=args, env=env, out_dir=out_dir)
     for line in run_over_models(args.jobs, models, _bench_worker, ctx):
         if line:
