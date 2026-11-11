@@ -14,6 +14,8 @@ Reads ``<results-dir>/<dataset>/`` produced by ``run_evaluation.py`` and
 * ``comparison.csv`` — only with ``--baseline``: metric deltas vs a previous
   raw-results directory (same layout), to compare corrected vs prior results.
 
+Use ``--datasets`` / ``--models`` to tabulate only a subset of the raw results.
+
 Example::
 
     python -m experiments.prepare_results --results-dir results/rerun/raw --out results/rerun/tables \
@@ -73,6 +75,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--results-dir", default="results/rerun/raw", help="Raw results root (per-dataset subdirs)")
     ap.add_argument("--out", default="results/rerun/tables", help="Output dir for tables")
     ap.add_argument("--agg-level", default="hourly", help="Aggregation level to tabulate")
+    ap.add_argument("--datasets", nargs="*", default=None, help="Subset of dataset dirs to tabulate")
+    ap.add_argument("--models", nargs="*", default=None, help="Subset of models to tabulate")
     ap.add_argument("--baseline", default=None, help="Optional previous raw-results dir for delta columns")
     return ap.parse_args(argv)
 
@@ -97,13 +101,17 @@ def _agg_rows_for_split(pkl_path: Path, agg_level: str) -> dict[str, float]:
     return rows
 
 
-def collect_dataset(results_dir: Path, dataset: str, agg_level: str) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
+def collect_dataset(
+    results_dir: Path, dataset: str, agg_level: str, models: set[str] | None = None
+) -> tuple[pd.DataFrame, pd.DataFrame, dict]:
     """Build (metrics_df, bench_df, provenance) for one dataset directory."""
     ds_dir = results_dir / dataset
     metric_rows, bench_rows = [], []
     provenance: dict = {"dataset": dataset}
     for meta_path in sorted(ds_dir.glob("*_meta.json")):
         name = meta_path.name[: -len("_meta.json")]
+        if models is not None and name not in models:
+            continue
         with open(meta_path, encoding="utf-8") as f:
             meta = json.load(f)
         row = {"model": name, "model_class": meta.get("model_class", ""), "params": json.dumps(meta.get("params", {}))}
@@ -125,6 +133,8 @@ def collect_dataset(results_dir: Path, dataset: str, agg_level: str) -> tuple[pd
         provenance["environment"] = env
     for bench_path in sorted(ds_dir.glob("*_benchmark.json")):
         name = bench_path.name[: -len("_benchmark.json")]
+        if models is not None and name not in models:
+            continue
         with open(bench_path, encoding="utf-8") as f:
             b = json.load(f)
         brow = {"model": name}
@@ -177,19 +187,28 @@ def main(argv: list[str] | None = None) -> int:
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    datasets = sorted(p.name for p in results_dir.iterdir() if p.is_dir())
+    if args.datasets:
+        datasets = [d for d in args.datasets if (results_dir / d).is_dir()]
+        missing = [d for d in args.datasets if not (results_dir / d).is_dir()]
+        if missing:
+            print(f"[WARN] missing dataset dirs under {results_dir}: {missing}", file=sys.stderr)
+    else:
+        datasets = sorted(p.name for p in results_dir.iterdir() if p.is_dir())
     if not datasets:
         print(f"[WARN] no dataset dirs under {results_dir}", file=sys.stderr)
         return 1
 
+    model_filter = set(args.models) if args.models else None
     baseline_dir = Path(args.baseline) if args.baseline else None
     summary: list[str] = ["# FastODT rerun results", ""]
     all_metrics, all_bench = [], []
 
     for dataset in datasets:
-        metrics_df, bench_df, prov = collect_dataset(results_dir, dataset, args.agg_level)
+        metrics_df, bench_df, prov = collect_dataset(results_dir, dataset, args.agg_level, models=model_filter)
         if baseline_dir and (baseline_dir / dataset).is_dir():
-            b_metrics, _, _ = collect_dataset(baseline_dir, dataset, args.agg_level)
+            b_metrics, _, _ = collect_dataset(
+                baseline_dir, dataset, args.agg_level, models=model_filter
+            )
             metrics_df = add_deltas(metrics_df, b_metrics, ["model"], ("valid_", "test_"))
         metrics_df.insert(0, "dataset", dataset)
         bench_df.insert(0, "dataset", dataset)

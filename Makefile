@@ -17,6 +17,12 @@ DATA_ROOT ?= data
 RESULTS ?= results/rerun
 MAX_LENGTH ?= -1
 
+# Paper rerun (Tables 2-3): the 6 hourly datasets x the 8 models shown in the
+# paper. Override e.g. PAPER_MODELS="... xFastODT" or PAPER_DATASETS="...".
+PAPER_DATASETS ?= od_aq_1h od_friedman_1h od_electricity_1h sb_com_1h fb_1h sb_ind_1h
+PAPER_MODELS ?= BL_Mean GBDT RF HoeffdingTree ARF_Hoeffding FastODT ARF_FastODT IncubationBoost
+DATASET_JOBS ?= 1
+
 # Install Python dependencies: uv project env when uv is available, else pip.
 install:
 ifeq ($(UV),)
@@ -56,21 +62,26 @@ exp-benchmark:
 exp-prepare:
 	${PYTHON} -m experiments.prepare_results --results-dir $(RESULTS)/raw --out $(RESULTS)/tables
 
-# full experiment matrix: every dataset in configs/experiments.yaml, all models;
-# a failing dataset is reported but does not abort the rest
-# JOBS=N parallelizes models within each dataset stage (e.g. make exp-all JOBS=8 SKIP_EXISTING=1)
+# Paper rerun: notebook-equivalent evaluation for the 6 paper datasets and the 8
+# models in Tables 2-3. No computational benchmark; use `make exp-benchmark` for that.
+# JOBS=N runs N models in parallel within each dataset (datasets stay sequential;
+# set DATASET_JOBS>1 to run datasets in parallel as well).
 exp-all:
-	@fail=0; for ds in $$(${PYTHON} -c "import yaml; print(' '.join(yaml.safe_load(open('configs/experiments.yaml'))['datasets']))"); do \
-	  echo "=== dataset $$ds ==="; \
-	  ${PYTHON} -m experiments.run_evaluation --dataset $$ds --data-root $(DATA_ROOT) --results-dir $(RESULTS)/raw --max-length $(MAX_LENGTH) $(if $(JOBS),--jobs $(JOBS),) $(if $(SKIP_EXISTING),--skip-existing,) || { echo "[FAIL] eval $$ds"; fail=1; }; \
-	  ${PYTHON} -m experiments.run_benchmark --dataset $$ds --data-root $(DATA_ROOT) --results-dir $(RESULTS)/raw --max-length $(MAX_LENGTH) $(if $(JOBS),--jobs $(JOBS),) $(if $(SKIP_EXISTING),--skip-existing,) || { echo "[FAIL] bench $$ds"; fail=1; }; \
-	done; \
-	${PYTHON} -m experiments.prepare_results --results-dir $(RESULTS)/raw --out $(RESULTS)/tables; \
-	exit $$fail
+	${PYTHON} -m experiments.run_matrix \
+	  --datasets $(PAPER_DATASETS) \
+	  --models $(PAPER_MODELS) \
+	  --data-root $(DATA_ROOT) \
+	  --results-dir $(RESULTS) \
+	  --max-length $(MAX_LENGTH) \
+	  --jobs $(DATASET_JOBS) \
+	  --model-jobs $(if $(JOBS),$(JOBS),1) \
+	  --no-benchmark \
+	  $(if $(SKIP_EXISTING),--skip-existing,)
 
-# same matrix as exp-all but parallel across datasets without SLURM (plain server):
-# JOBS=N runs N dataset workers concurrently, MODEL_JOBS=M parallelizes models within
-# each dataset (e.g. make exp-matrix JOBS=4 MODEL_JOBS=2 SKIP_EXISTING=1)
+# full 9-dataset x all-model matrix (evaluation + benchmark), parallel across datasets
+# without SLURM (plain server): JOBS=N runs N dataset workers concurrently,
+# MODEL_JOBS=M parallelizes models within each dataset
+# (e.g. make exp-matrix JOBS=4 MODEL_JOBS=2 SKIP_EXISTING=1)
 exp-matrix:
 	${PYTHON} -m experiments.run_matrix --data-root $(DATA_ROOT) --results-dir $(RESULTS) --max-length $(MAX_LENGTH) $(if $(JOBS),--jobs $(JOBS),) $(if $(MODEL_JOBS),--model-jobs $(MODEL_JOBS),) $(if $(MODELS),--models $(MODELS),) $(if $(SKIP_EXISTING),--skip-existing,)
 

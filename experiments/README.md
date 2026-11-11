@@ -70,6 +70,24 @@ results are merged into an existing `<Model>_valid.pkl`, so chunked runs equal a
 models whose results already exist (safe to re-run interrupted batches).
 `prepare_results --baseline <prev raw dir>` adds `*_delta` columns to compare against a previous run.
 
+## Rerun the paper experiments (6 datasets x 8 models)
+
+`make exp-all` reruns the evaluation protocol behind Tables 2-3: the six hourly paper
+datasets x the eight models shown in the table, without the computational benchmark.
+Datasets run sequentially; `JOBS=N` parallelizes models within each dataset.
+
+```bash
+make exp-all                 # results/rerun/raw -> results/rerun/tables
+make exp-all JOBS=8          # 8 model workers per dataset
+make exp-all RESULTS=results/paper
+make exp-all PAPER_MODELS="BL_Mean GBDT RF HoeffdingTree ARF_Hoeffding FastODT ARF_FastODT IncubationBoost xFastODT"
+```
+
+Defaults: `PAPER_DATASETS="od_aq_1h od_friedman_1h od_electricity_1h sb_com_1h fb_1h sb_ind_1h"`,
+`PAPER_MODELS="BL_Mean GBDT RF HoeffdingTree ARF_Hoeffding FastODT ARF_FastODT IncubationBoost"`,
+`DATASET_JOBS=1`. Set `SKIP_EXISTING=1` to resume an interrupted run. Use
+`make exp-benchmark DATASET=<key>` separately for efficiency measurements.
+
 ## Run the full matrix in parallel (no SLURM)
 
 ```bash

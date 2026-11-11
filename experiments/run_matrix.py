@@ -3,6 +3,8 @@
 Each dataset is one work unit: walk-forward valid evaluation + test evaluation
 (``run_evaluation``) followed by the computational benchmark (``run_benchmark``),
 then the summary tables are rebuilt once at the end (``prepare_results``).
+Pass ``--no-benchmark`` to rerun only the paper evaluation protocol; the final
+tables are restricted to the selected datasets/models.
 Dataset units run in ``--jobs`` forked worker processes, so a plain server works::
 
     python -m experiments.run_matrix --jobs 4 --model-jobs 2 --skip-existing
@@ -141,7 +143,17 @@ def main(argv: list[str] | None = None) -> int:
 
     from . import prepare_results
 
-    prepare_results.main(["--results-dir", str(raw_dir), "--out", str(results_dir / "tables")])
+    prepare_args = [
+        "--results-dir",
+        str(raw_dir),
+        "--out",
+        str(results_dir / "tables"),
+        "--datasets",
+        *datasets,
+    ]
+    if args.models:
+        prepare_args += ["--models", *args.models]
+    prepare_results.main(prepare_args)
     return 1 if failed else 0
 
 
