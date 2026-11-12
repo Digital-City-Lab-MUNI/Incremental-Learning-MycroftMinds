@@ -26,7 +26,10 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
     "ARF_Hoeffding": {"class": "river.forest.ARFRegressor", "incremental": True},
     "FastODT": {"class": "src.trees.fastodt.FastODT", "incremental": True},
     "xFastODT": {"class": "src.trees.xfastodt.xFastODT", "incremental": True},
+    "xFastODT_C": {"class": "src.trees.native_xfastodt.NativeXFastODT", "incremental": True},
     "ARF_FastODT": {"class": "src.bagging.ARFRegressorFODT", "incremental": True},
+    "ARF_FastODT_10x10": {"class": "src.bagging.ARFRegressorFODT", "incremental": True},
+    "ARF_Hoeffding_10x10": {"class": "river.forest.ARFRegressor", "incremental": True},
     "IncubationBoost": {"class": "src.boosting.IncubationBoost", "incremental": True},
     "IncubationBoost_WR": {
         "class": "src.ensemble_methods.IncubationBoostWeightedRatio.IncubationBoostWeightedRatio",
@@ -41,6 +44,14 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
 USE_RESIDUALS_SENTINEL = "$use_residuals"
 
 
+def experiment_seed(cfg: dict) -> int:
+    """Return the common experiment seed, restricted to NumPy's seed range."""
+    seed = cfg["protocol"].get("seed", 42)
+    if isinstance(seed, bool) or not isinstance(seed, int) or not 0 <= seed < 2**32:
+        raise ValueError(f"protocol.seed must be an integer in [0, 2**32); got {seed!r}")
+    return seed
+
+
 def load_config(path: str | Path) -> dict:
     """Load ``configs/experiments.yaml``."""
     with open(path, encoding="utf-8") as f:
@@ -52,6 +63,16 @@ def load_config(path: str | Path) -> dict:
             if target not in dataset["models"]:
                 dataset["models"].append(target)
             dataset.setdefault("model_params", {})[target] = copy.deepcopy(dataset["model_params"][source])
+    for target, variant in cfg.get("model_variants", {}).items():
+        source = variant["source"]
+        for dataset in cfg["datasets"].values():
+            if source not in dataset["models"]:
+                continue
+            if target not in dataset["models"]:
+                dataset["models"].append(target)
+            params = copy.deepcopy(dataset["model_params"][source])
+            params.update(copy.deepcopy(variant["params"]))
+            dataset["model_params"][target] = params
     return cfg
 
 
@@ -96,6 +117,12 @@ def resolve_model(cfg: dict, dataset: str, name: str) -> tuple[type, dict, bool,
     # Drop params the class constructor does not accept (config/class drift, e.g.
     # pruning_strategy on IncubationBoostElastic) instead of crashing the run.
     sig = inspect.signature(model_class.__init__)
+    # Explicit estimator generators are independent of np.random.seed().
+    # The protocol seed takes precedence over historical per-model seeds.
+    seed = experiment_seed(cfg)
+    for seed_param in ("random_state", "seed"):
+        if seed_param in sig.parameters:
+            params[seed_param] = seed
     if not any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()):
         unsupported = [k for k in params if k not in sig.parameters]
         if unsupported:

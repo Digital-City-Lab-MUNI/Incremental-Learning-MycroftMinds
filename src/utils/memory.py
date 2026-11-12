@@ -12,6 +12,25 @@ import traceback
 from typing import Any, Tuple
 
 
+def model_memory_breakdown(obj: Any) -> dict[str, int]:
+    """Count Python object bytes plus explicitly reported owned native allocations.
+
+    Native estimators expose native_memory_bytes/native_peak_memory_bytes. This
+    does not infer unreported C/Cython storage in third-party estimators.
+    """
+    python_bytes = int(asizeof.asizeof(obj))
+    native_bytes = int(getattr(obj, "native_memory_bytes", 0))
+    native_peak = int(getattr(obj, "native_peak_memory_bytes", native_bytes))
+    if native_bytes < 0 or native_peak < native_bytes:
+        raise ValueError("Native memory counters must be nonnegative and peak >= live bytes")
+    return {
+        "python_bytes": python_bytes,
+        "native_bytes": native_bytes,
+        "native_peak_bytes": native_peak,
+        "total_bytes": python_bytes + native_bytes,
+    }
+
+
 def calculate_memory_usage(obj: Any) -> float:
     """
     Calculate the approximate memory usage of an object in MB.
@@ -27,8 +46,7 @@ def calculate_memory_usage(obj: Any) -> float:
         Memory usage in MB.
     """
     try:
-        size_bytes = asizeof.asizeof(obj)
-        return size_bytes / (1024 * 1024)
+        return model_memory_breakdown(obj)["total_bytes"] / (1024 * 1024)
     except ImportError:
 
         def _sizeof(obj: Any) -> float:

@@ -19,10 +19,18 @@ calculation. `pipeline_time_s` measures the instrumented test pipeline, includin
 metrics, inference probes and model-size measurements. Validation timing is
 reported separately in evaluation metadata, not added to test training time.
 
-Both runners reset NumPy's global seed to 42 per model. Explicit estimator seeds
-remain those in the configuration. Benchmark Random Forest uses `n_jobs=1`;
+Both runners use `protocol.seed` (default 42) for Python/NumPy global randomness
+and explicitly pass it to constructor `random_state`/`seed` parameters. This common
+seed overrides historical per-model seed values, including `None`; it also seeds
+FastODT/boosting's independent NumPy generators and the ARF variants. Each newly
+constructed device/fold model starts from that estimator seed. Benchmark workers
+also start with `PYTHONHASHSEED` set to the common seed. Benchmark Random Forest uses `n_jobs=1`;
 OMP/MKL/OpenBLAS/NumExpr thread environment variables are set to 1 before imports.
 The actual parameters and environment are saved, including git revision and host.
+
+Repeatability requires the same data, row order, code and library versions.
+Equal seeds do not imply equal random draws or predictions across different
+algorithms. Training times and memory can still vary between executions.
 
 ## Inference
 
@@ -62,3 +70,19 @@ FastODT and xFastODT receive copied, matching configured parameters through
 whether binary-mask indexing improves time or memory; the runner assumes no win.
 This benchmark does not perform hyperparameter search, repeated timing trials,
 stream-length/feature-count scaling curves, or automatic manuscript updates.
+
+## ARF ensemble-size/depth ablation
+
+Run `make exp-arf-10x10` on the computation server to evaluate
+`ARF_FastODT_10x10` and `ARF_Hoeffding_10x10` on all six hourly paper datasets.
+Both use `n_models=10` and `max_depth=10`. Each variant inherits its own baseline's
+remaining per-dataset parameters through `model_variants` in the configuration.
+The original baseline parameters and `make exp-all` selection are preserved.
+Outputs go to `results/rerun/arf_10x10/raw/` and `results/rerun/arf_10x10/tables/`;
+override `ARF_RESULTS` to select another output root.
+
+This isolates the change in configured ensemble size/depth relative to each
+baseline. It does not equalize grace periods, split tests, leaf predictors, memory
+budgets, feature sampling, actual node counts, or background-tree counts between
+implementations. In particular, ARF(FastODT)'s existing `max_features`/`max_feature`
+distinction is unchanged; this experiment alone does not fix that wiring issue.

@@ -110,9 +110,11 @@ class TestMaxDepthPredictionUpdates:
         assert model.mature_tree is True
         model.learn_one(np.array([0.0]), 100.0)
         root = model.depths_containers[0][0]
-        assert root.samples_seen == 3
-        assert root.value == pytest.approx((0.0 + 10.0 + 100.0) / 3.0)
-        assert model.predict(np.array([[0.0]])) == [pytest.approx(root.value)]
+        assert root.samples_seen == 2
+        assert root.left.samples_seen == 1
+        assert root.left.value == pytest.approx(100.0)
+        assert model.current_depth == 1
+        assert model.predict(np.array([[0.0]])) == [pytest.approx(root.left.value)]
 
 
 class TestGracePeriod:
@@ -220,7 +222,7 @@ class TestSmallDeterministicStreams:
 
     def test_xfastodt_depth_saturation(self):
         """depth=1: after the root split the tree is mature; further samples
-        update the root but never attempt another split."""
+         update the depth-1 leaves but never attempt another split."""
         model = make_xfastodt(depth=1)
         model.learn_one(np.array([0.0]), 0.0)
         model.learn_one(np.array([1.0]), 10.0)
@@ -230,7 +232,9 @@ class TestSmallDeterministicStreams:
             for xv, yv in [(0.0, 1.0), (1.0, 2.0), (0.5, 3.0)]:
                 model.learn_one(np.array([xv]), yv)
         assert spy.call_count == 0
-        assert root.samples_seen == 5
+        assert root.samples_seen == 2
+        assert root.left.samples_seen == 2
+        assert root.right.samples_seen == 1
 
     def test_both_trees_learn_simple_function(self):
         """End-to-end smoke: both tree variants fit y = 2x + 5 on a fixed grid."""

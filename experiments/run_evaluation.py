@@ -27,6 +27,7 @@ import argparse
 import json
 import os
 import pickle
+import random
 import sys
 import time
 from pathlib import Path
@@ -34,7 +35,7 @@ from pathlib import Path
 import numpy as np
 
 from .bootstrap import collect_environment, ensure_ilm_on_path, peak_rss_mb, run_fingerprint, run_over_models
-from .registry import load_config, resolve_dataset, resolve_model
+from .registry import experiment_seed, load_config, resolve_dataset, resolve_model
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -102,7 +103,9 @@ def _eval_model(name: str, ctx: dict) -> str:
     ``ctx['out_dir']`` and returns the ``[DONE]`` log line.
     """
     cfg, ds, protocol = ctx["cfg"], ctx["ds"], ctx["protocol"]
-    np.random.seed(42)
+    seed = experiment_seed(cfg)
+    np.random.seed(seed)
+    random.seed(seed)
     model_class, params, incremental, update_freq = resolve_model(cfg, ctx["dataset"], name)
     common = ctx["common"]
 
@@ -181,7 +184,7 @@ def _eval_model(name: str, ctx: dict) -> str:
         "peak_rss_mb": peak_rss_mb(),
         "environment": ctx["env"],
         "fingerprint": ctx["fingerprint"],
-        "seed": 42,
+        "seed": seed,
         "protocol": {**protocol, "use_residuals": ds["use_residuals"], "data_freq": ds["data_freq"]},
     }
     with open(out_dir / f"{name}_meta.json", "w", encoding="utf-8") as f:
@@ -239,7 +242,7 @@ def main(argv: list[str] | None = None) -> int:
             "max_length": args.max_length,
             "start_split": args.start_split,
             "end_split": args.end_split,
-            "seed": 42,
+            "seed": experiment_seed(cfg),
         },
     )
     if args.skip_existing:

@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import random
 import subprocess
 import sys
 import time
@@ -19,7 +20,7 @@ from typing import Any
 import numpy as np
 
 from .bootstrap import collect_environment, ensure_ilm_on_path, peak_rss_mb, run_fingerprint
-from .registry import load_config, resolve_dataset, resolve_model
+from .registry import experiment_seed, load_config, resolve_dataset, resolve_model
 
 SCHEMA_VERSION = 2
 THREAD_KEYS = ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS")
@@ -47,7 +48,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return args
 
 
-def benchmark_fingerprint(args: argparse.Namespace, root: Path, data_dir: Path, prefix: str) -> str:
+def benchmark_fingerprint(args: argparse.Namespace, root: Path, data_dir: Path, prefix: str, seed: int) -> str:
     """Hash code/config, dataset file identities, and benchmark settings for resuming."""
     return run_fingerprint(
         args.config,
@@ -59,7 +60,7 @@ def benchmark_fingerprint(args: argparse.Namespace, root: Path, data_dir: Path, 
             "max_length": args.max_length,
             "predict_samples": args.predict_samples,
             "threads": 1,
-            "seed": 42,
+            "seed": seed,
         },
     )
 
@@ -129,7 +130,7 @@ class MeasuredModelFactory:
     def finish_device(self) -> None:
         """Measure fitted-model latency and size, then release the device model."""
         from src.evaluation.training import _predict_model
-        from src.utils.memory import calculate_memory_usage
+        from src.utils.memory import model_memory_breakdown
 
         measured = self.current
         if measured is None:
@@ -147,6 +148,22 @@ class MeasuredModelFactory:
         started = time.perf_counter()
         _predict_model(measured.model, features)
         batch_s = time.perf_counter() - started
+        memory = model_memory_breakdown(measured.model)
+        containers = getattr(measured.model, "depths_containers", None)
+        node_count = getattr(measured.model, "n_nodes_", None)
+        if containers is not None:
+            node_count = sum(node is not None for level in containers for node in level.values())
+        elif hasattr(measured.model, "root"):
+            pending = [measured.model.root]
+            node_count = 0
+            while pending:
+                node = pending.pop()
+                node_count += 1
+                if node.left is not None:
+                    pending.extend([node.left, node.right])
+        routing_depth = getattr(measured.model, "current_depth", None)
+        if routing_depth is None and hasattr(measured.model, "splits"):
+            routing_depth = sum(split is not None for split in measured.model.splits)
         self.devices.append(
             {
                 "train_time_s": measured.train_time_s,
@@ -154,7 +171,13 @@ class MeasuredModelFactory:
                 "single_us": single_us,
                 "batch_s": batch_s,
                 "samples": len(features),
-                "model_size_mb": calculate_memory_usage(measured.model),
+                "model_size_mb": memory["total_bytes"] / 1024**2,
+                "python_model_size_mb": memory["python_bytes"] / 1024**2,
+                "native_model_size_mb": memory["native_bytes"] / 1024**2,
+                "native_peak_model_size_mb": memory["native_peak_bytes"] / 1024**2,
+                "node_count": node_count,
+                "routing_depth": routing_depth,
+                "native_build_info": getattr(measured.model, "native_build_info", None),
             }
         )
 
@@ -171,7 +194,9 @@ def run_worker(args: argparse.Namespace, root: Path, cfg: dict, ds: dict, data_d
     from src.evaluation.metrics import all_time_aggregation_metrics
     from src.evaluation.training import test_set_seq_fit_predict
 
-    np.random.seed(42)
+    seed = experiment_seed(cfg)
+    np.random.seed(seed)
+    random.seed(seed)
     model_class, params, incremental, update_freq = resolve_model(cfg, args.dataset, args.worker_model)
     # n_jobs is a resource setting, not a learned-model hyperparameter.
     params = dict(params)
@@ -208,11 +233,15 @@ def run_worker(args: argparse.Namespace, root: Path, cfg: dict, ds: dict, data_d
     latency = np.concatenate([device["single_us"] for device in factory.devices])
     batch_s = sum(device["batch_s"] for device in factory.devices)
     batch_n = sum(device["samples"] for device in factory.devices)
+    largest_model = factory.devices[0]
+    for device in factory.devices[1:]:
+        if device["model_size_mb"] > largest_model["model_size_mb"]:
+            largest_model = device
     return {
         "schema_version": SCHEMA_VERSION,
         "worker_pid": os.getpid(),
-        "seed": 42,
-        "fingerprint": benchmark_fingerprint(args, root, data_dir, ds["prefix"]),
+        "seed": seed,
+        "fingerprint": benchmark_fingerprint(args, root, data_dir, ds["prefix"], seed),
         "dataset": args.dataset,
         "model": args.worker_model,
         "model_class": f"{model_class.__module__}.{model_class.__name__}",
@@ -238,7 +267,14 @@ def run_worker(args: argparse.Namespace, root: Path, cfg: dict, ds: dict, data_d
         "memory_scope": (
             "fresh process per dataset/model; includes imports, all loaded splits, evaluation, probes, pympler"
         ),
-        "model_size_mb": max(device["model_size_mb"] for device in factory.devices),
+        "model_size_mb": largest_model["model_size_mb"],
+        "python_model_size_mb": largest_model["python_model_size_mb"],
+        "native_model_size_mb": largest_model["native_model_size_mb"],
+        "native_peak_model_size_mb": max(device["native_peak_model_size_mb"] for device in factory.devices),
+        "native_build_info": factory.devices[0]["native_build_info"],
+        "model_structure": [
+            {"node_count": device["node_count"], "routing_depth": device["routing_depth"]} for device in factory.devices
+        ],
         "model_size_scope": "maximum final model size across devices; not sum or peak during fitting",
         "test_rmse": mean_device_metric(aggregated, protocol["agg_level"], "rmse"),
         "test_mae": mean_device_metric(aggregated, protocol["agg_level"], "mae"),
@@ -273,7 +309,7 @@ def main(argv: list[str] | None = None) -> int:
         temporary.replace(path)
         print(f"[DONE] {args.dataset}/{args.worker_model}: wrote {path}")
         return 0
-    fingerprint = benchmark_fingerprint(args, root, data_dir, ds["prefix"])
+    fingerprint = benchmark_fingerprint(args, root, data_dir, ds["prefix"], experiment_seed(cfg))
     failed = False
     for name in args.models or ds["models"]:
         path = out_dir / f"{name}_benchmark.json"
@@ -308,6 +344,7 @@ def main(argv: list[str] | None = None) -> int:
         ]
         environment = dict(os.environ)
         environment.update({key: "1" for key in THREAD_KEYS})
+        environment["PYTHONHASHSEED"] = str(experiment_seed(cfg))
         completed = subprocess.run(command, cwd=root, env=environment, check=False)
         failed = failed or completed.returncode != 0
     return int(failed)

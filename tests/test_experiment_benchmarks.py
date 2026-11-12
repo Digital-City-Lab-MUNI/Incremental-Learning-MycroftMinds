@@ -14,7 +14,7 @@ import yaml
 
 from experiments import prepare_results, run_benchmark
 from experiments.bootstrap import git_revision
-from experiments.registry import load_config, resolve_model
+from experiments.registry import experiment_seed, load_config, resolve_model
 from src.evaluation.metrics import all_time_aggregation_metrics
 from src.evaluation.training import test_set_seq_fit_predict
 
@@ -104,7 +104,7 @@ class ExperimentBenchmarkTests(unittest.TestCase):
                     "model_params": {
                         "GBDT": {"n_estimators": 3, "max_depth": 2, "random_state": 42},
                         "RF": {"n_estimators": 3, "max_depth": 2, "random_state": 42, "n_jobs": 1},
-                        "FastODT": {"depth": 2, "grace_period": 10, "random_state": 42},
+                        "FastODT": {"depth": 2, "grace_period": 10, "max_feature": 0.6},
                         "HoeffdingTree": {"max_depth": 2, "grace_period": 10, "leaf_prediction": "mean"},
                     },
                 }
@@ -210,6 +210,89 @@ class ExperimentBenchmarkTests(unittest.TestCase):
         _, benchmarks, _ = prepare_results.collect_dataset(self.directory, "fixture", "hourly")
         self.assertEqual(list(benchmarks["model"]), ["xFastODT"])
         self.assertEqual(benchmarks.iloc[0]["ilm_git_revision"], "test-revision")
+
+    def test_arf_variants_override_only_ensemble_size_and_depth(self) -> None:
+        """Every dataset gets distinct aliases with inherited non-size parameters."""
+        root = Path(__file__).resolve().parents[1]
+        cfg = load_config(root / "configs" / "experiments.yaml")
+        for dataset_name, dataset in cfg["datasets"].items():
+            for source in ("ARF_FastODT", "ARF_Hoeffding"):
+                with self.subTest(dataset=dataset_name, source=source):
+                    target = f"{source}_10x10"
+                    original = dataset["model_params"][source]
+                    expected = dict(original, n_models=10, max_depth=10)
+                    self.assertIn(target, dataset["models"])
+                    self.assertEqual(dataset["model_params"][target], expected)
+                    self.assertIsNot(dataset["model_params"][target], original)
+                    original_class, _, original_incremental, original_update = resolve_model(cfg, dataset_name, source)
+                    variant_class, params, incremental, update = resolve_model(cfg, dataset_name, target)
+                    self.assertIs(variant_class, original_class)
+                    self.assertEqual(params["n_models"], 10)
+                    self.assertEqual(params["max_depth"], 10)
+                    self.assertEqual((incremental, update), (original_incremental, original_update))
+
+    def test_common_seed_overrides_constructor_generators(self) -> None:
+        """A protocol seed reaches independent generators, even if old parameters differ."""
+        root = Path(__file__).resolve().parents[1]
+        cfg = load_config(root / "configs" / "experiments.yaml")
+        cfg["protocol"]["seed"] = 91
+        for name, key in (
+            ("FastODT", "random_state"),
+            ("xFastODT", "random_state"),
+            ("IncubationBoost", "random_state"),
+            ("ARF_FastODT", "seed"),
+            ("ARF_Hoeffding", "seed"),
+            ("RF", "random_state"),
+            ("GBDT", "random_state"),
+        ):
+            with self.subTest(model=name):
+                _, params, _, _ = resolve_model(cfg, "od_aq_1h", name)
+                self.assertEqual(params[key], 91)
+        features, targets = make_split(0, 40)
+        cfg = load_config(self.config_path)
+        model_class, params, _, _ = resolve_model(cfg, "fixture", "FastODT")
+        self.assertEqual(params["random_state"], 42)
+        first = model_class(**params)
+        second = model_class(**params)
+        first.partial_fit(features[:, 2:].astype(float), targets)
+        second.partial_fit(features[:, 2:].astype(float), targets)
+        np.testing.assert_array_equal(
+            first.predict(features[:, 2:].astype(float)), second.predict(features[:, 2:].astype(float))
+        )
+        for invalid in (None, True, -1, 2**32, 1.5):
+            cfg["protocol"]["seed"] = invalid
+            with self.assertRaises(ValueError):
+                experiment_seed(cfg)
+
+    def test_native_benchmark_reports_c_allocations_and_equal_accuracy(self) -> None:
+        """The actual fresh-worker pipeline counts C memory and preserves test errors."""
+        root = Path(__file__).resolve().parents[1]
+        if not (root / "src/trees/_native/libxfastodt.so").exists():
+            self.skipTest("run make native to verify the C benchmark integration")
+        config = yaml.safe_load(self.config_path.read_text())
+        config["matched_models"]["xFastODT_C"] = "FastODT"
+        self.config_path.write_text(yaml.safe_dump(config))
+        arguments = self.arguments[: self.arguments.index("--models")] + [
+            "--models",
+            "FastODT",
+            "xFastODT",
+            "xFastODT_C",
+        ]
+        self.assertEqual(run_benchmark.main(arguments), 0)
+        outputs = self.directory / "raw" / "fixture"
+        reference = json.loads((outputs / "FastODT_benchmark.json").read_text())
+        vector = json.loads((outputs / "xFastODT_benchmark.json").read_text())
+        native = json.loads((outputs / "xFastODT_C_benchmark.json").read_text())
+        for metric in ("test_rmse", "test_mae", "test_mape"):
+            self.assertAlmostEqual(native[metric], reference[metric])
+            self.assertAlmostEqual(vector[metric], reference[metric])
+        self.assertGreater(native["native_model_size_mb"], 0)
+        self.assertGreater(native["python_model_size_mb"], 0)
+        self.assertGreater(native["model_size_mb"], native["native_model_size_mb"])
+        self.assertGreaterEqual(native["native_peak_model_size_mb"], native["native_model_size_mb"])
+        self.assertEqual(native["params"]["random_state"], 42)
+        self.assertEqual(native["model_structure"], reference["model_structure"])
+        self.assertEqual(vector["model_structure"], reference["model_structure"])
 
 
 if __name__ == "__main__":

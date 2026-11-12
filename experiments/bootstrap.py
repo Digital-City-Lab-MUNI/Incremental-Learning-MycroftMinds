@@ -89,6 +89,7 @@ def collect_environment(ilm_path: Path) -> dict:
         "python": platform.python_version(),
         "cpu_count": os.cpu_count(),
         "thread_env": thread_env,
+        "pythonhashseed": os.environ.get("PYTHONHASHSEED"),
         "libraries": libraries,
         "ilm_path": str(ilm_path),
         "ilm_git_revision": git_revision(ilm_path),
@@ -110,6 +111,8 @@ def run_fingerprint(config: str, root: Path, data_dir: Path, prefix: str, settin
     """Identify code/config, dataset file stats, and settings for safe result reuse."""
     digest = hashlib.sha256()
     paths = sorted((root / "src").rglob("*.py")) + sorted((root / "experiments").glob("*.py"))
+    native_dir = root / "src" / "trees" / "_native"
+    paths += sorted(native_dir.glob("*.c")) + sorted(native_dir.glob("*.so"))
     for path in paths:
         digest.update(str(path.relative_to(root)).encode())
         digest.update(path.read_bytes())

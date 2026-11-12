@@ -6,7 +6,17 @@ _comment:
 # Matched implementation comparison, not a separately tuned xFastODT model.
 matched_models:
   xFastODT: FastODT
+  xFastODT_C: FastODT
+# Size/depth ablation: inherit each baseline's other per-dataset parameters.
+model_variants:
+  ARF_FastODT_10x10:
+    source: ARF_FastODT
+    params: {n_models: 10, max_depth: 10}
+  ARF_Hoeffding_10x10:
+    source: ARF_Hoeffding
+    params: {n_models: 10, max_depth: 10}
 protocol:
+  seed: 42
   forecast_horizon: 1h
   agg_level: hourly
   update_freq_batch: 14D
