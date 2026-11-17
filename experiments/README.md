@@ -74,6 +74,8 @@ its Python-wrapper size. See [C interface, limits and measurement](NATIVE.md).
 
 ## Other commands
 
+- `make exp-fix-unsplit`: validation-select growing public-data trees, then rerun
+  the three FastODT variants plus original/persistence controls. See [selection and outputs](PUBLIC_TREES.md).
 - `make exp-arf-10x10`: six hourly datasets, two ARF variants with 10 trees and
   maximum depth 10; evaluation and resources go to `results/rerun/arf_10x10/`.
   Other parameters are inherited from each baseline, not equalized or retuned.

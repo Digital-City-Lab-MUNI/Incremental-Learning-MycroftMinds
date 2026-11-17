@@ -25,6 +25,7 @@ MODEL_REGISTRY: dict[str, dict[str, Any]] = {
     "HoeffdingTree": {"class": "river.tree.HoeffdingTreeRegressor", "incremental": True},
     "ARF_Hoeffding": {"class": "river.forest.ARFRegressor", "incremental": True},
     "FastODT": {"class": "src.trees.fastodt.FastODT", "incremental": True},
+    "FastODT_Original": {"class": "src.trees.fastodt.FastODT", "incremental": True},
     "xFastODT": {"class": "src.trees.xfastodt.xFastODT", "incremental": True},
     "xFastODT_C": {"class": "src.trees.native_xfastodt.NativeXFastODT", "incremental": True},
     "ARF_FastODT": {"class": "src.bagging.ARFRegressorFODT", "incremental": True},

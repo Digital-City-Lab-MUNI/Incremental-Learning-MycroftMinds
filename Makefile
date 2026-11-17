@@ -1,4 +1,4 @@
-.PHONY: install format lint all clean test native native-check exp-native exp-run exp-benchmark exp-prepare exp-all exp-arf-10x10 exp-matrix wes-launch wes-sync
+.PHONY: install format lint all clean test native native-check exp-native exp-run exp-benchmark exp-prepare exp-all exp-fix-unsplit exp-arf-10x10 exp-matrix wes-launch wes-sync
 
 # Python command: prefer the uv project env (`uv run python` uses .venv created
 # by `uv sync` / `make install`); fall back to system python3 (run `make install`
@@ -13,6 +13,7 @@ endif
 # Experiment rerun (see experiments/README.md); override with e.g.
 #   make exp-run DATASET=od_friedman_1h DATA_ROOT=data_staging
 DATASET ?= od_friedman_1h
+CONFIG ?= configs/experiments.yaml
 DATA_ROOT ?= data
 RESULTS ?= results/rerun
 MAX_LENGTH ?= -1
@@ -24,6 +25,9 @@ DATASET_JOBS ?= 1
 ARF_RESULTS ?= $(RESULTS)/arf_10x10
 NATIVE_DATASETS ?= od_aq_1h
 NATIVE_RESULTS ?= $(RESULTS)/native
+PUBLIC_DATASETS ?= od_aq_1h od_friedman_1h od_electricity_1h
+PUBLIC_TREE_RESULTS ?= $(RESULTS)/public_trees
+PUBLIC_TAUS ?= 0.01 0.02 0.05 0.1
 NATIVE_CFLAGS ?= -O3 -std=c11 -fPIC -Wall -Wextra -Werror -ffp-contract=off
 NATIVE_LIB := src/trees/_native/libxfastodt.so
 
@@ -40,6 +44,7 @@ native-check:
 # Full learner comparison, initially Air Quality; override NATIVE_DATASETS for more.
 exp-native: native
 	${PYTHON} -m experiments.run_matrix \
+	  --config $(CONFIG) \
 	  --datasets $(NATIVE_DATASETS) \
 	  --models FastODT xFastODT xFastODT_C \
 	  --data-root $(DATA_ROOT) \
@@ -80,10 +85,10 @@ test:
 # MODELS="FastODT IncubationBoost" to subset models, MAX_LENGTH=N to cap rows/split,
 # SKIP_EXISTING=1 to skip models whose results already exist (resume), JOBS=N for parallel model workers
 exp-run:
-	${PYTHON} -m experiments.run_evaluation --dataset $(DATASET) --data-root $(DATA_ROOT) --results-dir $(RESULTS)/raw $(if $(MODELS),--models $(MODELS),) --max-length $(MAX_LENGTH) $(if $(JOBS),--jobs $(JOBS),) $(if $(SKIP_EXISTING),--skip-existing,)
+	${PYTHON} -m experiments.run_evaluation --config $(CONFIG) --dataset $(DATASET) --data-root $(DATA_ROOT) --results-dir $(RESULTS)/raw $(if $(MODELS),--models $(MODELS),) --max-length $(MAX_LENGTH) $(if $(JOBS),--jobs $(JOBS),) $(if $(SKIP_EXISTING),--skip-existing,)
 
 exp-benchmark:
-	${PYTHON} -m experiments.run_benchmark --dataset $(DATASET) --data-root $(DATA_ROOT) --results-dir $(RESULTS)/raw $(if $(MODELS),--models $(MODELS),) --max-length $(MAX_LENGTH) $(if $(JOBS),--jobs $(JOBS),) $(if $(SKIP_EXISTING),--skip-existing,)
+	${PYTHON} -m experiments.run_benchmark --config $(CONFIG) --dataset $(DATASET) --data-root $(DATA_ROOT) --results-dir $(RESULTS)/raw $(if $(MODELS),--models $(MODELS),) --max-length $(MAX_LENGTH) $(if $(JOBS),--jobs $(JOBS),) $(if $(SKIP_EXISTING),--skip-existing,)
 
 exp-prepare:
 	${PYTHON} -m experiments.prepare_results --results-dir $(RESULTS)/raw --out $(RESULTS)/tables
@@ -93,6 +98,7 @@ exp-prepare:
 # set DATASET_JOBS>1 to run datasets in parallel as well).
 exp-all: native
 	${PYTHON} -m experiments.run_matrix \
+	  --config $(CONFIG) \
 	  --datasets $(PAPER_DATASETS) \
 	  --models $(PAPER_MODELS) \
 	  --data-root $(DATA_ROOT) \
@@ -102,9 +108,23 @@ exp-all: native
 	  --model-jobs $(if $(JOBS),$(JOBS),1) \
 	  $(if $(SKIP_EXISTING),--skip-existing,)
 
+# Validation-selected growing trees plus original/persistence controls, public data only.
+exp-fix-unsplit: native
+	${PYTHON} -m experiments.run_public_trees \
+	  --config $(CONFIG) \
+	  --datasets $(PUBLIC_DATASETS) \
+	  --tie-thresholds $(PUBLIC_TAUS) \
+	  --data-root $(DATA_ROOT) \
+	  --results-dir $(PUBLIC_TREE_RESULTS) \
+	  --max-length $(MAX_LENGTH) \
+	  --jobs $(DATASET_JOBS) \
+	  --model-jobs $(if $(JOBS),$(JOBS),1) \
+	  $(if $(SKIP_EXISTING),--skip-existing,)
+
 # Targeted size/depth ablation; separate outputs preserve the original run tables.
 exp-arf-10x10:
 	${PYTHON} -m experiments.run_matrix \
+	  --config $(CONFIG) \
 	  --datasets $(PAPER_DATASETS) \
 	  --models ARF_FastODT_10x10 ARF_Hoeffding_10x10 \
 	  --data-root $(DATA_ROOT) \
@@ -119,7 +139,7 @@ exp-arf-10x10:
 # MODEL_JOBS=M parallelizes models within each dataset
 # (e.g. make exp-matrix JOBS=4 MODEL_JOBS=2 SKIP_EXISTING=1)
 exp-matrix: native
-	${PYTHON} -m experiments.run_matrix --data-root $(DATA_ROOT) --results-dir $(RESULTS) --max-length $(MAX_LENGTH) $(if $(JOBS),--jobs $(JOBS),) $(if $(MODEL_JOBS),--model-jobs $(MODEL_JOBS),) $(if $(MODELS),--models $(MODELS),) $(if $(SKIP_EXISTING),--skip-existing,)
+	${PYTHON} -m experiments.run_matrix --config $(CONFIG) --data-root $(DATA_ROOT) --results-dir $(RESULTS) --max-length $(MAX_LENGTH) $(if $(JOBS),--jobs $(JOBS),) $(if $(MODEL_JOBS),--model-jobs $(MODEL_JOBS),) $(if $(MODELS),--models $(MODELS),) $(if $(SKIP_EXISTING),--skip-existing,)
 
 # --- HPC rerun via WES (see jobs/fastodt_rerun.wes) ---
 WES ?= ../wes/.venv/bin/wes
