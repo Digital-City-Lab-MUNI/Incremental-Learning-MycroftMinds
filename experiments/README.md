@@ -13,11 +13,16 @@ Run from this repository's root after transferring the updated code to the serve
 make exp-all
 ```
 
-This builds the C library and runs six hourly datasets, including Electricity and
-Friedman, with the eight paper models plus Python/C xFastODT: 60 validation/test
+This builds the C library, selects growing FastODT configurations on validation for
+Air Quality, Friedman and Electricity, then runs one full matrix: six hourly
+datasets, the eight paper models plus Python/C xFastODT, 60 validation/test
 evaluations and 60 resource benchmarks.
 It writes `results/rerun/raw/<dataset>/` and `results/rerun/tables/summary.md`,
-`all_metrics.csv`, and `all_benchmark.csv`. Full-server runtime has not been measured.
+`all_metrics.csv`, and `all_benchmark.csv`. Selection diagnostics and the generated
+config are under `results/rerun/public_trees/`. Full-server runtime has not been measured.
+If no candidate splits in every validation fit, `exp-all` stops before the matrix and
+leaves the root diagnostics in `public_trees/tuning/<dataset>/tuning.json`. After the
+matrix, it checks the saved final models and fails if any FastODT variant is still root-only.
 
 Each resource benchmark uses a fresh Python process. All evaluations finish before
 resource benchmarking starts; resource benchmarks run sequentially with one compute
@@ -39,6 +44,9 @@ outputs are recomputed. Data fingerprints use paths, sizes and modification time
 `PAPER_DATASETS` selects dataset keys; `PAPER_MODELS` selects model names.
 Defaults are the six hourly datasets and
 `BL_Mean GBDT RF HoeffdingTree ARF_Hoeffding FastODT ARF_FastODT IncubationBoost xFastODT xFastODT_C`.
+`exp-all` tunes only `TUNE_DATASETS`, the intersection of `PUBLIC_DATASETS` and
+`PAPER_DATASETS`. With no public dataset selected, it uses `CONFIG` directly.
+Set `PUBLIC_TAUS` to override the validation `tie_threshold` grid.
 The `matched_models` configuration copies FastODT's parameters into Python/C xFastODT
 for the implementation comparison; these variants are not separately tuned.
 
@@ -74,8 +82,9 @@ its Python-wrapper size. See [C interface, limits and measurement](NATIVE.md).
 
 ## Other commands
 
-- `make exp-fix-unsplit`: validation-select growing public-data trees, then rerun
-  the three FastODT variants plus original/persistence controls. See [selection and outputs](PUBLIC_TREES.md).
+- `make exp-fix-unsplit`: targeted validation selection plus a five-model rerun of
+  the three FastODT variants with original/persistence controls. `make exp-all` applies
+  the same selection automatically before its full matrix. See [selection and outputs](PUBLIC_TREES.md).
 - `make exp-arf-10x10`: six hourly datasets, two ARF variants with 10 trees and
   maximum depth 10; evaluation and resources go to `results/rerun/arf_10x10/`.
   Other parameters are inherited from each baseline, not equalized or retuned.

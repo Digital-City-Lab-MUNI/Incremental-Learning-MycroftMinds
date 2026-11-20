@@ -241,6 +241,24 @@ def rerun_config(cfg: dict, selections: dict[str, dict]) -> dict:
     return generated
 
 
+def check_results(results: Path, datasets: list[str]) -> int:
+    """Fail if any selected FastODT variant has a root-only final test model."""
+    for dataset in datasets:
+        for model in ("FastODT", "xFastODT", "xFastODT_C"):
+            path = results / "raw" / dataset / f"{model}_benchmark.json"
+            if not path.exists():
+                print(f"[FAIL] {dataset}/{model}: missing {path}", file=sys.stderr)
+                return 1
+            benchmark = json.loads(path.read_text())
+            structures = benchmark.get("model_structure", [])
+            if not structures or any(entry.get("routing_depth", 0) < 1 for entry in structures):
+                print(
+                    f"[FAIL] {dataset}/{model}: unsplit final test model; inspect tuning diagnostics", file=sys.stderr
+                )
+                return 1
+    return 0
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     """Parse targeted tuning/rerun options."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -254,6 +272,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--model-jobs", type=int, default=1)
     parser.add_argument("--skip-existing", action="store_true")
     parser.add_argument("--tune-only", action="store_true")
+    parser.add_argument("--check-results", action="store_true")
     args = parser.parse_args(argv)
     if any(not math.isfinite(value) or not 0 < value <= 1 for value in args.tie_thresholds):
         parser.error("--tie-thresholds must be finite values in (0, 1]")
@@ -265,10 +284,12 @@ def main(argv: list[str] | None = None) -> int:
     from . import run_matrix
 
     args = parse_args(argv)
+    results = Path(args.results_dir).resolve()
+    if args.check_results:
+        return check_results(results, args.datasets)
     root = ensure_ilm_on_path()
     cfg = load_config(args.config)
     data_root = Path(args.data_root or os.environ.get("FASTODT_DATA_ROOT") or root / "data").expanduser().resolve()
-    results = Path(args.results_dir).resolve()
     selections = {}
     for dataset in args.datasets:
         selections[dataset] = tune_dataset(
@@ -310,17 +331,7 @@ def main(argv: list[str] | None = None) -> int:
     status = run_matrix.main(command)
     if status:
         return status
-    for dataset in args.datasets:
-        for model in ("FastODT", "xFastODT", "xFastODT_C"):
-            path = results / "raw" / dataset / f"{model}_benchmark.json"
-            benchmark = json.loads(path.read_text())
-            structures = benchmark.get("model_structure", [])
-            if not structures or any(entry.get("routing_depth", 0) < 1 for entry in structures):
-                print(
-                    f"[FAIL] {dataset}/{model}: unsplit final test model; inspect tuning diagnostics", file=sys.stderr
-                )
-                return 1
-    return 0
+    return check_results(results, args.datasets)
 
 
 if __name__ == "__main__":

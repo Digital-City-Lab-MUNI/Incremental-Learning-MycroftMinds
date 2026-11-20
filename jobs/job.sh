@@ -65,7 +65,7 @@ echo "python: $(python -c 'import sys; print(sys.version)') at $(command -v pyth
 python -c "import numpy, pandas, scipy, sklearn, river, tqdm, pympler, yaml; print('deps ok')" \
   || { echo "[ERROR] missing required packages (numpy pandas scipy sklearn river tqdm pympler yaml); job will fail"; exit 1; }
 
-# --- evaluation (valid splits + test set) -----------------------------------
+# --- validation selection (public root-only datasets) ------------------------
 SKIP_ARG=()
 if [ "${SKIP_EXISTING:-0}" = "1" ]; then
   SKIP_ARG=(--skip-existing)
@@ -76,7 +76,25 @@ if [ -n "${MODELS:-}" ]; then
   # shellcheck disable=SC2206
   MODELS_ARG=(--models $MODELS)
 fi
+
+# Select growing trees for the root-only public datasets before evaluation.
+CONFIG_PATH="configs/experiments.yaml"
+case "$DATASET" in
+  od_aq_1h|od_friedman_1h|od_electricity_1h)
+    TREE_RESULTS="$RESULTS/public_trees/$DATASET"
+    python -m experiments.run_public_trees \
+      --config "$CONFIG_PATH" \
+      --datasets "$DATASET" \
+      --data-root "$DATA_ROOT" \
+      --results-dir "$TREE_RESULTS" \
+      --max-length "${MAX_LENGTH:--1}" \
+      --tune-only "${SKIP_ARG[@]}"
+    CONFIG_PATH="$TREE_RESULTS/selected_config.yaml"
+    ;;
+esac
+
 python -m experiments.run_evaluation \
+  --config "$CONFIG_PATH" \
   --dataset "$DATASET" "${MODELS_ARG[@]}" \
   --data-root "$DATA_ROOT" \
   --results-dir "$RESULTS/raw" --max-length "${MAX_LENGTH:--1}" \
@@ -89,10 +107,19 @@ if [ -n "${BENCH_MODELS:-}" ]; then
   BENCH_ARG=(--models $BENCH_MODELS)
 fi
 python -m experiments.run_benchmark \
+  --config "$CONFIG_PATH" \
   --dataset "$DATASET" "${BENCH_ARG[@]}" \
   --data-root "$DATA_ROOT" \
   --results-dir "$RESULTS/raw" --max-length "${MAX_LENGTH:--1}" \
   --jobs "${JOBS:-1}" "${SKIP_ARG[@]}"
+
+if [ "$CONFIG_PATH" != "configs/experiments.yaml" ] \
+  && [ -z "${MODELS:-}" ] && [ -z "${BENCH_MODELS:-}" ]; then
+  python -m experiments.run_public_trees \
+    --datasets "$DATASET" \
+    --results-dir "$RESULTS" \
+    --check-results
+fi
 
 # --- aggregate whatever raw results exist so far (idempotent) ----------------
 python -m experiments.prepare_results --results-dir "$RESULTS/raw" --out "$RESULTS/tables"

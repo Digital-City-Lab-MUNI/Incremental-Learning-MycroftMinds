@@ -1,7 +1,8 @@
 # Resource measurement definitions
 
-`make exp-all` runs `experiments.run_evaluation` for all selected datasets first,
-then `experiments.run_benchmark`, then `experiments.prepare_results`.
+`make exp-all` first runs validation-only `experiments.run_public_trees` for the
+public datasets in `PAPER_DATASETS`, then runs `experiments.run_evaluation` for all
+selected datasets, then `experiments.run_benchmark`, then `experiments.prepare_results`.
 The benchmark coordinator starts a fresh interpreter for each dataset/model pair;
 no process is reused between model measurements, even when evaluation uses `JOBS>1`.
 

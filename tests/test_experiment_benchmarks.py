@@ -18,6 +18,8 @@ from experiments.registry import experiment_seed, load_config, resolve_model
 from src.evaluation.metrics import all_time_aggregation_metrics
 from src.evaluation.training import test_set_seq_fit_predict
 
+test_set_seq_fit_predict.__test__ = False
+
 
 def make_split(start: int, count: int) -> tuple[np.ndarray, np.ndarray]:
     """Two hourly devices with different target scales and occasional zeros."""

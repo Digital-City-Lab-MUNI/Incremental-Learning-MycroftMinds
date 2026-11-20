@@ -53,12 +53,14 @@ Default output root: `results/rerun/public_trees/` (override `PUBLIC_TREE_RESULT
 - `raw/`, `tables/`: the same accuracy/resource artifacts as the main matrix.
 
 The input config and existing results remain unchanged. Resume with
-`make exp-fix-unsplit SKIP_EXISTING=1`. For a later full matrix using the selected
-public configurations, run:
-
-```bash
-make exp-all CONFIG=results/rerun/public_trees/selected_config.yaml
-```
+`make exp-fix-unsplit SKIP_EXISTING=1`. A normal `make exp-all` performs the same
+validation selection for every public dataset in `PAPER_DATASETS`, writes
+`results/rerun/public_trees/selected_config.yaml`, and runs the full matrix with that
+generated config. Selection is skipped when `PAPER_DATASETS` contains no public dataset.
+`exp-all` also runs `--check-results` after the matrix and fails on any root-only
+saved FastODT variant. The WES array job in `jobs/job.sh` tunes each public dataset in
+its own `results/rerun/public_trees/<dataset>/` directory, then evaluates and
+benchmarks with that dataset's generated config.
 
 The Industrial(2) chronology issue and the Air Quality date-range discrepancy
 are separate investigations; this command does not resolve either one.

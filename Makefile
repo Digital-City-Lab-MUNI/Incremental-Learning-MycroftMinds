@@ -28,6 +28,9 @@ NATIVE_RESULTS ?= $(RESULTS)/native
 PUBLIC_DATASETS ?= od_aq_1h od_friedman_1h od_electricity_1h
 PUBLIC_TREE_RESULTS ?= $(RESULTS)/public_trees
 PUBLIC_TAUS ?= 0.01 0.02 0.05 0.1
+TUNE_DATASETS ?= $(filter $(PUBLIC_DATASETS),$(PAPER_DATASETS))
+SELECTED_CONFIG ?= $(PUBLIC_TREE_RESULTS)/selected_config.yaml
+EXP_ALL_CONFIG ?= $(if $(TUNE_DATASETS),$(SELECTED_CONFIG),$(CONFIG))
 NATIVE_CFLAGS ?= -O3 -std=c11 -fPIC -Wall -Wextra -Werror -ffp-contract=off
 NATIVE_LIB := src/trees/_native/libxfastodt.so
 
@@ -93,12 +96,21 @@ exp-benchmark:
 exp-prepare:
 	${PYTHON} -m experiments.prepare_results --results-dir $(RESULTS)/raw --out $(RESULTS)/tables
 
-# Paper rerun: evaluation followed by fresh-process, serial resource benchmarks.
+# Paper rerun: select growing public trees on validation, then run one full matrix.
 # JOBS=N runs N models in parallel within each dataset (datasets stay sequential;
 # set DATASET_JOBS>1 to run datasets in parallel as well).
 exp-all: native
-	${PYTHON} -m experiments.run_matrix \
+	$(if $(TUNE_DATASETS),${PYTHON} -m experiments.run_public_trees \
 	  --config $(CONFIG) \
+	  --datasets $(TUNE_DATASETS) \
+	  --tie-thresholds $(PUBLIC_TAUS) \
+	  --data-root $(DATA_ROOT) \
+	  --results-dir $(PUBLIC_TREE_RESULTS) \
+	  --max-length $(MAX_LENGTH) \
+	  --tune-only \
+	  $(if $(SKIP_EXISTING),--skip-existing,),)
+	${PYTHON} -m experiments.run_matrix \
+	  --config $(EXP_ALL_CONFIG) \
 	  --datasets $(PAPER_DATASETS) \
 	  --models $(PAPER_MODELS) \
 	  --data-root $(DATA_ROOT) \
@@ -107,6 +119,10 @@ exp-all: native
 	  --jobs $(DATASET_JOBS) \
 	  --model-jobs $(if $(JOBS),$(JOBS),1) \
 	  $(if $(SKIP_EXISTING),--skip-existing,)
+	$(if $(TUNE_DATASETS),${PYTHON} -m experiments.run_public_trees \
+	  --datasets $(TUNE_DATASETS) \
+	  --results-dir $(RESULTS) \
+	  --check-results,)
 
 # Validation-selected growing trees plus original/persistence controls, public data only.
 exp-fix-unsplit: native

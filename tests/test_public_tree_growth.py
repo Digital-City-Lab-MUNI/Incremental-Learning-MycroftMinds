@@ -11,7 +11,14 @@ import numpy as np
 import yaml
 
 from experiments.registry import load_config, resolve_model
-from experiments.run_public_trees import evaluate_candidate, main, rerun_config, root_diagnostics, select_trials
+from experiments.run_public_trees import (
+    check_results,
+    evaluate_candidate,
+    main,
+    rerun_config,
+    root_diagnostics,
+    select_trials,
+)
 from src.data.io import load_dataset
 from src.trees.fastodt import FastODT
 from tests.test_experiment_benchmarks import make_split
@@ -176,6 +183,7 @@ class PublicTreeGrowthTests(unittest.TestCase):
                 self.assertEqual(benchmark["seed"], 42)
                 if name in ("FastODT", "xFastODT", "xFastODT_C"):
                     self.assertTrue(all(entry["routing_depth"] > 0 for entry in benchmark["model_structure"]))
+            self.assertEqual(check_results(results, ["od_aq_1h"]), 0)
 
     def test_rerun_config_preserves_unaffected_datasets(self) -> None:
         """Public-data selection must not overwrite parameters for other datasets."""
